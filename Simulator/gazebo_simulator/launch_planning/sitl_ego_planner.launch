@@ -1,0 +1,280 @@
+<launch>
+	<arg name="simulation" default="true"/>
+	<arg name="control_from_joy" value="2"/><!-- Whether to use joy control as a second input:  0：disable, 1：control in Body Frame，2：control in Joystick Frame -->
+	<arg name="type_in_goal" default="false"/>
+	<arg name="sensor" default="2"/> <!-- 1: 3dLidar; 2: Camera -->
+	<arg name="input_source" default="0"/>  <!-- 0: inside; 1: dedicted -->
+	<arg name="sensor_max_range" default="4.0"/>
+  <!-- size of map, change the size inflate x, y, z according to your application -->
+  <arg name="map_size_x" value="40.0"/>
+  <arg name="map_size_y" value="40.0"/>
+  <arg name="map_size_z" value=" 4.0"/>
+  
+  <!-- maximum velocity and acceleration the drone will reach -->
+  <arg name="max_vel" value="4.0" />
+  <arg name="max_acc" value="2.0" />
+
+  <arg name="planning_horizon" value="7.5" />
+  <arg name="inflate" value="0.4"/>
+
+  <!-- topic of your odometry such as VIO or LIO -->
+  <arg name="odom_topic" value="/drone_msg/drone_odom" />
+  
+	<!-- Joystick Dirver -->
+	<group unless="$(eval arg('control_from_joy') == 0)">
+		<node pkg="joy" type="joy_node" name="joystick" />
+		<node pkg="joy_remote" type="joy_remote_main" name="joy_remote">
+			<param name="control_from_joy" value="$(arg control_from_joy)" type="int"/>
+			<param name="joy_goal_xy_max" value="4.0" type="double"/>      <!-- Horizontal furthest distance (when joy control) -->
+			<param name="joy_goal_z_max" value="1.0" type="double"/>       <!-- Vertical furthest distance (when joy control) -->
+			<param name="is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice VFH Histogram mode below -->
+			<param name="fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+			<param name="min_goal_height" value="1.0" type="double"/>				<!-- virtual ground -->
+			<param name="ceil_height" value="2.0" type="double"/>
+			<!-- GeoFence -->
+		</node>
+  </group>
+
+  <!-- run the pub_goal.cpp -->
+  <node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
+
+
+	<!-- Launch Gazebo Simulation -->
+	<arg name="x" default="0.0"/>
+	<arg name="y" default="-10.0"/>
+	<arg name="z" default="0"/>
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" default="$(find simulation_gazebo)/worlds/obstacle.world"/>
+
+	<!-- 3D Lidar -->
+	<group if="$(eval arg('sensor') == 1)">	
+		<include if="$(arg simulation)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+			<arg name="world" value="$(arg world)"/>
+			<arg name="mode" value="_3Dlidar"/>
+			<arg name="x" value="$(arg x)"/>
+			<arg name="y" value="$(arg y)"/>
+			<arg name="z" value="$(arg z)"/>
+		</include>	
+
+		<!-- Points_filter.cpp -->
+		<node pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
+			<remap from="/points_filter/sensor" to="/drone_msg/sensors/3Dlidar_scan" />
+			<param name="points_filter/frame_name" value="/world" type="string"/>
+			<param name="points_filter/object_link_name" value="/3Dlidar_link" type="string"/>
+			<!-- Sensory distance, considering only obstacles within the range -->
+			<param name="points_filter/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>
+			<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
+			<param name="points_filter/data_type" value="2" type="int"/>
+			<param name="points_filter/is_lidar" value="true" type="bool"/>
+			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/downsampling" value="true" type="bool"/>
+			<param name="points_filter/spatial" value="false" type="bool"/>
+			<param name="points_filter/concatenate" value="true" type="bool"/>
+			<param name="points_filter/ground_height" value="0.3" type="double"/>
+			<param name="points_filter/resolution" value="0.1" type="double"/>
+		</node>
+      
+    <!-- main algorithm params -->
+    <node pkg="ego_planner" name="ego_planner" type="ego_planner_node" output="screen" launch-prefix="gnome-terminal --tab --">
+      <remap from="/ego_planner/grid_map/odom" to="$(arg odom_topic)"/>
+      <!-- topic of point cloud measurement, such as from LIDAR  -->
+      <!-- don't set camera pose and depth, if you already set this one! -->
+      <remap from="/ego_planner/grid_map/cloud" to="/local_obs_pcl"/>
+
+      <!-- traj_server -->
+      <remap from="/position_cmd" to="/drone_msg/control_command"/>
+      <remap from="/ego_planner/odom_world" to="$(arg odom_topic)"/>
+      <param name="traj_server/time_forward" value="1.0" type="double"/>
+      
+      <!-- planning fsm -->
+      <param name="fsm/flight_type" value="1" type="int"/> <!-- 1: use 2D Nav Goal to select goal  2: use global waypoints below  -->
+      <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/> <!--always set to 1.5 times grater than sensing horizen-->
+      <param name="fsm/emergency_time_" value="1.0" type="double"/> <!-- Suddenly discovered obstacles. emergency stop!-->
+
+      <!-- grid map -->
+      <param name="grid_map/resolution"      value="0.1" /> 
+      <param name="grid_map/map_size_x"   value="$(arg map_size_x)" /> 
+      <param name="grid_map/map_size_y"   value="$(arg map_size_y)" /> 
+      <param name="grid_map/map_size_z"   value="$(arg map_size_z)" /> 
+      <param name="grid_map/local_update_range_x"  value="4.0" /> 
+      <param name="grid_map/local_update_range_y"  value="4.0" /> 
+      <param name="grid_map/local_update_range_z"  value="4.0" /> 
+      <param name="grid_map/obstacles_inflation"     value="$(arg inflate)" /> 
+      <param name="grid_map/local_map_margin" value="30"/>
+      <param name="grid_map/ground_height"        value="-0.01"/>
+
+      <param name="grid_map/virtual_ceil_height"   value="2.5"/>
+      <param name="grid_map/visualization_truncate_height"   value="2.4"/>
+      <param name="grid_map/show_occ_time"  value="false"/>
+      <param name="grid_map/pose_type"     value="2"/>  
+      <param name="grid_map/frame_id"      value="world"/>
+
+      <!-- local fusion -->
+      <param name="grid_map/p_hit"  value="0.65"/>
+      <param name="grid_map/p_miss" value="0.35"/>
+      <param name="grid_map/p_min"  value="0.12"/>
+      <param name="grid_map/p_max"  value="0.90"/>
+      <param name="grid_map/p_occ"  value="0.80"/>
+      <param name="grid_map/min_ray_length" value="0.1"/>
+      <param name="grid_map/max_ray_length" value="4.5"/>
+
+    <!-- planner manager -->
+      <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+      <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
+      <param name="manager/max_jerk" value="4" type="double"/>
+      <param name="manager/control_points_distance" value="0.4" type="double"/>
+      <param name="manager/feasibility_tolerance" value="0.05" type="double"/>
+      <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
+
+    <!-- trajectory optimization -->
+      <param name="optimization/lambda_smooth" value="0.01" type="double"/>
+      <param name="optimization/lambda_collision" value="1.0" type="double"/>
+      <param name="optimization/lambda_feasibility" value="0.01" type="double"/>
+      <param name="optimization/lambda_fitness" value="0.01" type="double"/>
+      <param name="optimization/dist0" value="$(eval 1.7 * arg('inflate'))" type="double"/>
+      <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
+      <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
+
+      <param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+      <param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+      <param name="bspline/limit_ratio" value="1.1" type="double"/>
+    </node>
+	</group>
+	
+
+
+	<!-- Camera -->
+	<group if="$(eval arg('sensor') == 2)">	
+		<include if="$(arg simulation)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+			<arg name="world" value="$(arg world)"/>
+			<arg name="mode" value="_D435i"/>
+			<arg name="x" value="$(arg x)"/>
+			<arg name="y" value="$(arg y)"/>
+			<arg name="z" value="$(arg z)"/>
+		</include>	
+
+		<!-- Points_filter.cpp -->
+		<node if="$(eval arg('input_source') == 1)" pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
+			<remap from="/points_filter/sensor" to="/realsense_plugin/camera/local_pointclouds" />   <!-- if data_type == 2 -->
+			<remap from="/camera/depth/image_rect_raw" to="/realsense_plugin/camera/depth/image_raw" />   <!-- if data_type == 3 -->
+			<remap from="/camera/depth/camera_info" to="/realsense_plugin/camera/depth/camera_info" />    <!-- if data_type == 3 -->
+			<param name="points_filter/frame_name" value="/world" type="string"/>
+			<param name="points_filter/object_link_name" value="/realsense_camera_link" type="string"/>
+			<!-- Sensory distance, considering only obstacles within sensory distance -->
+			<param name="points_filter/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>
+			<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
+			<param name="points_filter/data_type" value="3" type="int"/>
+			<param name="points_filter/is_rgbd" value="true" type="bool"/>		<!-- if data_type == 2 -->
+			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/downsampling" value="true" type="bool"/>
+			<param name="points_filter/spatial" value="false" type="bool"/>
+			<param name="points_filter/concatenate" value="true" type="bool"/>
+			<param name="points_filter/ground_height" value="0.3" type="double"/>
+			<param name="points_filter/resolution" value="0.1" type="double"/>
+			<param name="points_filter/fx" value="231.06897487523196" type="double"/>
+			<param name="points_filter/fy" value="231.06897487523196" type="double"/>
+			<param name="points_filter/cx" value="160.5" type="double"/>
+			<param name="points_filter/cy" value="120.5" type="double"/>
+			<param name="points_filter/dist_min" value="0.1" type="double"/>
+			<param name="points_filter/cut_edge" value="0" type="int"/>
+			<param name="points_filter/interval" value="1" type="int"/>
+		</node>
+	
+    <!-- main algorithm params -->
+    <node pkg="ego_planner" name="ego_planner" type="ego_planner_node" output="screen" launch-prefix="gnome-terminal --tab --">
+      <remap from="/ego_planner/grid_map/odom" to="$(arg odom_topic)"/>
+      <!-- topic of point cloud measurement, such as from LIDAR  -->
+      <!-- don't set camera pose and depth, if you already set this one! -->
+      <remap from="/ego_planner/grid_map/cloud" to="/local_obs_pcl"/>
+
+      <!-- traj_server -->
+      <remap from="/ego_planner/position_cmd" to="/drone_msg/control_command"/>
+      <remap from="/ego_planner/odom_world" to="$(arg odom_topic)"/>
+      <param name="traj_server/time_forward" value="1.0" type="double"/>
+      
+      <!-- planning fsm -->
+      <param name="fsm/flight_type" value="1" type="int"/> <!-- 1: use 2D Nav Goal to select goal  2: use global waypoints below  -->
+      <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/> <!--always set to 1.5 times grater than sensing horizen-->
+      <param name="fsm/emergency_time_" value="1.0" type="double"/> <!-- Suddenly discovered obstacles. emergency stop!-->
+
+      <!-- grid map -->
+      <param name="grid_map/resolution"      value="0.1" /> 
+      <param name="grid_map/map_size_x"   value="$(arg map_size_x)" /> 
+      <param name="grid_map/map_size_y"   value="$(arg map_size_y)" /> 
+      <param name="grid_map/map_size_z"   value="$(arg map_size_z)" /> 
+      <param name="grid_map/local_update_range_x"  value="4.0" /> 
+      <param name="grid_map/local_update_range_y"  value="4.0" /> 
+      <param name="grid_map/local_update_range_z"  value="4.0" /> 
+      <param name="grid_map/obstacles_inflation"     value="$(arg inflate)" /> 
+      <param name="grid_map/local_map_margin" value="30"/>
+      <param name="grid_map/ground_height"        value="-0.01"/>
+
+      <param name="grid_map/virtual_ceil_height"   value="3"/>
+      <param name="grid_map/visualization_truncate_height"   value="2.4"/>
+      <param name="grid_map/pose_type"     value="2"/>  
+      <param name="grid_map/frame_id"      value="world"/>
+
+      <!-- camera parameter -->
+      <!-- intrinsic params of the depth camera -->
+      <param name="grid_map/cx" value="160.5"/>
+      <param name="grid_map/cy" value="120.5"/>
+      <param name="grid_map/fx" value="231.06897487523196"/>
+      <param name="grid_map/fy" value="231.06897487523196"/>
+
+      <!-- camera pose: transform of camera frame in the world frame -->
+      <!-- depth topic: depth image, 640x480 by default -->
+      <!-- don't set cloud_topic if you already set these ones! -->
+      <remap if="$(eval arg('input_source') == 0)" from="/ego_planner/grid_map/pose" to="/mavros/local_position/pose"/>
+      <remap if="$(eval arg('input_source') == 0)" from="/ego_planner/grid_map/depth" to="/realsense_plugin/camera/depth/image_raw"/>
+
+      <!-- depth filter -->
+      <param name="grid_map/use_depth_filter" value="true"/>
+      <param name="grid_map/depth_filter_tolerance" value="0.15"/>
+      <param name="grid_map/depth_filter_maxdist"   value="4.0"/>
+      <param name="grid_map/depth_filter_mindist"   value="0.2"/>
+      <param name="grid_map/depth_filter_margin"    value="1"/>
+      <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
+      <param name="grid_map/skip_pixel" value="1"/>
+
+      <!-- local fusion -->
+      <param name="grid_map/p_hit"  value="0.65"/>
+      <param name="grid_map/p_miss" value="0.35"/>
+      <param name="grid_map/p_min"  value="0.12"/>
+      <param name="grid_map/p_max"  value="0.90"/>
+      <param name="grid_map/p_occ"  value="0.80"/>
+      <param name="grid_map/min_ray_length" value="0.1"/>
+      <param name="grid_map/max_ray_length" value="4.5"/>
+
+    <!-- planner manager -->
+      <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+      <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
+      <param name="manager/max_jerk" value="4" type="double"/>
+      <param name="manager/control_points_distance" value="0.4" type="double"/>
+      <param name="manager/feasibility_tolerance" value="0.05" type="double"/>
+      <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
+
+    <!-- trajectory optimization -->
+      <param name="optimization/lambda_smooth" value="0.01" type="double"/>
+      <param name="optimization/lambda_collision" value="1.0" type="double"/>
+      <param name="optimization/lambda_feasibility" value="0.01" type="double"/>
+      <param name="optimization/lambda_fitness" value="0.01" type="double"/>
+      <param name="optimization/dist0" value="$(eval 1.7 * arg('inflate'))" type="double"/>
+      <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
+      <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
+
+      <param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+      <param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+      <param name="bspline/limit_ratio" value="1.1" type="double"/>
+
+    </node>
+	</group>
+	
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_planning_ego_planner.rviz" />
+  <!-- obstacle.world 真实点云 -->
+  <node pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+    <param name="pcd_path" type="string" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
+  </node>
+
+</launch>

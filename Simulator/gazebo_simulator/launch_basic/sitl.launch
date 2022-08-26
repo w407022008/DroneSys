@@ -1,0 +1,97 @@
+<launch>
+	<!-- 初始位置 -->
+	<arg name="x" default="1.0"/>
+	<arg name="y" default="3.0"/>
+	<arg name="z" default="0.2"/>
+	<arg name="R" default="0"/>
+	<arg name="P" default="0"/>
+	<arg name="Y" default="0.0"/>
+	<!-- 启动PX4中的SITL功能 -->
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
+	<arg name="mode" default=""/>
+	
+	<!-- We could use the companion model, except that there are still pid parameters that need to be adjusted to allow for higher tracking accuracy. -->
+	<arg name="model" default="iris"/> 
+	
+	<arg name="sdf" default="$(find simulation_gazebo)/drone_models/mav_isir$(arg mode)/mav_isir$(arg mode).sdf"/>
+	<!-- 这里的环境变量将传递到rcS启动脚本中-->
+	<!-- 参看 PX4/ROMFS/px4fmu_common/init.d-posix/rcS 中的修改内容 -->
+	<env name="PX4_SIM_MODEL" value="$(arg model)" />
+	<env name="PX4_ESTIMATOR" value="ekf2_vision"/>
+	<!-- 仿真速度因子 1.0代表与真实时间同步，大于1加快仿真速度，小于1则减慢 （电脑性能较差，可选择减小该参数）-->
+	<env name="PX4_SIM_SPEED_FACTOR" value="1.0" />
+	
+	<!-- PX4 configs -->
+	<arg name="interactive" default="true"/>
+	<!-- PX4 SITL -->
+	<arg unless="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+	<arg     if="$(arg interactive)" name="px4_command_arg1" value=""/>
+	<!-- 节点源文件路径: ~/Firmware_v110/platforms/posix/src/px4/common/main.cpp -->
+	<node name="sitl" pkg="px4" type="px4" output="screen" 
+		args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS $(arg px4_command_arg1)"/>
+
+	<!-- 启动Gazebo -->
+	<!-- Gazebo configs -->
+	<arg name="debug" default="false"/>
+	<arg name="verbose" default="false"/>
+	<arg name="paused" default="false"/>
+	<arg name="respawn_gazebo" default="false"/>
+	<!-- Gazebo sim -->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="gui" value="$(arg gazebo_gui)"/>
+		<arg name="debug" value="$(arg debug)"/>
+		<arg name="verbose" value="$(arg verbose)"/>
+		<arg name="paused" value="$(arg paused)"/>
+		<arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
+		<arg name="world_name" value="$(arg world)"/>
+	</include>
+
+	<!-- Spawn vehicle model -->
+	<!-- https://github.com/ros-simulation/gazebo_ros_pkgs/blob/kinetic-devel/gazebo_ros/scripts/spawn_model -->
+	<node name="$(anon vehicle_spawn)" pkg="gazebo_ros" type="spawn_model" output="screen" 
+		args="-sdf -file $(arg sdf) -model $(arg model) -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)">
+	</node>
+
+	<!-- 启动MAVROS -->
+	<node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+		<param name="fcu_url" value="udp://:14540@localhost:14557" />
+		<param name="gcs_url" value="" />
+		<param name="target_system_id" value="1" />
+		<param name="target_component_id" value="1" />
+		<rosparam command="load" file="$(find simulation_gazebo)/config/mavros_config/px4_pluginlists.yaml" />
+		<rosparam command="load" file="$(find simulation_gazebo)/config/mavros_config/px4_config.yaml" />
+	</node>
+
+	
+	<!-- 定义传感器TF transform -->
+	<include file="$(find simulation_gazebo)/launch_basic/tf_transform.launch">
+		<arg name="x" value="$(arg x)"/>
+		<arg name="y" value="$(arg y)"/>
+		<arg name="z" value="$(arg z)"/>
+	</include>
+
+	<!-- run the px4_transceiver.cpp -->
+	<!-- 仅订阅发布消息 -->
+	<node pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
+		<!-- 定位数据输入源 0 for vicon， 1 for 激光SLAM, 2 for gazebo ground truth, 3 for Intel T265 dual camera slam，4 for SLAM (but where pub?), 9 for outdoor (with rel_alt)-->
+		<param name="input_source" value="2" />
+		<param name="rate_hz" value="30" />
+	</node>
+	
+	<!-- run the px4_commander.cpp -->
+	<!-- 通过MAVLink协议发布pos_vel_setpoint到px4 -->
+	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen">
+		<rosparam command="load" file="$(find simulation_gazebo)/config/controllers_config/px4_commander.yaml"/>
+	</node>
+
+	<!-- run the ground_station.cpp -->
+	<!-- 打印飞行消息到终端 -->
+	<node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+
+	<!-- run the ground_station_msg.cpp -->
+	<!-- 订阅规划&识别消息 -->
+	<node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+
+</launch>
+

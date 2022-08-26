@@ -1,0 +1,170 @@
+<launch>
+
+  <!-- Whether to use joy control as a second input:  0：disable, 1：control in Body Frame，2：control in Custom Frame -->
+  <arg name="control_from_joy" value="2"/>
+  <node unless="$(eval arg('control_from_joy') == 0)" pkg="joy_remote" type="joy_remote_main" name="joy_remote">
+    <param name="control_from_joy" value="$(arg control_from_joy)" type="int"/>
+    <param name="joy_goal_xy_max" value="4.0" type="double"/>      <!-- Horizontal furthest distance (when joy control) -->
+    <param name="joy_goal_z_max" value="1.0" type="double"/>       <!-- Vertical furthest distance (when joy control) -->
+		<param name="is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice VFH Histogram mode below -->
+		<param name="fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+		<param name="min_goal_height" value="1.0" type="double"/>				<!-- virtual ground -->
+		<param name="ceil_height" value="4.0" type="double"/>
+		<!-- GeoFence -->
+		<rosparam command="load" file="$(find drone_experiment)/config/control_config/geofence.yaml"/>
+  </node>
+
+  <!-- size of map, change the size inflate x, y, z according to your application -->
+  <arg name="map_size_x" value="10.0"/>
+  <arg name="map_size_y" value="10.0"/>
+  <arg name="map_size_z" value="4.0"/>
+
+  <!-- topic of your odometry such as VIO or LIO -->
+  <arg name="odom_topic" value="/drone_msg/drone_odom" />
+
+  <!-- camera pose: transform of camera frame in the world frame -->
+  <!-- depth topic: depth image, 640x480 by default -->
+  <!-- don't set cloud_topic if you already set these ones! -->
+  <arg name="camera_pose_topic" value="/pcl_render_node/camera_pose"/>
+  <arg name="depth_topic" value="/pcl_render_node/depth"/>
+
+  <!-- intrinsic params of the depth camera -->
+  <arg name="cx" value="321.04638671875"/>
+  <arg name="cy" value="243.44969177246094"/>
+  <arg name="fx" value="387.229248046875"/>
+  <arg name="fy" value="387.229248046875"/>
+
+  <!-- topic of point cloud measurement, such as from LIDAR  -->
+  <!-- don't set camera pose and depth, if you already set this one! -->
+  <arg name="cloud_topic" value="/drone_msg/planning/local_enu_pcl_sim"/>
+
+  <!-- maximum velocity and acceleration the drone will reach -->
+  <arg name="max_vel" value="2.0" />
+  <arg name="max_acc" value="1.0" />
+
+  <!--always set to 1.5 times grater than sensing horizen-->
+  <arg name="planning_horizon" value="7.5" /> 
+
+  <!-- 1: use 2D Nav Goal to select goal  -->
+  <!-- 2: use global waypoints below  -->
+  <arg name="flight_type" value="1" />
+  
+    <!-- global waypoints -->
+    <!-- It generates a piecewise min-snap traj passing all waypoints -->
+    <arg name="point_num" value="5" />
+
+    <arg name="point0_x" value="-15.0" />
+    <arg name="point0_y" value="0.0" />
+    <arg name="point0_z" value="1.0" />
+
+    <arg name="point1_x" value="0.0" />
+    <arg name="point1_y" value="15.0" />
+    <arg name="point1_z" value="1.0" />
+
+    <arg name="point2_x" value="15.0" />
+    <arg name="point2_y" value="0.0" />
+    <arg name="point2_z" value="1.0" />
+
+    <arg name="point3_x" value="0.0" />
+    <arg name="point3_y" value="-15.0" />
+    <arg name="point3_z" value="1.0" />
+
+    <arg name="point4_x" value="-15.0" />
+    <arg name="point4_y" value="0.0" />
+    <arg name="point4_z" value="1.0" />
+    
+  <node pkg="ego_planner" name="ego_planner" type="ego_planner_node" output="screen">
+    <remap from="/ego_planner/grid_map/odom" to="$(arg odom_topic)"/>
+    <remap from="/ego_planner/grid_map/cloud" to="$(arg cloud_topic)"/>
+
+    <!-- traj_server -->
+    <remap from="/position_cmd" to="/drone_msg/control_command"/>
+    <remap from="/ego_planner/odom_world" to="$(arg odom_topic)"/>
+    <param name="traj_server/time_forward" value="1.0" type="double"/>
+    
+    <!-- planning fsm -->
+    <param name="fsm/flight_type" value="$(arg flight_type)" type="int"/>
+    <param name="fsm/tracking" value="true" type="bool"/>
+    <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/> <!--always set to 1.5 times grater than sensing horizen-->
+    <param name="fsm/emergency_time_" value="1.0" type="double"/> <!-- Suddenly discovered obstacles. emergency stop!-->
+
+    <param name="fsm/waypoint_num" value="$(arg point_num)" type="int"/>
+    <param name="fsm/waypoint0_x" value="$(arg point0_x)" type="double"/>
+    <param name="fsm/waypoint0_y" value="$(arg point0_y)" type="double"/>
+    <param name="fsm/waypoint0_z" value="$(arg point0_z)" type="double"/>
+    <param name="fsm/waypoint1_x" value="$(arg point1_x)" type="double"/>
+    <param name="fsm/waypoint1_y" value="$(arg point1_y)" type="double"/>
+    <param name="fsm/waypoint1_z" value="$(arg point1_z)" type="double"/>
+    <param name="fsm/waypoint2_x" value="$(arg point2_x)" type="double"/>
+    <param name="fsm/waypoint2_y" value="$(arg point2_y)" type="double"/>
+    <param name="fsm/waypoint2_z" value="$(arg point2_z)" type="double"/>
+    <param name="fsm/waypoint3_x" value="$(arg point3_x)" type="double"/>
+    <param name="fsm/waypoint3_y" value="$(arg point3_y)" type="double"/>
+    <param name="fsm/waypoint3_z" value="$(arg point3_z)" type="double"/>
+    <param name="fsm/waypoint4_x" value="$(arg point4_x)" type="double"/>
+    <param name="fsm/waypoint4_y" value="$(arg point4_y)" type="double"/>
+    <param name="fsm/waypoint4_z" value="$(arg point4_z)" type="double"/>
+
+    <param name="grid_map/resolution"      value="0.1" /> 
+    <param name="grid_map/map_size_x"   value="$(arg map_size_x)" /> 
+    <param name="grid_map/map_size_y"   value="$(arg map_size_y)" /> 
+    <param name="grid_map/map_size_z"   value="$(arg map_size_z)" /> 
+    <param name="grid_map/local_update_range_x"  value="1.5" /> 
+    <param name="grid_map/local_update_range_y"  value="1.5" /> 
+    <param name="grid_map/local_update_range_z"  value="1.5" /> 
+    <param name="grid_map/obstacles_inflation"     value="0.25" /> 
+    <param name="grid_map/local_map_margin" value="30"/>
+    <param name="grid_map/ground_height"        value="0.5"/>
+    <!-- camera parameter -->
+    <remap from = "/ego_planner/grid_map/pose"   to = "$(arg camera_pose_topic)"/> 
+    <remap from = "/ego_planner/grid_map/depth" to = "$(arg depth_topic)"/>
+    <param name="grid_map/cx" value="$(arg cx)"/>
+    <param name="grid_map/cy" value="$(arg cy)"/>
+    <param name="grid_map/fx" value="$(arg fx)"/>
+    <param name="grid_map/fy" value="$(arg fy)"/>
+    <!-- depth filter -->
+    <param name="grid_map/use_depth_filter" value="true"/>
+    <param name="grid_map/depth_filter_tolerance" value="0.15"/>
+    <param name="grid_map/depth_filter_maxdist"   value="5.0"/>
+    <param name="grid_map/depth_filter_mindist"   value="0.2"/>
+    <param name="grid_map/depth_filter_margin"    value="1"/>
+    <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
+    <param name="grid_map/skip_pixel" value="2"/>
+    <!-- local fusion -->
+    <param name="grid_map/p_hit"  value="0.65"/>
+    <param name="grid_map/p_miss" value="0.35"/>
+    <param name="grid_map/p_min"  value="0.12"/>
+    <param name="grid_map/p_max"  value="0.90"/>
+    <param name="grid_map/p_occ"  value="0.80"/>
+    <param name="grid_map/min_ray_length" value="0.1"/>
+    <param name="grid_map/max_ray_length" value="4.5"/>
+
+    <param name="grid_map/virtual_ceil_height"   value="2.0"/>
+    <param name="grid_map/visualization_truncate_height"   value="2.4"/>
+    <param name="grid_map/show_occ_time"  value="false"/>
+    <param name="grid_map/pose_type"     value="2"/>  
+    <param name="grid_map/frame_id"      value="world"/>
+
+  <!-- planner manager -->
+    <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+    <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
+    <param name="manager/max_jerk" value="4" type="double"/>
+    <param name="manager/control_points_distance" value="0.4" type="double"/>
+    <param name="manager/feasibility_tolerance" value="0.05" type="double"/>
+    <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
+
+  <!-- trajectory optimization -->
+    <param name="optimization/lambda_smooth" value="0.01" type="double"/>
+    <param name="optimization/lambda_collision" value="1.0" type="double"/>
+    <param name="optimization/lambda_feasibility" value="0.01" type="double"/>
+    <param name="optimization/lambda_fitness" value="0.1" type="double"/>
+    <param name="optimization/dist0" value="0.45" type="double"/>
+    <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
+    <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
+
+    <param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+    <param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+    <param name="bspline/limit_ratio" value="1.1" type="double"/>
+  </node>
+
+</launch>

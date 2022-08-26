@@ -1,0 +1,30 @@
+<launch>
+	<arg name="visualization" default="true"/>
+	<!-- config of 'sitl.launch' -->
+	<arg name="x" default="1"/>
+	<arg name="y" default="0"/>
+	<arg name="z" default="0"/>
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" default="$(find simulation_gazebo)/worlds/empty.world"/>
+	<arg name="mode" default=""/>
+	<!-- Launch Gazebo Simulation -->
+	<include file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+		<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+		<arg name="world" value="$(arg world)"/>
+		<arg name="mode" value="$(arg mode)"/>
+		<arg name="x" value="$(arg x)"/>
+		<arg name="y" value="$(arg y)"/>
+		<arg name="z" value="$(arg z)"/>
+	</include>
+
+	<!-- run the terminal_control.cpp -->
+	<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --">	
+		<rosparam command="load" file="$(find simulation_gazebo)/config/controllers_config/terminal_control.yaml" />
+	</node>	
+
+	<!-- run the rviz -->
+	<group if="$(arg visualization)">
+		<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_controller_test.rviz" />
+	</group>
+</launch>
+

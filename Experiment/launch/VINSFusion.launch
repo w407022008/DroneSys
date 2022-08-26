@@ -1,0 +1,22 @@
+<launch>
+	<arg name="loop_closure" default="false"/>
+	<arg name="gps_global" default="false"/>
+	<arg name="rviz" default="false"/>
+
+    <!-- VINS Fusion SLAM -->
+	<node name="VINSFUsion" pkg="vins" type="vins_node" output="screen" args="$(find vins)/../config/realsense_d435i/realsense_stereo_imu_config.yaml" />
+
+    <!-- loop closure SLAM -->
+	<node if="$(arg loop_closure)" name="VINSLoop" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find vins)/../config/realsense_d435i/realsense_stereo_imu_config.yaml" launch-prefix="gnome-terminal --tab --"/>
+
+    <!-- GPS global SLAM -->
+	<node if="$(arg gps_global)" name="VINSGlobal" pkg="global_fusion" type="global_fusion_node" output="screen" launch-prefix="gnome-terminal --tab --">
+		<remap from="/gps"    to="/mavros/global_position/global"/> <!-- gps NavSatFix msg -->
+		<remap from="/vins_estimator/odometry"   to="/vins_estimator/odometry"/> <!-- odom msg -->
+		<remap from="/orb_slam3_ros/camera"   to="/orb_slam3_ros/camera"/> <!-- pose msg -->
+		<remap from="/global_odometry"   to="/global_odometry"/> <!-- pub -->
+	</node>
+
+    <!-- Visualization - RViz-->
+    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find vins)/../config/vins_rviz_config.rviz" launch-prefix="gnome-terminal --tab --"/>
+</launch>

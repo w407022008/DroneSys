@@ -1,0 +1,26 @@
+<launch>
+	<arg name="visualization" default="true"/>
+	<arg name="joystick" default="3"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="type_in_goal" default="false"/>
+		
+	<!-- Joystick Dirver -->
+	<node if="$(eval arg('joystick') > 0)" pkg="joy" type="joy_node" name="joystick" />
+	<node if="$(eval arg('joystick') == 3)" pkg="joy_remote" type="JY901_Bluetooth_Pyserial.py" name="joystick_frame" launch-prefix="gnome-terminal --tab --" />
+		
+	<!-- run the pub_goal.cpp -->
+	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+
+	<!-- run the ground_station.cpp -->
+	<node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --">	
+		<param name="refresh_time" value="1.0" type="double"/>	<!-- release cycle -->
+		<param name="mission_type" value="0" type="int"/>	<!-- vision detection -->
+	</node>
+
+	<!-- run the ground_station_msg.cpp -->
+	<node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	
+	<!-- RVIZ -->
+	<node if="$(arg visualization)" type="rviz" name="rviz" pkg="rviz" args="-d $(find drone_experiment)/config/rviz_config/rviz_planning_map.rviz" />
+
+</launch>
+

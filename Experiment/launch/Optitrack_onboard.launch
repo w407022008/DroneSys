@@ -1,0 +1,42 @@
+<!-- 本launch仅测试Optitrack消息 -->
+<launch>
+	<arg name="mavros_in" default="true"/>
+	<arg name="mavros_ok" default="true"/>
+	<arg name="fcu_url" default="/dev/ttyPX4:4000000"/>
+	<arg name="gcs_url" default="udp-b://192.168.0.100:14555@14550"/>
+	<arg name="rate_hz" default="50.0"/>
+	<arg name="server" default="192.168.0.104"/>
+
+    <!-- MAVROS -->
+	<!-- fcu_url: fcu communication address, dev port with baudrate, e.g: "/dev/ttyS4:921600" via UART4 or "/dev/ttyACM0:921600" via USB0 -->
+	<!-- gcs_url: gcs communication address, udp address with port, e.g: "udp-b://192.168.1.101:14555@14550" msg to gcs from ip address 192.168.1.101 with port 14555@14550 -->
+	<node if="$(arg mavros_ok)" pkg="mavros" type="mavros_node" name="mavros" output="screen">
+		<param name="fcu_url" value="$(arg fcu_url)" />
+		<param name="gcs_url" value="$(arg gcs_url)" />
+		<param name="target_system_id" value="1" />
+		<param name="target_component_id" value="1" />
+		<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_pluginlists.yaml" />
+		<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_config.yaml" />
+	</node> 
+
+	<!-- vrpn -->
+	<include file="$(find vrpn_client_ros)/launch/sample.launch">
+		<arg name="server" value="$(arg server)"/>
+	</include>
+
+	<!-- TF camera_link in base_link -->
+	<node pkg="tf" type="static_transform_publisher" name="tf_base_camera" args="0.07 0.016 -0.04 -1.5707963 0 -1.5707963 base_link camera_link 100"/>
+
+	<!-- run the px4_transceiver.cpp -->
+	<node if="$(arg mavros_in)" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
+		<!-- 0 for vicon， 1 for 激光SLAM, 2 for gazebo ground truth(仿真用) -->
+		<param name="input_source" value="0" />
+    	<!-- Optitrack frame convention 0: Z-up; 1: Y-up (See the configuration in the motive software) -->
+		<param name="optitrack_frame" value="1" />
+		<!-- 如果使用动作捕捉系统，则指定刚体名称，用于订阅vrpn节点发布的话题 -->
+		<param name="object_name" value="UAV"/>
+		<param name="rate_hz" value="$(arg rate_hz)"/>
+	</node>
+	
+</launch>
+

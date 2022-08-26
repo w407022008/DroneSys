@@ -1,0 +1,114 @@
+<launch>
+  <!-- size of map, change the size inflate x, y, z according to your application -->
+  <arg name="map_size_x" value="40.0"/>
+  <arg name="map_size_y" value="40.0"/>
+  <arg name="map_size_z" value=" 3.0"/>
+
+  <!-- topic of your odometry such as VIO or LIO -->
+  <arg name="odom_topic" value="/visual_slam/odom" />
+  
+<!-- Launch Gazebo Simulation -->
+<include file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" value="$(find simulation_gazebo)/worlds/obstacle.world"/>
+	<arg name="mode" value="_3Dlidar"/>
+	<arg name="x" value="0.0"/>
+	<arg name="y" value="-10.0"/>
+	<arg name="z" value="0.0"/>
+</include>		
+
+<!-- Points_filter.cpp -->
+<node if="$(eval arg('input_source') == 2)" pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
+	<remap from="/points_filter/sensor" to="/drone_msg/sensors/3Dlidar_scan" />
+	<param name="points_filter/frame_name" value="/world" type="string"/>
+	<param name="points_filter/object_link_name" value="/3Dlidar_link" type="string"/>
+	<!-- 感知距离，只考虑感知距离内的障碍物 -->
+	<param name="points_filter/sensor_max_range" value="5.0" type="double"/>
+	<!-- 1代表2d传感器数据类型<sensor_msgs::LaserScan>,2代表3d传感器数据类型<sensor_msgs::PointCloud2> -->
+	<param name="points_filter/data_type" value="2" type="int"/>
+	<param name="points_filter/is_lidar" value="true" type="bool"/>
+	<param name="points_filter/ground_removal" value="true" type="bool"/>
+	<param name="points_filter/ground_height" value="0.3" type="double"/>
+	<param name="points_filter/downsampling" value="true" type="bool"/>
+	<param name="points_filter/resolution" value="0.2" type="double"/>
+	<param name="points_filter/MinNeighborsInRadius" value="20" type="double"/>
+	<param name="points_filter/timeSteps_fusingSamples" value="5" type="int"/>
+</node>
+		
+  <!-- main algorithm params -->
+  <include file="$(find ego_planner)/launch/advanced_param.xml">
+
+    <arg name="map_size_x_" value="$(arg map_size_x)"/>
+    <arg name="map_size_y_" value="$(arg map_size_y)"/>
+    <arg name="map_size_z_" value="$(arg map_size_z)"/>
+    <arg name="inflate" value="0.4"/>
+    <arg name="update_range_hor" value="5.5"/>
+    <arg name="update_range_ver" value="4.5"/>
+    <arg name="odometry_topic" value="$(arg odom_topic)"/>
+
+    <!-- camera pose: transform of camera frame in the world frame -->
+    <!-- depth topic: depth image, 640x480 by default -->
+    <!-- don't set cloud_topic if you already set these ones! -->
+    <arg name="camera_pose_topic" value="/pcl_render_node/camera_pose"/>
+    <arg name="depth_topic" value="/pcl_render_node/depth"/>
+
+    <!-- intrinsic params of the depth camera -->
+    <arg name="cx" value="321.04638671875"/>
+    <arg name="cy" value="243.44969177246094"/>
+    <arg name="fx" value="387.229248046875"/>
+    <arg name="fy" value="387.229248046875"/>
+
+    <!-- topic of point cloud measurement, such as from LIDAR  -->
+    <!-- don't set camera pose and depth, if you already set this one! -->
+    <arg name="cloud_topic" value="/local_obs_pcl"/>
+
+    <!-- maximum velocity and acceleration the drone will reach -->
+    <arg name="max_vel" value="2.0" />
+    <arg name="max_acc" value="3.0" />
+
+    <!--always set to 1.5 times grater than sensing horizen-->
+    <arg name="planning_horizon" value="7.5" /> 
+
+    <!-- 1: use 2D Nav Goal to select goal  -->
+    <!-- 2: use global waypoints below  -->
+    <arg name="flight_type" value="1" />
+    
+    <!-- global waypoints -->
+    <!-- It generates a piecewise min-snap traj passing all waypoints -->
+    <arg name="point_num" value="5" />
+
+    <arg name="point0_x" value="-15.0" />
+    <arg name="point0_y" value="0.0" />
+    <arg name="point0_z" value="1.0" />
+
+    <arg name="point1_x" value="0.0" />
+    <arg name="point1_y" value="15.0" />
+    <arg name="point1_z" value="1.0" />
+
+    <arg name="point2_x" value="15.0" />
+    <arg name="point2_y" value="0.0" />
+    <arg name="point2_z" value="1.0" />
+
+    <arg name="point3_x" value="0.0" />
+    <arg name="point3_y" value="-15.0" />
+    <arg name="point3_z" value="1.0" />
+
+    <arg name="point4_x" value="-15.0" />
+    <arg name="point4_y" value="0.0" />
+    <arg name="point4_z" value="1.0" />
+    
+    <!-- traj_server -->
+    <arg name="odom_topic" value="$(arg odom_topic)" />
+  </include>
+
+  <!-- run the pub_goal.cpp -->
+  <node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
+
+
+<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_planning_ego_planner.rviz" />
+<!-- obstacle.world 真实点云 -->
+<node pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+	<param name="pcd_path" type="string" value="$(arg pcd_file)" />
+</node>
+
+</launch>

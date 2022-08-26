@@ -1,0 +1,264 @@
+<launch>
+	<arg name="sensor" default="1"/> <!-- 1: 3dLidar; 2: Camera -->
+	<arg name="type_in_goal" default="false"/>
+	<arg name="joystick" default="2"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="simulation" default="true"/>
+	<arg name="visualization" default="true"/>
+		
+	<!-- Joystick Dirver -->
+	<group unless="$(eval arg('joystick') == 0)">
+		<node pkg="joy" type="joy_node" name="joystick" />
+		<node if="$(eval arg('joystick') == 3)" pkg="joy_remote" type="JY901_Bluetooth_Pyserial.py" name="joystick_frame" launch-prefix="gnome-terminal --tab --" />
+		<node pkg="joy_remote" type="joy_remote_main" name="joy_remote">
+			<param name="control_from_joy" value="$(arg joystick)" type="int"/>
+			<param name="joy_goal_xy_max" value="4.0" type="double"/>      <!-- Horizontal furthest distance (when joy control) -->
+			<param name="joy_goal_z_max" value="1.0" type="double"/>       <!-- Vertical furthest distance (when joy control) -->
+			<param name="is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice VFH Histogram mode below -->
+			<param name="fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+			<param name="min_goal_height" value="1.0" type="double"/>				<!-- virtual ground -->
+			<param name="ceil_height" value="2.0" type="double"/>
+			<!-- GeoFence -->
+		</node>
+    </group>
+    
+	<!-- run the pub_goal.cpp -->
+	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
+
+	<!-- Launch Gazebo Simulation -->
+	<arg name="x" default="0.0"/>
+	<arg name="y" default="-10.0"/>
+	<arg name="z" default="0"/>
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" default="$(find simulation_gazebo)/worlds/obstacle.world"/>
+	<arg name="local_sdf" default="true"/> <!-- 全局局部输入的都是局部点云，但是获取梯度值时候调用不同，全局的会调用第三方sdf库 -->
+    
+	<!-- 确定路径规划点云输入 -->
+	<arg name="topic_of_global_pcl" default="/octomap_point_cloud_centers"/>
+	<arg name="topic_of_local_octomap" default="/octomap_full"/>
+	<!-- 如果直接使用  GroundTruth 点云输入 -->
+	<!-- <arg name="topic_of_global_pcl" default="/drone_msg/pcl_groundtruth"/> -->
+
+
+	<!-- 启动Fast Planner -->
+	<arg name="max_vel" value="4.0" />
+	<arg name="max_acc" value="2.0" />
+	<arg name="dynamic" value="1" />
+	<group if="$(eval arg('sensor') == 1)">
+		<include if="$(arg simulation)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+			<arg name="world" value="$(arg world)"/>
+			<arg name="mode" value="_3Dlidar"/>
+			<arg name="x" value="$(arg x)"/>
+			<arg name="y" value="$(arg y)"/>
+			<arg name="z" value="$(arg z)"/>
+		</include>	
+
+		<!-- 启动 octomap 建图, 仅仅将激光扫描数据转化为点云 -->
+		<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+			<param name="resolution" value="0.1" />
+			<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+			<param name="frame_id" type="string" value="map" />
+			<!-- maximum range to integrate (speedup!) -->
+			<param name="sensor_model/max_range" value="4.0" />
+			<!-- data source to integrate (PointCloud2) -->
+			<remap from="cloud_in" to="/drone_msg/sensors/3Dlidar_scan" />
+		</node>
+
+		<node pkg="fast_planner" name="fast_planner" type="dyn_planner_node" output="screen">
+			<remap unless="$(arg local_sdf)" from="/drone_msg/planning/global_pcl" to="$(arg topic_of_global_pcl)" />
+			<remap if="$(arg local_sdf)" from="/fast_planner/local_pointclouds" to="/octomap_point_cloud_centers" />
+
+			<!-- planning_fsm.cpp , small scene-->
+			<param if="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="0" type="int"/>	<!-- 0: local sdf; 1: global sdf -->
+			<param unless="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="1" type="int"/>
+			<param name="fsm/flight_type" value="1" type="int"/>
+			<param name="fsm/safety_distance" value="0.1" type="double"/> <!-- for current point, smaller than margin -->
+			<param name="fsm/thresh_replan" value="1.0" type="double"/>
+			<param name="fsm/thresh_no_replan" value="1.0" type="double"/>
+			<param name="fsm/wp_num" value="3" type="int"/>
+			<param name="fsm/wp0_x" value="-5.5" type="double"/>
+			<param name="fsm/wp0_y" value="-4.0" type="double"/>
+			<param name="fsm/wp0_z" value="1.0" type="double"/>
+			<param name="fsm/wp1_x" value="0.0" type="double"/>
+			<param name="fsm/wp1_y" value="-6.0" type="double"/>
+			<param name="fsm/wp1_z" value="1.0" type="double"/>
+			<param name="fsm/wp2_x" value="2.0" type="double"/>
+			<param name="fsm/wp2_y" value="-3.0" type="double"/>
+			<param name="fsm/wp2_z" value="0.5" type="double"/>
+			<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+			<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+			<param name="bspline/limit_ratio" value="1.1" type="double"/>
+
+			<!-- dyn_planner_manager.cpp -->
+			<param name="manager/time_sample" value="1.0" type="double"/>
+			<param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+			<param name="manager/dynamic" value="$(arg dynamic)" type="int"/>
+			<param name="manager/margin" value="0.2" type="double"/> <!-- for trajectory, equal to inflate -->
+
+			<!-- sdf_map.cp -->
+			<param name="sdf_map/origin_x" value="-20.0" type="double"/>
+			<param name="sdf_map/origin_y" value="-20.0" type="double"/>
+			<param name="sdf_map/origin_z" value="0.0" type="double"/>
+			<param name="sdf_map/map_size_x" value="40.0" type="double"/>
+			<param name="sdf_map/map_size_y" value="40.0" type="double"/>
+			<param name="sdf_map/map_size_z" value="5.0" type="double"/>
+			<param name="sdf_map/resolution_sdf" value="0.1" type="double"/>
+			<param name="sdf_map/ceil_height" value="3.5" type="double"/>
+			<param name="sdf_map/update_rate" value="10.0" type="double"/>
+			<param name="sdf_map/update_range" value="8.0" type="double"/>
+			<param name="sdf_map/inflate" value="0.2" type="double"/>	<!-- occupancy space cor to obs -->
+			<param name="sdf_map/radius_ignore" value="0.2" type="double"/> <!-- useless -->
+
+			<!-- A* path searching, Not support now, TBD -->
+			<param name="astar/lambda_heu" value="10.0" type="double"/>
+			<param name="astar/resolution_astar" value="0.1" type="double"/>
+			<param name="astar/time_resolution" value="0.8" type="double"/>
+			<param name="astar/margin" value="0.4" type="double"/>
+			<param name="astar/allocate_num" value="100000" type="int"/>
+			<!-- kinodynamic path searching -->
+			<param name="search/max_tau" value="0.8" type="double"/>
+			<param name="search/init_max_tau" value="0.8" type="double"/>
+			<param name="search/max_vel" value="$(arg max_vel)" type="double"/>
+			<param name="search/max_acc" value="$(arg max_acc)" type="double"/>
+			<param name="search/w_time" value="15.0" type="double"/>
+			<param name="search/horizon" value="7.0" type="double"/>
+			<param name="search/lambda_heu" value="10.0" type="double"/>
+			<param name="search/resolution_astar" value="0.1" type="double"/>
+			<param name="search/time_resolution" value="0.8" type="double"/>
+			<param name="search/margin" value="0.4" type="double"/>	 <!-- for trajectory, equal to inflate -->
+			<param name="search/allocate_num" value="100000" type="int"/>
+			<param name="search/check_num" value="5" type="int"/>
+
+			<!-- Bspline trajectory optimization -->
+			<param name="optimization/lamda1" value="0.1" type="double"/>	<!-- smoothness jerk-->
+			<param name="optimization/lamda2" value="1.0" type="double"/>	<!-- distance -->
+			<param name="optimization/lamda3" value="0.1" type="double"/>	<!-- feasibility vel&acc -->
+			<param name="optimization/lamda4" value="0.01" type="double"/>	<!-- endpoint pos -->
+			<param name="optimization/lamda5" value="17.0" type="double"/>	<!-- tensile strength -->
+			<param name="optimization/dist0" value="0.5" type="double"/>	<!-- bigger than inflate -->
+			<param name="optimization/dist1" value="1.0" type="double"/>	<!-- efficient distance to sense obs -->
+			<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>	<!-- 最大速度要求 -->
+			<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>	<!-- 最大加速度要求 -->
+			<param name="optimization/algorithm" value="40" type="int"/>	<!-- 优化算法选择 40: SLSQP(constrained), 11 LBFGS(unconstrained barrier) -->
+			<param name="optimization/max_iteration_num" value="100" type="int"/>	<!-- 最大优化迭代次数 -->
+			<param name="optimization/order" value="3" type="int"/>		<!-- 样条连续阶数 -->
+		</node>
+	</group>
+
+	<!-- Camera -->
+	<group if="$(eval arg('sensor') == 2)">	
+		<include if="$(arg simulation)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+			<arg name="world" value="$(arg world)"/>
+			<arg name="mode" value="_D435i"/>
+			<arg name="x" value="$(arg x)"/>
+			<arg name="y" value="$(arg y)"/>
+			<arg name="z" value="$(arg z)"/>
+		</include>	
+
+		<!-- 启动 octomap 建图, 仅仅将激光扫描数据转化为点云 -->
+		<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+			<param name="resolution" value="0.05" />
+			<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+			<param name="frame_id" type="string" value="map" />
+			<!-- maximum range to integrate (speedup!) -->
+			<param name="sensor_model/max_range" value="2.0" />
+			<!-- data source to integrate (PointCloud2) -->
+			<remap from="cloud_in" to="/realsense_plugin/camera/local_pointclouds" />
+			<!-- filter out ground -->
+			<param name="filter_ground" value="false" />
+		</node>
+		
+		<node pkg="fast_planner" name="fast_planner" type="dyn_planner_node" output="screen">
+			<remap unless="$(arg local_sdf)" from="/drone_msg/planning/global_pcl" to="$(arg topic_of_global_pcl)" />
+			<remap if="$(arg local_sdf)" from="/fast_planner/local_pointclouds" to="/octomap_point_cloud_centers" />
+
+			<!-- planning_fsm.cpp -->
+			<param if="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="0" type="int"/>	<!-- 0: local sdf; 1: global sdf -->
+			<param unless="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="1" type="int"/>
+			<param name="fsm/flight_type" value="1" type="int"/>	<!-- 1: 手动设置末点, 2: 自定义轨迹点 -->
+			<param name="fsm/safety_distance" value="0.3" type="double"/> <!-- for current point, smaller than margin -->
+			<param name="fsm/thresh_replan" value="1.0" type="double"/>	<!-- 起点区域 -->
+			<param name="fsm/thresh_no_replan" value="1.0" type="double"/>	<!-- 终点区域 -->
+			<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+			<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+			<param name="bspline/limit_ratio" value="1.1" type="double"/>
+
+			<!-- dyn_planner_manager.cpp -->
+			<param name="manager/time_sample" value="0.5" type="double"/>
+			<param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+			<param name="manager/dynamic" value="$(arg dynamic)" type="int"/>
+			<param name="manager/margin" value="0.3" type="double"/> <!-- for trajectory, equal to inflate -->
+
+			<!-- sdf_map.cp -->
+			<param name="sdf_map/origin_x" value="-10.0" type="double"/>
+			<param name="sdf_map/origin_y" value="-10.0" type="double"/>
+			<param name="sdf_map/origin_z" value="0.0" type="double"/>
+			<param name="sdf_map/map_size_x" value="40.0" type="double"/>
+			<param name="sdf_map/map_size_y" value="40.0" type="double"/>
+			<param name="sdf_map/map_size_z" value="5.0" type="double"/>
+			<param name="sdf_map/resolution_sdf" value="0.1" type="double"/>
+			<param name="sdf_map/ceil_height" value="3.5" type="double"/>
+			<param name="sdf_map/update_rate" value="10.0" type="double"/>
+			<param name="sdf_map/update_range" value="4.0" type="double"/>
+			<param name="sdf_map/inflate" value="0.2" type="double"/>	<!-- occupancy space cor to obs -->
+			<param name="sdf_map/radius_ignore" value="0.2" type="double"/> <!-- useless -->
+
+			<!-- A* path searching -->
+			<param name="astar/lambda_heu" value="10.0" type="double"/>
+			<param name="astar/resolution_astar" value="0.1" type="double"/>
+			<param name="astar/time_resolution" value="0.8" type="double"/>
+			<param name="astar/margin" value="0.3" type="double"/>
+			<param name="astar/allocate_num" value="100000" type="int"/>
+			<!-- kinodynamic path searching -->
+			<param name="search/max_tau" value="0.8" type="double"/>
+			<param name="search/init_max_tau" value="0.8" type="double"/>
+			<param name="search/max_vel" value="$(arg max_vel)" type="double"/>
+			<param name="search/max_acc" value="$(arg max_acc)" type="double"/>
+			<param name="search/w_time" value="15.0" type="double"/>
+			<param name="search/horizon" value="7.0" type="double"/>
+			<param name="search/lambda_heu" value="10.0" type="double"/>
+			<param name="search/resolution_astar" value="0.1" type="double"/>
+			<param name="search/time_resolution" value="0.8" type="double"/>
+			<param name="search/margin" value="0.3" type="double"/>	 <!-- for trajectory, equal to inflate -->
+			<param name="search/allocate_num" value="100000" type="int"/>
+			<param name="search/check_num" value="5" type="int"/>
+
+			<!-- Bspline trajectory optimization -->
+			<param name="optimization/lamda1" value="0.1" type="double"/>	<!-- smoothness jerk-->
+			<param name="optimization/lamda2" value="1.0" type="double"/>	<!-- distance -->
+			<param name="optimization/lamda3" value="0.1" type="double"/>	<!-- feasibility vel&acc -->
+			<param name="optimization/lamda4" value="0.01" type="double"/>	<!-- endpoint pos -->
+			<param name="optimization/lamda5" value="17.0" type="double"/>	<!-- tensile strength -->
+			<param name="optimization/dist0" value="0.5" type="double"/>	<!-- bigger than inflate -->
+			<param name="optimization/dist1" value="1.0" type="double"/>	<!-- efficient distance to sense obs -->
+			<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>	<!-- 最大速度要求 -->
+			<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>	<!-- 最大加速度要求 -->
+			<param name="optimization/algorithm" value="40" type="int"/>	<!-- 优化算法选择 40: SLSQP(constrained), 11 LBFGS(unconstrained barrier) -->
+			<param name="optimization/max_iteration_num" value="100" type="int"/>	<!-- 最大优化迭代次数 -->
+			<param name="optimization/order" value="3" type="int"/>		<!-- 样条连续阶数 -->
+		</node>
+	</group>
+
+	<!-- 发布轨迹点 -->
+	<node pkg="fast_planner" name="traj_server" type="traj_server" output="screen">
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+	</node>
+
+	<!-- 发布指令追踪轨迹， 激光输入yaw_tracking_mode设为false，rgbd输入yaw_tracking_mode设为true -->
+	<node pkg="fast_planner" type="planning_tracking" name="fast_planning_tracking" output="screen" launch-prefix="gnome-terminal --tab --">	
+		<param name="fast_planning_tracking/sim_mode" value="true" type="bool"/>
+		<param name="fast_planning_tracking/yaw_tracking_mode" value="$(eval arg('sensor') == 2)" type="bool"/>
+	</node>
+
+	<!-- 启动rviz,设为false可关闭 -->
+	<group if="$(arg visualization)">
+		<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_fast_planning.rviz" />
+		<!-- obstacle.world 真实点云 -->
+		<node pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+			<param name="pcd_path" type="string" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
+		</node>
+	</group>
+</launch>
+

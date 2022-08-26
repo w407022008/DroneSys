@@ -1,0 +1,30 @@
+<!--   
+    ## rosbridge : messages forwarding toward an IP address different from ros master
+    
+    ## topic_tools : messages forwarding via bandwidth-limited wireless link
+    throttle message (rate):
+    throttle messages <intopic> <msgs_per_sec> [outtopic]
+    throttle bytes (bandwidth):
+    throttle bytes <intopic> <bytes_per_sec> <window> [outtopic]
+-->
+
+<launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+      <arg name="port" value="8080" doc="websocket server port number, and the number must be matched in the url. default value 9099"/>
+      <arg name="address" default="127.0.0.1"/>
+    </include>
+	
+    <arg name="frame_rate" default="1" doc="transmition rate. set it as low as possible, make sure the UI response in time." />
+    
+	<!-- The output argument sets the node's stdout/stderr location. Set to 'screen' to see this node's output in the terminal. -->
+    <arg name="output" default="screen" doc="The stdout/stderr location for this node. Set to 'screen' to see this node's output in the terminal." />    
+    
+	<!-- The following node sets the messages' throttle command. Generally, All the messages are going to transmit and calcuate over the network should be set to frame_rate -->
+    <node name="control_command_throttler" pkg="topic_tools" type="throttle" args="messages /drone_msg/control_command $(arg frame_rate) /drone_msg/control_command" output="$(arg output)"/>
+
+    <node name="reference_traj_throttler" pkg="topic_tools" type="throttle" args="messages /drone_msg/reference_trajectory $(arg frame_rate) /drone_msg/reference_trajectory" output="$(arg output)"/>
+
+    <node name="drone_traj_throttler" pkg="topic_tools" type="throttle" args="messages /drone_msg/drone_trajectory $(arg frame_rate) /drone_msg/drone_trajectory" output="$(arg output)"/>
+
+    <node name="drone_state_throttler" pkg="topic_tools" type="throttle" args="messages /drone_msg/drone_state $(arg frame_rate) /drone_msg/drone_state" output="$(arg output)"/>
+</launch>

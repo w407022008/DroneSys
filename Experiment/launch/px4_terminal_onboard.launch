@@ -1,0 +1,33 @@
+<launch>
+	<arg name="simulation?" default="false"/>
+	<group if="$(arg simulation?)">
+		<!-- px4_base -->
+		<include file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="false"/>
+			<arg name="world" value="$(find simulation_gazebo)/worlds/empty.world"/>
+			<arg name="mode" value=""/>
+			<arg name="x" value="0.0"/>
+			<arg name="y" value="0.0"/>
+			<arg name="z" value="1.0"/>
+		</include>
+		<!-- run the terminal_control.cpp -->
+		<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --" >	
+			<rosparam command="load" file="$(find drone_experiment)/config/control_config/terminal_control.yaml" />
+		</node>	
+	</group>
+
+	<group unless="$(arg simulation?)">
+		<!-- px4_base -->
+		<include file="$(find drone_experiment)/launch/px4_base_onboard.launch">
+			<arg name="input_source" default="5"/> <!-- 1 Vicon, 4 VINS, 5 ORBSLAM  -->
+			<arg name="camera_type" default="4"/> <!--  0 for MonoVision， 1 for RGBD, 2 for StereoVision, 3 fro Mono-IMU, 4 for Stereo-IMU  -->
+			<arg name="fcu_url" default="/dev/ttyPX4:4000000"/> 
+			<arg name="gcs_url" default="udp-b://192.168.0.100:14555@14550"/> <!-- ip addr on board, it seem that u dont need to set anythin in QGC -->
+		</include>
+		<!-- run the terminal_control.cpp -->
+		<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen">	
+			<rosparam command="load" file="$(find drone_experiment)/config/control_config/terminal_control.yaml" />
+		</node>	
+	</group>
+</launch>
+

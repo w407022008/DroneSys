@@ -1,0 +1,41 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+nano.save
+.catkin_workspace
+
+**~
+
+build/
+devel/
+install/
+.vscode/
+Modules/planning/histo-planner/dataLog
+Modules/tools/camera_models/camera_calib_example/DATA
+
+# pytorch/python/numpy formats
+# *.pth
+*.pkl
+*.npy
+
+# ipython/jupyter notebooks
+*.ipynb
+**/.ipynb_checkpoints/
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# Pycharm editor settings
+.idea
+
+# project dirs
+/datasets
+/models
+
+ORBvoc.txt
+

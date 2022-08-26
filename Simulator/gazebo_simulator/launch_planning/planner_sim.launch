@@ -1,0 +1,399 @@
+<launch>
+	<arg name="visualization" default="true"/>
+	<arg name="pcd_file" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
+
+	<arg name="control_from_joy" value="2"/><!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="type_in_goal" default="false"/>
+	<arg name="histo_planner" default="true"/>
+	<arg name="ego_planner" default="true"/> 
+	<arg name="fast_planner" default="true"/> 
+	<arg name="px4_enable" default="false"/>
+	<arg name="random_obs" default="true"/>
+	
+	<arg name="map_resolution" default="0.01" />
+	<arg name="forbidden_range" default="0.2" />
+	<arg name="sensor_max_range" default="2.0" />
+
+	
+	<!-- GeoFence -->
+	<arg name="geo_x_min" default="-15.2" />
+	<arg name="geo_x_max" default="15.2" />
+	<arg name="geo_y_min" default="-15.2" />
+	<arg name="geo_y_max" default="15.2" />
+	<arg name="geo_z_min" default="0.1" />
+	<arg name="geo_z_max" default="4.2" />
+
+	<arg name="max_vel" value="2.0" />
+	<arg name="max_acc" value="2.0" />
+	
+
+	<!-- Joystick Dirver -->
+	<group if="$(eval arg('control_from_joy') > 0)">
+		<node pkg="joy" type="joy_node" name="joystick" />
+		<node pkg="joy_remote" type="joy_remote_main" name="joy_remote">
+			<param name="control_from_joy" value="$(arg control_from_joy)" type="int"/>
+			<param name="joy_goal_xy_max" value="4.0" type="double"/>      <!-- Horizontal furthest distance (when joy control) -->
+			<param name="joy_goal_z_max" value="1.0" type="double"/>       <!-- Vertical furthest distance (when joy control) -->
+			<param name="is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice Histogram mode below -->
+			<param name="fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+			<param name="min_goal_height" value="1.0" type="double"/>				<!-- virtual ground -->
+			<param name="ceil_height" value="2.0" type="double"/>
+			<!-- GeoFence -->
+			<param name="geo_fence/x_min" value="$(arg geo_x_min)" type="double"/>
+			<param name="geo_fence/x_max" value="$(arg geo_x_max)" type="double"/>
+			<param name="geo_fence/y_min" value="$(arg geo_y_min)" type="double"/>
+			<param name="geo_fence/y_max" value="$(arg geo_y_max)" type="double"/>
+			<param name="geo_fence/z_min" value="$(arg geo_z_min)" type="double"/>
+			<param name="geo_fence/z_max" value="$(arg geo_z_max)" type="double"/>
+		</node>
+    </group>
+
+
+	<!-- run the pub_goal.cpp -->
+	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --">	
+	</node> 
+
+	
+	
+    <!-- Initialize Environment, Publish global / local point clouds -->
+    <node if="$(arg random_obs)" pkg="planning_simulator" name="random_forest" type="random_forest" output="screen">
+        <!-- Drone initial postion -->
+        <param name="init_pos_x" value="0.0" type="double"/>
+        <param name="init_pos_y" value="0.0" type="double"/>
+        <!-- Map size, number of obstacles, resolution -->
+        <param name="global_map/x_size" value="20.0" type="double"/> <!-- Global map limited space -->
+        <param name="global_map/y_size" value="20.0" type="double"/>
+        <param name="global_map/z_size" value="4.0" type="double"/>
+        <param name="map/resolution" value="$(arg map_resolution)" type="double"/> <!-- points resolution -->
+        <param name="map/pillar_num" value="100" type="double"/> <!-- Num of colum to be created -->
+        <param name="map/circle_num" value="100" type="double"/> <!-- Num of circle to be created -->
+        <param name="map/min_distance_init" value="1.0" type="double"/> <!-- Initial free space -->
+        <param name="map/min_distance" value="1.5" type="double"/> <!-- Minimum distance between obstacles(Column or circle) -->
+        <!-- Definition of obstacle shapes -->
+        <param name="pillar_shape/min_radius" value="0.1" type="double"/>
+        <param name="pillar_shape/max_radius" value="0.2" type="double"/> <!-- Column diameter -->
+        <param name="pillar_shape/min_height" value="1.0" type="double"/>
+        <param name="pillar_shape/max_height" value="5.0" type="double"/>
+        <param name="circle_shape/min_radius" value="1.0" type="double"/> <!-- Long and short diameter of the ellipse -->
+        <param name="circle_shape/max_radius" value="3.0" type="double"/>
+        <param name="circle_shape/min_height" value="1.0" type="double"/> <!-- Height of circle center  -->
+        <param name="circle_shape/max_height" value="2.0" type="double"/>
+        <param name="circle_shape/theta" value="0.5" type="double"/> <!-- Random z-axis rotation -->
+        <!-- Env Sense -->
+        <param name="sensing/sense_range" value="$(arg sensor_max_range)" type="double"/> <!-- Sensory range -->
+        <param name="sensing/sense_rate" value="30.0" type="double"/> <!-- pcl pub rate -->
+    </node>
+
+
+
+    <!-- Initialize Drone Module -->
+	<!-- Gazebo Drone Model -->
+	<!-- Launch Gazebo Simulation -->
+	<group if="$(arg px4_enable)" >
+		<include if="$(arg random_obs)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="false"/>
+			<arg name="world" value="$(find simulation_gazebo)/worlds/empty.world"/>
+			<arg name="mode" value=""/>
+			<arg name="x" value="0.0"/>
+			<arg name="y" value="0.0"/>
+			<arg name="z" value="1.0"/>
+		</include>
+		<include unless="$(arg random_obs)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+			<arg name="gazebo_gui" default="false"/>
+			<arg name="world" value="$(find simulation_gazebo)/worlds/obstacle.world"/>
+			<arg name="mode" value="_D435i"/>
+			<arg name="x" value="0.0"/>
+			<arg name="y" value="-10.0"/>
+			<arg name="z" value="0.0"/>
+		</include>
+		<!-- Points_filter.cpp -->
+		<node unless="$(arg random_obs)" pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
+			<remap from="/points_filter/sensor" to="/realsense_plugin/camera/local_pointclouds" />   <!-- if data_type == 2 -->
+			<remap from="/camera/depth/image_rect_raw" to="/realsense_plugin/camera/depth/image_raw" />   <!-- if data_type == 3 -->
+			<remap from="/camera/depth/camera_info" to="/realsense_plugin/camera/depth/camera_info" />    <!-- if data_type == 3 -->
+			<param name="points_filter/frame_name" value="/world" type="string"/>
+			<param name="points_filter/object_link_name" value="/realsense_camera_link" type="string"/>
+			<!-- Sensory distance, considering only obstacles within sensory distance -->
+			<param name="points_filter/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>
+			<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
+			<param name="points_filter/data_type" value="3" type="int"/>
+			<param name="points_filter/is_rgbd" value="true" type="bool"/>		<!-- if data_type == 2 -->
+			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/downsampling" value="false" type="bool"/>
+			<param name="points_filter/spatial" value="false" type="bool"/>
+			<param name="points_filter/concatenate" value="false" type="bool"/>
+			<param name="points_filter/ground_height" value="$(arg geo_z_min)" type="double"/>
+			<param name="points_filter/resolution" value="0.1" type="double"/>
+			<param name="points_filter/fx" value="231.06897487523196" type="double"/>
+			<param name="points_filter/fy" value="231.06897487523196" type="double"/>
+			<param name="points_filter/cx" value="160.5" type="double"/>
+			<param name="points_filter/cy" value="120.5" type="double"/>
+			<param name="points_filter/dist_min" value="0.1" type="double"/>
+			<param name="points_filter/cut_edge" value="0" type="int"/>
+			<param name="points_filter/interval" value="1" type="int"/>
+			<remap from="/local_obs_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
+		</node>
+	</group>
+	<!-- Simple Drone Model -->
+	<group unless="$(arg px4_enable)" >
+		<node pkg="planning_simulator" name="uav_sim" type="uav_sim" output="screen">
+		    <param name="init_pos_x" value="0.0" type="double"/>
+		    <param name="init_pos_y" value="0.0" type="double"/>
+		    <param name="init_pos_z" value="1.0" type="double"/>
+		    <param name="planner_type" value="0" type="int"/>
+		    <param name="color/a" value="1.0"/>    
+		    <param name="color/r" value="0.0"/>        
+		    <param name="color/g" value="0.0"/>        
+		    <param name="color/b" value="0.0"/>       
+		    <param name="robot_scale" value="1.0"/>
+		    <param name="mesh_resource" value="$(find planning_simulator)/meshes/hummingbird.mesh"/>
+		</node>
+
+		<!-- run the ground_station_msg.cpp -->
+		<node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --">	
+		</node>
+		
+		<!-- TF for world-->
+		<node pkg="tf" type="static_transform_publisher" name="tf_world_map"
+		  	args="0 0 0 0 0 0 world map 100"/>
+	</group>
+      	
+		
+		
+	<!-- Histo Planner -->
+	<node if="$(arg histo_planner)" pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">
+		<remap from="/planning/local_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
+		
+		<param name="histo_planner/sim_mode" value="true" type="bool"/>				<!-- if False: pls manually set mode and arm -->
+		<param name="histo_planner/path_tracking_enable" value="true" type="bool"/>	<!-- Whether to enable track tracking and pub reference -->
+		<param name="histo_planner/CNNLogEnable" value="false" type="bool"/>
+		<!-- Core Param -->
+		<param name="histo_planner/forbidden_range" value="$(arg forbidden_range)" type="double"/>	<!-- Inflation parameter, typically set to the radius of the drone or greater -->
+		<param name="histo_planner/max_tracking_error" value="0.2" type="double"/>						<!-- Safe stopping range -->
+		<param name="histo_planner/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>	<!-- Sensory distance, considering only obstacles within the range -->
+		<param name="histo_planner/range_near_start" value="$(arg forbidden_range)" type="double"/>	<!-- start zone: do nothing -->
+		<param name="histo_planner/range_near_end" value="0.05" type="double"/>							<!-- end zone: reach the goal? -->
+		<param name="histo_planner/time_traj_interval" value="0.4" type="double"/>						<!-- the bigger the slower -->
+		<param name="histo_planner/time_to_replan" value="10.0" type="double"/>							<!-- time_to_replan -->
+		<param name="histo_planner/ground_height" value="$(arg geo_z_min)" type="double"/>				<!-- virtual ground -->
+		<param name="histo_planner/ceil_height" value="$(arg geo_z_max)" type="double"/>				<!-- virtual ceil -->
+	
+		<param name="histo_planner/is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice Histogram mode below -->
+		<param name="histo_planner/fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+		<!-- Whether use joy control:  0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+		<param name="histo_planner/control_from_joy" value="0" type="int"/>
+		<param name="histo_planner/joy_goal_xy_max" value="4.0" type="double"/>		<!-- Horizontal furthest distance (when joy control) -->
+		<param name="histo_planner/joy_goal_z_max" value="2.0" type="double"/>		<!-- Vertical furthest distance (when joy control) -->
+		<!-- Yaw auto-hold? -->
+		<param name="histo_planner/yaw_tracking_mode" value="1" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
+		<param name="histo_planner/spinning_once_first" value="false" type="bool"/>  <!-- Spinning once turn first before starting tracking a new traj -->
+		<param name="histo_planner/yaw_rate" value="1.0" type="double"/>             <!-- Maximum steering speed (whenever auto_hold or joy control) -->
+		<param name="histo_planner/time_forward_facing_toward" value="2.0" type="double"/> <!-- Towards the waypoint in n second later -->
+		<!-- Goal Regenerate, when it is unreachable ? -->
+			<!-- 1: Move the original goal in the direction of the falling gradient of the obstacle map! [Not recommended] -->
+			<!-- 2: Searching within the cylindrical space centred on the original goal, first searching for positions closer to cur_pos and the goal.  [Not recommended] -->
+			<!-- 3: Back to the feasible position along the trajectory -->
+		<param name="histo_planner/goal_regenerate_mode" value="3" type="int"/>
+		<param name="histo_planner/min_goal_height" value="1.0" type="double"/>
+		
+		<!-- Histogram -->
+		<param name="histogram/is_2D" value="false" type="bool"/>							<!-- 2D Histogram? -->
+		<param name="histogram/h_cnt" value="60" type="double"/>							<!-- Horizontal resolution-->
+		<param name="histogram/v_cnt" value="20" type="double"/>							<!-- Vertical resolution -->
+		<param name="histogram/min_vel_default" value="0.2" type="double"/>				<!-- Don't care if too small-->
+		<param name="histogram/max_planning_vel" value="$(arg max_vel)" type="double"/>	<!-- Maximum speed, the smaller the setting the safer -->
+		<param name="histogram/isCylindrical" value="false" type="bool"/>					<!-- if 3D, histogram with cylindrical histogram -->
+		<param name="histogram/isSpherical" value="true" type="bool"/>					<!-- if 3D, histogram with spherical histogram -->
+		<param name="histogram/std_normal" value="0.4" type="double"/>					<!-- Std of normal distribution function weights for Cylindrical Histogram Vertical -->
+		<param name="histogram/min_fun_cos_value" value="0.3" type="double"/>				<!-- Minimum of cos distribution, for Spherical Histogram; The higher the value the more likely the turn -->
+		<param name="histogram/fun_cos_pow" value="1.0" type="double"/>					<!-- exponent of cos distribution for Spherical Histogram -->
+		
+		<!-- B-Spline -->
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+
+		<!-- GeoFence -->
+		<param name="geo_fence/x_min" value="$(arg geo_x_min)" type="double"/>
+		<param name="geo_fence/x_max" value="$(arg geo_x_max)" type="double"/>
+		<param name="geo_fence/y_min" value="$(arg geo_y_min)" type="double"/>
+		<param name="geo_fence/y_max" value="$(arg geo_y_max)" type="double"/>
+		<param name="geo_fence/z_min" value="$(arg geo_z_min)" type="double"/>
+		<param name="geo_fence/z_max" value="$(arg geo_z_max)" type="double"/>
+				
+		<!-- Optimization -->
+		<param name="optimization/lamda_smooth" value="0.1" type="double"/>				<!-- smoothness jerk -->
+		<param name="optimization/lamda_obs" value="100.0" type="double"/>				<!-- distance -->
+		<param name="optimization/lamda_feas" value="0.01" type="double"/>				<!-- feasibility vel&acc -->
+		<param name="optimization/lamda_end" value="0.0" type="double"/>				<!-- endpoint pos -->
+		<param name="optimization/lamda_tensile" value="30.0" type="double"/>			<!-- tensile strength -->
+		<param name="optimization/ratio" value="0.1" type="double"/>					<!-- anti-bend: times tensile strength, the smaller the softer -->
+		<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>		<!-- Maximum speedn -->
+		<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>		<!-- Maximum accel -->
+		<param name="optimization/algorithm" value="40" type="int"/>					<!-- Opt Alg 40: SLSQP(constrained), 24 NLOPT_LD_MMA(Method of Moving Asymptotes) -->
+		<param name="optimization/max_iteration_num" value="200" type="int"/>			<!-- Maximum number of optimization iterations -->
+		<param name="optimization/min_iter_err" value="1e-6" type="double"/>			<!-- Minimum optimization iteration error -->
+		<param name="optimization/max_iter_time" value="0.003" type="double"/>			<!-- Maximum optimization iteration time -->
+		<param name="optimization/order" value="3" type="int"/>                                <!-- Orders of a spline -->
+	</node>		
+
+	<!-- topic of your odometry such as VIO or LIO -->
+	<arg name="odom_topic" value="/drone_msg/drone_odom" />
+	<arg name="planning_horizon" value="7.5" />
+
+	<!-- Ego Planner -->
+	<node if="$(arg ego_planner)" pkg="ego_planner" name="ego_planner" type="ego_planner_node" output="screen" launch-prefix="gnome-terminal --tab --">
+		<remap from="/ego_planner/grid_map/odom" to="$(arg odom_topic)"/>
+		<!-- topic of point cloud measurement, such as from LIDAR  -->
+		<!-- don't set camera pose and depth, if you already set this one! -->
+		<remap from="/ego_planner/grid_map/cloud" to="/drone_msg/planning/local_enu_pcl_sim"/>
+
+		<!-- traj_server -->
+		<remap from="/ego_planner/position_cmd" to="/drone_msg/control_command"/>
+		<remap from="/ego_planner/odom_world" to="$(arg odom_topic)"/>
+		<param name="traj_server/time_forward" value="1.0" type="double"/>
+
+		<!-- planning fsm -->
+		<param name="fsm/tracking" value="false" type="bool"/>
+		<param name="fsm/flight_type" value="1" type="int"/> <!-- 1: use 2D Nav Goal to select goal  2: use global waypoints below  -->
+		<param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/> <!--always set to 1.5 times grater than sensing horizen-->
+		<param name="fsm/emergency_time_" value="1.0" type="double"/> <!-- Suddenly discovered obstacles. emergency stop!-->
+
+		<!-- grid map -->
+		<param name="grid_map/resolution"      value="0.1" /> 
+		<param name="grid_map/map_size_x"   value="15" /> 
+		<param name="grid_map/map_size_y"   value="15" /> 
+		<param name="grid_map/map_size_z"   value="5" /> 
+		<param name="grid_map/local_update_range_x"  value="$(arg sensor_max_range)" /> 
+		<param name="grid_map/local_update_range_y"  value="$(arg sensor_max_range)" /> 
+		<param name="grid_map/local_update_range_z"  value="$(arg sensor_max_range)" /> 
+		<param name="grid_map/obstacles_inflation"     value="$(eval 0.1 + arg('forbidden_range'))" /> 
+		<param name="grid_map/local_map_margin" value="30"/>
+		<param name="grid_map/ground_height"        value="$(arg geo_z_min)"/>
+
+		<param name="grid_map/virtual_ceil_height"   value="$(arg geo_z_max)"/>
+		<param name="grid_map/visualization_truncate_height"   value="2.4"/>
+		<param name="grid_map/show_occ_time"  value="false"/>
+		<param name="grid_map/pose_type"     value="2"/>  
+		<param name="grid_map/frame_id"      value="world"/>
+
+		<!-- local fusion -->
+		<param name="grid_map/p_hit"  value="0.65"/>
+		<param name="grid_map/p_miss" value="0.35"/>
+		<param name="grid_map/p_min"  value="0.12"/>
+		<param name="grid_map/p_max"  value="0.90"/>
+		<param name="grid_map/p_occ"  value="0.80"/>
+		<param name="grid_map/min_ray_length" value="0.1"/>
+		<param name="grid_map/max_ray_length" value="4.5"/>
+
+		<!-- planner manager -->
+		<param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
+		<param name="manager/max_jerk" value="4" type="double"/>
+		<param name="manager/control_points_distance" value="0.4" type="double"/>
+		<param name="manager/feasibility_tolerance" value="0.05" type="double"/>
+		<param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
+
+		<!-- trajectory optimization -->
+		<param name="optimization/lambda_smooth" value="0.01" type="double"/>
+		<param name="optimization/lambda_collision" value="1.0" type="double"/>
+		<param name="optimization/lambda_feasibility" value="0.01" type="double"/>
+		<param name="optimization/lambda_fitness" value="0.01" type="double"/>
+		<param name="optimization/dist0" value="$(eval 0.1 + arg('forbidden_range'))" type="double"/>
+		<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
+
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+		<param name="bspline/limit_ratio" value="1.1" type="double"/>
+	</node>
+      	
+
+	<!-- Fast Planner -->
+	<node if="$(arg fast_planner)" pkg="fast_planner" name="fast_planner" type="dyn_planner_node" output="screen" launch-prefix="gnome-terminal --tab --">
+		<remap from="/fast_planner/local_pointclouds" to="/drone_msg/planning/local_enu_pcl_sim" />
+
+		<!-- planning_fsm.cpp -->
+		<param name="sdf_map/SDF_MODE" value="0" type="int"/>	<!-- 0: local sdf; 1: global sdf -->
+		<param name="fsm/flight_type" value="1" type="int"/>	<!-- 1: 手动设置末点, 2: 自定义轨迹点 -->
+		<param name="fsm/safety_distance" value="$(arg forbidden_range)" type="double"/> <!-- for current point, smaller than margin -->
+		<param name="fsm/thresh_replan" value="1.0" type="double"/>	<!-- 起点区域 -->
+		<param name="fsm/thresh_no_replan" value="1.0" type="double"/>	<!-- 终点区域 -->
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+		<param name="bspline/limit_ratio" value="1.1" type="double"/>
+
+		<!-- dyn_planner_manager.cpp -->
+		<param name="manager/time_sample" value="0.5" type="double"/>
+		<param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="manager/dynamic" value="0" type="int"/>
+		<param name="manager/margin" value="0.3" type="double"/> <!-- for trajectory, equal to inflate -->
+
+		<!-- sdf_map.cp -->
+		<param name="sdf_map/origin_x" value="-20.0" type="double"/>
+		<param name="sdf_map/origin_y" value="-20.0" type="double"/>
+		<param name="sdf_map/origin_z" value="0.0" type="double"/>
+		<param name="sdf_map/map_size_x" value="40.0" type="double"/>
+		<param name="sdf_map/map_size_y" value="40.0" type="double"/>
+		<param name="sdf_map/map_size_z" value="5.0" type="double"/>
+		<param name="sdf_map/resolution_sdf" value="0.1" type="double"/>
+		<param name="sdf_map/ceil_height" value="$(arg geo_z_max)" type="double"/>
+		<param name="sdf_map/update_rate" value="10.0" type="double"/>
+		<param name="sdf_map/update_range" value="$(arg sensor_max_range)" type="double"/>
+		<param name="sdf_map/inflate" value="$(eval 0.1 + arg('forbidden_range'))" type="double"/>	<!-- occupancy space cor to obs -->
+
+		<!-- A* path searching -->
+		<param name="astar/lambda_heu" value="10.0" type="double"/>
+		<param name="astar/resolution_astar" value="0.1" type="double"/>
+		<param name="astar/time_resolution" value="0.8" type="double"/>
+		<param name="astar/margin" value="0.3" type="double"/>
+		<param name="astar/allocate_num" value="100000" type="int"/>
+		<!-- kinodynamic path searching -->
+		<param name="search/max_tau" value="0.8" type="double"/>
+		<param name="search/init_max_tau" value="0.8" type="double"/>
+		<param name="search/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="search/max_acc" value="$(arg max_acc)" type="double"/>
+		<param name="search/w_time" value="15.0" type="double"/>
+		<param name="search/horizon" value="7.0" type="double"/>
+		<param name="search/lambda_heu" value="10.0" type="double"/>
+		<param name="search/resolution_astar" value="0.1" type="double"/>
+		<param name="search/time_resolution" value="0.8" type="double"/>
+		<param name="search/margin" value="0.3" type="double"/>	 <!-- for trajectory, equal to inflate -->
+		<param name="search/allocate_num" value="100000" type="int"/>
+		<param name="search/check_num" value="5" type="int"/>
+
+		<!-- Bspline trajectory optimization -->
+		<param name="optimization/lamda1" value="0.1" type="double"/>	<!-- smoothness jerk-->
+		<param name="optimization/lamda2" value="1.0" type="double"/>	<!-- distance -->
+		<param name="optimization/lamda3" value="0.1" type="double"/>	<!-- feasibility vel&acc -->
+		<param name="optimization/lamda4" value="0.01" type="double"/>	<!-- endpoint pos -->
+		<param name="optimization/lamda5" value="17.0" type="double"/>	<!-- tensile strength -->
+		<param name="optimization/dist0" value="0.5" type="double"/>	<!-- bigger than inflate -->
+		<param name="optimization/dist1" value="1.0" type="double"/>	<!-- efficient distance to sense obs -->
+		<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>	<!-- 最大速度要求 -->
+		<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>	<!-- 最大加速度要求 -->
+		<param name="optimization/algorithm" value="40" type="int"/>	<!-- 优化算法选择 40: SLSQP(constrained), 11 LBFGS(unconstrained barrier) -->
+		<param name="optimization/max_iteration_num" value="100" type="int"/>	<!-- 最大优化迭代次数 -->
+		<param name="optimization/order" value="3" type="int"/>		<!-- 样条连续阶数 -->
+	</node>
+	
+	<node if="$(arg fast_planner)" pkg="fast_planner" name="traj_server" type="traj_server" output="screen">
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+	</node>
+	
+	<node if="$(arg fast_planner)" pkg="fast_planner" type="planning_tracking" name="fast_planning_tracking" output="screen" launch-prefix="gnome-terminal --tab --">	
+		<param name="fast_planning_tracking/yaw_tracking_mode" value="true" type="bool"/>
+		<param name="fast_planning_tracking/sim_mode" value="true" type="bool"/>
+		<param name="fast_planning_tracking/enable" value="false" type="bool"/>
+	</node>
+
+	<!-- RVIZ -->
+	<group if="$(arg visualization)">
+		<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/sim_rviz_config.rviz" />
+		<!-- obstacle.world 真实点云 -->
+		<node unless="$(arg random_obs)" pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+			<param name="pcd_path" type="string" value="$(arg pcd_file)" />
+		</node>
+	</group>
+</launch>
+

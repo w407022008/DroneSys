@@ -1,0 +1,4 @@
+[submodule "orb_slam3_ros_wrapper"]
+	path = Modules/slam/orb_slam3_ros_wrapper
+	url = https://github.com/w407022008/orb_slam3_ros_wrapper.git
+	branch = master
