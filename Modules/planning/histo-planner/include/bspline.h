@@ -1,5 +1,5 @@
-#ifndef _NON_UNIFORM_BSPLINE_H_
-#define _NON_UNIFORM_BSPLINE_H_
+#ifndef _BSPLINE_H_
+#define _BSPLINE_H_
 
 #include <Eigen/Eigen>
 #include <iostream>
@@ -9,10 +9,10 @@ using namespace std;
 
 namespace Histo_Planning
 {
-class UniformBspline
+class Bspline
 {
 private:
-  /* non-uniform bspline */
+  /* bspline */
   int p_, n_, m_;
   Eigen::MatrixXd control_points_;
   Eigen::VectorXd u_, u;  // knots vector
@@ -26,11 +26,11 @@ public:
   static double limit_vel_, limit_acc_, limit_omega_;
   static bool yaw_track;
 
-  UniformBspline()
+  Bspline()
   {
   }
-  UniformBspline(Eigen::MatrixXd points, int order, double interval, bool zero = true);
-  ~UniformBspline();
+  Bspline(Eigen::MatrixXd points, int order, double interval, bool zero = true);
+  ~Bspline();
   void setKnot(Eigen::VectorXd knot);
   Eigen::VectorXd getKnot();
 
@@ -44,7 +44,7 @@ public:
   Eigen::Vector3d evaluateDeBoor(double t);
   Eigen::Vector3d getLocation(double t_cur, double dist_forward);
 
-  UniformBspline getDerivative();
+  Bspline getDerivative();
 
   static void cubicSamplePts_to_BsplineCtlPts(vector<Eigen::Vector3d> samples, double ts, Eigen::MatrixXd& control_pts);
   static void BsplineParameterize(const double& ts, const vector<Eigen::Vector3d>& point_set,
@@ -64,7 +64,7 @@ public:
   void getVelMeanMinMax(double& mean_v, double& min_v, double& max_v, double t_start_=-1.0, double t_end_=-1.0, int sample_num=0);
   void getAccMeanMinMax(double& mean_a, double& min_a, double& max_a, double t_start_=-1.0, double t_end_=-1.0, int sample_num=0);
 
-  // typedef std::shared_ptr<UniformBspline> Ptr;
+  // typedef std::shared_ptr<Bspline> Ptr;
 };
 }
 #endif

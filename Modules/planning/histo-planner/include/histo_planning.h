@@ -40,7 +40,6 @@
 
 #include "histogram.h"
 #include "bspline_optimizer.h"
-#include "sdf_map.h"
 #include "planning_visualization.h"
 #include "message_utils.h"
 
@@ -67,7 +66,6 @@ class Histo_Planner
 private:
     // Fuction Initialisation
     ros::NodeHandle histo_planner_nh;
-    // SDFMap::Ptr sdf_map_;
     histo_planning_alg::Ptr histo_planning_;  
     BsplineOptimizer::Ptr bspline_optimizer_;
     PlanningVisualization::Ptr visualization_;
@@ -238,8 +236,8 @@ public:
     geometry_msgs::PointStamped  guide_rviz; 
     Eigen::Vector3d closest_obs;
     geometry_msgs::PointStamped  closest_rviz; 
-    UniformBspline traj_init_;
-    UniformBspline traj_pos_, traj_vel_, traj_acc_;
+    Bspline traj_init_;
+    Bspline traj_pos_, traj_vel_, traj_acc_;
     double traj_duration_, t_start_, t_end_;
     ros::Time time_traj_start;
 	

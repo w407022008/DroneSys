@@ -7,7 +7,7 @@
 #include <vector>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
-#include <uniform_bspline.h>
+#include <bspline.h>
 
 using std::vector;
 namespace Histo_Planning
@@ -40,7 +40,7 @@ public:
 
   PlanningVisualization(ros::NodeHandle& nh);
 
-  void drawBspline(UniformBspline bspline, double size, Eigen::Vector4d color, bool show_ctrl_pts = false,
+  void drawBspline(Bspline bspline, double size, Eigen::Vector4d color, bool show_ctrl_pts = false,
                    double size2 = 0.1, Eigen::Vector4d color2 = Eigen::Vector4d(1, 1, 0, 1), int id1 = 0, int id2 = 0, bool optimized = false);
 
   typedef std::shared_ptr<PlanningVisualization> Ptr;

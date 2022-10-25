@@ -3,11 +3,10 @@
 
 #include <ros/ros.h>
 #include <Eigen/Eigen>
-#include <sdf_map.h>
 #include <histogram.h>
 #include "math.h"
 
-// Gradient and elasitc band optimization
+// Gradient and elastic band optimization
 
 // Input: a signed distance field and a sequence of points
 // Output: the optimized sequence of points
@@ -17,13 +16,12 @@ namespace Histo_Planning
 class BsplineOptimizer
 {
 private:
-  SDFMap::Ptr sdf_map_;
   histo_planning_alg::Ptr hist_;
   Eigen::MatrixXd control_points_;  // nx3
   Eigen::Vector3d start_pt_, end_pt_;
   vector<tuple<int, int, Eigen::Vector3d>> ranges_;
-  bool use_guide_;
   int yaw_tracking_mode;
+  double forbidden_plus_safe_distance,safe_distance,forbidden_range;
 
   /* optimization parameters */
   double lamda_smooth;                       // curvature weight
@@ -82,7 +80,6 @@ public:
   /* main API */
   void setControlPoints(Eigen::MatrixXd points);
   void setBSplineInterval(double interval_);
-  void setEnvironment(shared_ptr<SDFMap> map);
   void setEnvironment(shared_ptr<histo_planning_alg> histogram);
 
   void setParam(ros::NodeHandle& nh);
