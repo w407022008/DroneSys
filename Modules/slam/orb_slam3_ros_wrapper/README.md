@@ -2,30 +2,27 @@
 
 # ROS wrapper for ORB-SLAM3
 
-A ROS wrapper for [ORB-SLAM3](https://github.com/UZ-SLAMLab/ORB_SLAM3) (currently in [V1.0, December 22th, 2021](https://github.com/w407022008/ORB_SLAM3)). The main idea is to use the ORB-SLAM3 as a standalone library and interface with it instead of putting everything in one package.
+A ROS wrapper for [ORB-SLAM3](https://github.com/SyRoCo-ISIR/ORB_SLAM3) (currently in [V1.0, December 22th, 2021](https://github.com/w407022008/ORB_SLAM3)). The main idea is to use the ORB-SLAM3 as a standalone library and interface with it instead of putting everything in one package.
 
 ## 1. ORB-SLAM3 (original or other variants)
 
 ### 1.1  Prerequisites - Pangolin-0.6
-We have tested the library in **Ubuntu 16.04** and **18.04**, but it should be easy to compile in other platforms. A powerful computer (e.g. i7) will ensure real-time performance and provide more stable and accurate results.
+We have tested the library in **Ubuntu 18.04** and **20.04**, but it should be easy to compile in other platforms. A powerful computer (e.g. i7) will ensure real-time performance and provide more stable and accurate results.
 - Install Dependencies: 
 ```
-  libgl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols libegl1-mesa-dev
-	libc++-dev libglew-dev libeigen3-dev cmake
-	libjpeg-dev libpng-dev
-	libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev
-	libdc1394-22-dev libraw1394-dev libopenni-dev python3.7-dev python3-distutils
+sudo apt install libgl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols libegl1-mesa-dev libc++-dev libglew-dev libeigen3-dev cmake libjpeg-dev libpng-dev libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libdc1394-22-dev libraw1394-dev libopenni-dev python3.7-dev python3-distutils
   ```
 - Build Sources
 ```
-  wget https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v0.6.zip
-	mkdir build; cd build
-	cmake ..
-	cmake --build .
+wget https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v0.6.zip
+unzip v0.6 && cd Pangolin-0.6
+mkdir build; cd build
+cmake ..
+cmake --build .
   ```
 
 ### 1.2  Prerequisites - OpenCV
-We use [OpenCV](http://opencv.org) to manipulate images and features. Dowload and install instructions can be found at: http://opencv.org. **Required at leat 3.0. Tested with OpenCV 3.2.0**.
+We use [OpenCV](http://opencv.org) to manipulate images and features. Dowload and install instructions can be found at: http://opencv.org. **Required at leat 3.0. Tested with OpenCV 4.2.0**.
 Check your opencv version:  
 ```
 /usr/bin/python3 -c "import cv2;print(cv2.__version__)"
@@ -46,14 +43,13 @@ Required to calculate the alignment of the trajectory with the ground truth. **R
 
 ### 1.6  Install ROS
 
-We provide the ros wrapper to process input of a monocular, monocular-inertial, stereo, stereo-inertial or RGB-D camera using ROS. Building these examples is optional. These have been tested with [ROS Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) under Ubuntu 18.04.
+We provide the ros wrapper to process input of a monocular, monocular-inertial, stereo, stereo-inertial or RGB-D camera using ROS. Building these examples is optional.
 
 ### 1.7 Install ORB_SLAM3
 
 - Build and install ORB-SLAM3. Any location is fine (default directory that I use later on is the home folder `~`):
 ```
-cd ~
-git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git ORB_SLAM3
+git clone https://github.com/SyRoCo-ISIR/ORB_SLAM3.git ORB_SLAM3
 cd ORB_SLAM3
 chmod +x build.sh
 ./build.sh
