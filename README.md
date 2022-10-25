@@ -80,7 +80,7 @@ Please kindly give us a star :star:, if you find this work useful or interesting
   realsense_viwer
 ```
 
-1. Installing [ORB-SLAM3](https://github.com/SyRoCo-ISIR/ORB_SLAM3):
+1. Installing [ORB-SLAM3](Modules/slam/orb_slam3_ros_wrapper/README.md):
 
 2. Installing Ceres for VINS:
 ```
