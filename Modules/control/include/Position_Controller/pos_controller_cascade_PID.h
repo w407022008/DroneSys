@@ -291,7 +291,7 @@ void pos_controller_cascade_PID::_velocityController
     }
 
     // Use tracking Anti-Windup for XY-direction: during saturation, the integrator is used to unsaturate the output
-    // see Anti-Reset Windup for PID controllers, L.Rundqwist, 1990
+    // see Anti-Reset Windup for PID control, L.Rundqwist, 1990
     // Actually, I dont understand here.
     float arw_gain = 2.f / Kp_vxvy;
 

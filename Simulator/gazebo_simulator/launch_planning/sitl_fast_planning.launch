@@ -22,7 +22,7 @@
     </group>
     
 	<!-- run the pub_goal.cpp -->
-	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
+	<node if="$(arg type_in_goal)" pkg="control" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
 
 	<!-- Launch Gazebo Simulation -->
 	<arg name="x" default="0.0"/>

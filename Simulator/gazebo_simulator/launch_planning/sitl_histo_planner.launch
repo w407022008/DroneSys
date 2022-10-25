@@ -3,7 +3,7 @@
 	<arg name="visualization" default="true"/>
 	<arg name="pcd_file" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
 	
-	<arg name="sensor" default="0"/> <!-- 0: hokuyo_2dLidar; 1: 3dLidar; 2: Camera -->
+	<arg name="sensor" default="1"/> <!-- 0: hokuyo_2dLidar; 1: 3dLidar; 2: Camera -->
 	<arg name="input_source" default="1"/>  <!-- 0: ground truth points; 1:Filtered raw points -->
 	
 	<arg name="type_in_goal" default="false"/>
@@ -21,7 +21,7 @@
 	<node if="$(eval arg('joystick') == 3)" pkg="joy_remote" type="JY901_Bluetooth_Pyserial.py" name="joystick_frame" launch-prefix="gnome-terminal --tab --" />
     
 	<!-- run the pub_goal.cpp -->
-	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --">	
+	<node if="$(arg type_in_goal)" pkg="control" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --">	
 	</node> 
 
 	<!-- Launch Gazebo Simulation -->

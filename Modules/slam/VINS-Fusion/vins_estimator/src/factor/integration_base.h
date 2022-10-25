@@ -28,12 +28,12 @@ class IntegrationBase
 
     {
         noise = Eigen::Matrix<double, 18, 18>::Zero();
-        noise.block<3, 3>(0, 0) =  (ACC_N * ACC_N) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(3, 3) =  (GYR_N * GYR_N) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(6, 6) =  (ACC_N * ACC_N) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(9, 9) =  (GYR_N * GYR_N) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(12, 12) =  (ACC_W * ACC_W) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(15, 15) =  (GYR_W * GYR_W) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(0, 0) =  Eigen::DiagonalMatrix<double, 3, 3>((ACC_NX * ACC_NX),(ACC_NY * ACC_NY),(ACC_NZ * ACC_NZ));//(ACC_N * ACC_N) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(3, 3) =  Eigen::DiagonalMatrix<double, 3, 3>((GYR_NX * GYR_NX),(GYR_NY * GYR_NY),(GYR_NZ * GYR_NZ));
+        noise.block<3, 3>(6, 6) =  Eigen::DiagonalMatrix<double, 3, 3>((ACC_NX * ACC_NX),(ACC_NY * ACC_NY),(ACC_NZ * ACC_NZ));
+        noise.block<3, 3>(9, 9) =  Eigen::DiagonalMatrix<double, 3, 3>((GYR_NX * GYR_NX),(GYR_NY * GYR_NY),(GYR_NZ * GYR_NZ));
+        noise.block<3, 3>(12, 12) =  Eigen::DiagonalMatrix<double, 3, 3>((ACC_WX * ACC_WX),(ACC_WY * ACC_WY),(ACC_WZ * ACC_WZ));
+        noise.block<3, 3>(15, 15) =  Eigen::DiagonalMatrix<double, 3, 3>((GYR_WX * GYR_WX),(GYR_WY * GYR_WY),(GYR_WZ * GYR_WZ));
     }
 
     void push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)

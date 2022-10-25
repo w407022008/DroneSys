@@ -102,7 +102,7 @@
   </include>
 
   <!-- run the pub_goal.cpp -->
-  <node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
+  <node if="$(arg type_in_goal)" pkg="control" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>
 
 
 <node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_planning_ego_planner.rviz" />

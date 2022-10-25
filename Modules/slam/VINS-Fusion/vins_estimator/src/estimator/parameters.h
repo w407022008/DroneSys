@@ -29,8 +29,8 @@ extern double INIT_DEPTH;
 extern double MIN_PARALLAX;
 extern int ESTIMATE_EXTRINSIC;
 
-extern double ACC_N, ACC_W;
-extern double GYR_N, GYR_W;
+extern double ACC_N, ACC_NX, ACC_NY, ACC_NZ, ACC_W, ACC_WX, ACC_WY, ACC_WZ;
+extern double GYR_N, GYR_NX, GYR_NY, GYR_NZ, GYR_W, GYR_WX, GYR_WY, GYR_WZ;
 
 extern std::vector<Eigen::Matrix3d> RIC;
 extern std::vector<Eigen::Vector3d> TIC;

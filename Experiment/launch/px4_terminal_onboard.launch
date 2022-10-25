@@ -11,7 +11,7 @@
 			<arg name="z" value="1.0"/>
 		</include>
 		<!-- run the terminal_control.cpp -->
-		<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --" >	
+		<node pkg="control" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --" >	
 			<rosparam command="load" file="$(find drone_experiment)/config/control_config/terminal_control.yaml" />
 		</node>	
 	</group>
@@ -25,7 +25,7 @@
 			<arg name="gcs_url" default="udp-b://192.168.0.100:14555@14550"/> <!-- ip addr on board, it seem that u dont need to set anythin in QGC -->
 		</include>
 		<!-- run the terminal_control.cpp -->
-		<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen">	
+		<node pkg="control" type="terminal_control" name="terminal_control" output="screen">	
 			<rosparam command="load" file="$(find drone_experiment)/config/control_config/terminal_control.yaml" />
 		</node>	
 	</group>

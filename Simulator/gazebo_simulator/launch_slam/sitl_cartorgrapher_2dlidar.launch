@@ -46,8 +46,8 @@
         type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
 
 	<!-- run the terminal_control.cpp -->
-	<node pkg="controllers" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --">	
-		<rosparam command="load" file="$(find simulation_gazebo)/config/controllers_config/terminal_control.yaml" />
+	<node pkg="control" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --">	
+		<rosparam command="load" file="$(find simulation_gazebo)/config/control_config/terminal_control.yaml" />
 	</node>	
 
 </launch>

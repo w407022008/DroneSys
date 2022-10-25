@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(optitrack)
+project(sensors)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -7,14 +7,20 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   message_generation  
   roscpp
   geometry_msgs
   nav_msgs
+  sensor_msgs
+  mavros
   std_msgs
   std_srvs
+  tf
+  tf2_ros
+  tf2_eigen
+  mavros_msgs
+  drone_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -30,8 +36,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 generate_messages(
   DEPENDENCIES
   geometry_msgs 
-  std_msgs
   nav_msgs
+  sensor_msgs
+  std_msgs
 )
 
 catkin_package(
@@ -49,7 +56,9 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${Eigen3_INCLUDE_DIRS}
+  ../../common/include/common
+  ../../common/include/Filter
+  ../../common/include/mavros
 )
 
 
@@ -58,14 +67,12 @@ include_directories(
 ###############################
 
 ###### Lib File ##########
-add_library(OptiTrackFeedbackRigidBody src/OptiTrackFeedBackRigidBody.cpp)
 
 ###### Main File ##########
-
-## optitracktest.cpp
-add_executable(optitracktest src/OptiTrackTest.cpp)
-target_link_libraries(optitracktest ${catkin_LIBRARIES})
-target_link_libraries(optitracktest OptiTrackFeedbackRigidBody)
+## TFmini.cpp
+add_executable(TFmini src/TFmini.cpp)
+add_dependencies(TFmini sensors_gencpp)
+target_link_libraries(TFmini ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -111,7 +118,7 @@ install(DIRECTORY launch/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_controllers.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_control.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

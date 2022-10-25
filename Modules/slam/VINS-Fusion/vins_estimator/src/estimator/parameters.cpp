@@ -11,8 +11,8 @@
 
 double INIT_DEPTH;
 double MIN_PARALLAX;
-double ACC_N, ACC_W;
-double GYR_N, GYR_W;
+double ACC_N, ACC_NX, ACC_NY, ACC_NZ, ACC_W, ACC_WX, ACC_WY,ACC_WZ;
+double GYR_N, GYR_NX, GYR_NY, GYR_NZ, GYR_W, GYR_WX, GYR_WY, GYR_WZ;
 
 std::vector<Eigen::Matrix3d> RIC;
 std::vector<Eigen::Vector3d> TIC;
@@ -96,9 +96,41 @@ void readParameters(std::string config_file)
         fsSettings["imu_topic"] >> IMU_TOPIC;
         printf("IMU_TOPIC: %s\n", IMU_TOPIC.c_str());
         ACC_N = fsSettings["acc_n"];
+        ACC_NX = fsSettings["acc_nx"];
+        ACC_NY = fsSettings["acc_ny"];
+        ACC_NZ = fsSettings["acc_nz"];
+        if(ACC_NX==0 && ACC_NY==0 && ACC_NZ==0){
+            ACC_NX = ACC_N;
+            ACC_NY = ACC_N;
+            ACC_NZ = ACC_N;
+        }
         ACC_W = fsSettings["acc_w"];
+        ACC_WX = fsSettings["acc_wx"];
+        ACC_WY = fsSettings["acc_wy"];
+        ACC_WZ = fsSettings["acc_wz"];
+        if(ACC_WX==0 && ACC_WY==0 && ACC_WZ==0){
+            ACC_WX = ACC_W;
+            ACC_WY = ACC_W;
+            ACC_WZ = ACC_W;
+        }
         GYR_N = fsSettings["gyr_n"];
+        GYR_NX = fsSettings["gyr_nx"];
+        GYR_NY = fsSettings["gyr_ny"];
+        GYR_NZ = fsSettings["gyr_nz"];
+        if(GYR_NX==0 && GYR_NY==0 && GYR_NZ==0){
+            GYR_NX = GYR_N;
+            GYR_NY = GYR_N;
+            GYR_NZ = GYR_N;
+        }
         GYR_W = fsSettings["gyr_w"];
+        GYR_WX = fsSettings["gyr_wx"];
+        GYR_WY = fsSettings["gyr_wy"];
+        GYR_WZ = fsSettings["gyr_wz"];
+        if(GYR_WX==0 && GYR_WY==0 && GYR_WZ==0){
+            GYR_WX = GYR_W;
+            GYR_WY = GYR_W;
+            GYR_WZ = GYR_W;
+        }
         G.z() = fsSettings["g_norm"];
     }
 

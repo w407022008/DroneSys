@@ -8,7 +8,7 @@
 	<node if="$(eval arg('joystick') == 3)" pkg="joy_remote" type="JY901_Bluetooth_Pyserial.py" name="joystick_frame" launch-prefix="gnome-terminal --tab --" />
 		
 	<!-- run the pub_goal.cpp -->
-	<node if="$(arg type_in_goal)" pkg="controllers" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	<node if="$(arg type_in_goal)" pkg="control" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 	<!-- run the ground_station.cpp -->
 	<node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --">	

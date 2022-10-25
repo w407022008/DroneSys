@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(controllers)
+project(optitrack)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -7,20 +7,14 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   message_generation  
   roscpp
   geometry_msgs
   nav_msgs
-  sensor_msgs
-  mavros
   std_msgs
   std_srvs
-  tf
-  tf2_ros
-  tf2_eigen
-  mavros_msgs
-  drone_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -36,9 +30,8 @@ find_package(Boost REQUIRED COMPONENTS system)
 generate_messages(
   DEPENDENCIES
   geometry_msgs 
-  nav_msgs
-  sensor_msgs
   std_msgs
+  nav_msgs
 )
 
 catkin_package(
@@ -56,7 +49,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ../common/include/common
+  ${Eigen3_INCLUDE_DIRS}
 )
 
 
@@ -65,31 +58,14 @@ include_directories(
 ###############################
 
 ###### Lib File ##########
+add_library(OptiTrackFeedbackRigidBody src/OptiTrackFeedBackRigidBody.cpp)
 
 ###### Main File ##########
-##terminal_control.cpp
-add_executable(terminal_control src/terminal_control.cpp)
-add_dependencies(terminal_control controllers_gencpp)
-target_link_libraries(terminal_control ${catkin_LIBRARIES})
 
-##goal publisher
-add_executable(pub_goal src/pub_goal.cpp)
-add_dependencies(pub_goal controllers_gencpp)
-target_link_libraries(pub_goal ${catkin_LIBRARIES})
-
-add_executable(pub_goal_from_qgc src/pub_goal_from_qgc.cpp)
-add_dependencies(pub_goal_from_qgc controllers_gencpp)
-target_link_libraries(pub_goal_from_qgc ${catkin_LIBRARIES})
-
-## gimbal control
-add_executable(gimbal_control src/gimbal_control.cpp)
-add_dependencies(gimbal_control controllers_gencpp)
-target_link_libraries(gimbal_control ${catkin_LIBRARIES})
-
-###### Test File ##########
-
-
-###### Utilities File ##########
+## optitracktest.cpp
+add_executable(optitracktest src/OptiTrackTest.cpp)
+target_link_libraries(optitracktest ${catkin_LIBRARIES})
+target_link_libraries(optitracktest OptiTrackFeedbackRigidBody)
 
 #############
 ## Install ##
@@ -135,7 +111,7 @@ install(DIRECTORY launch/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_controllers.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_control.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

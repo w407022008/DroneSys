@@ -82,7 +82,7 @@
 	<!-- run the px4_commander.cpp -->
 	<!-- 通过MAVLink协议发布pos_vel_setpoint到px4 -->
 	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen">
-		<rosparam command="load" file="$(find simulation_gazebo)/config/controllers_config/px4_commander.yaml"/>
+		<rosparam command="load" file="$(find simulation_gazebo)/config/control_config/px4_commander.yaml"/>
 	</node>
 
 	<!-- run the ground_station.cpp -->

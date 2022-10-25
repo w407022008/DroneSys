@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(sensors)
+project(control)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -56,9 +56,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ../../common/include/common
-  ../../common/include/Filter
-  ../../common/include/mavros
+  ../common/include/common
 )
 
 
@@ -69,10 +67,29 @@ include_directories(
 ###### Lib File ##########
 
 ###### Main File ##########
-## TFmini.cpp
-add_executable(TFmini src/TFmini.cpp)
-add_dependencies(TFmini sensors_gencpp)
-target_link_libraries(TFmini ${catkin_LIBRARIES})
+##terminal_control.cpp
+add_executable(terminal_control src/terminal_control.cpp)
+add_dependencies(terminal_control control_gencpp)
+target_link_libraries(terminal_control ${catkin_LIBRARIES})
+
+##goal publisher
+add_executable(pub_goal src/pub_goal.cpp)
+add_dependencies(pub_goal control_gencpp)
+target_link_libraries(pub_goal ${catkin_LIBRARIES})
+
+add_executable(pub_goal_from_qgc src/pub_goal_from_qgc.cpp)
+add_dependencies(pub_goal_from_qgc control_gencpp)
+target_link_libraries(pub_goal_from_qgc ${catkin_LIBRARIES})
+
+## gimbal control
+add_executable(gimbal_control src/gimbal_control.cpp)
+add_dependencies(gimbal_control control_gencpp)
+target_link_libraries(gimbal_control ${catkin_LIBRARIES})
+
+###### Test File ##########
+
+
+###### Utilities File ##########
 
 #############
 ## Install ##
@@ -118,7 +135,7 @@ install(DIRECTORY launch/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_controllers.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_control.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

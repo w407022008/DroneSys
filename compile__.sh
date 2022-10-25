@@ -5,7 +5,7 @@ catkin_make --source Modules/common --build build/common_util
 catkin_make --source Modules/tools --build build/tools
 catkin_make --source Experiment --build build/drone_experiment
 catkin_make --source Modules/mavros_interface --build build/mavros_interface
-catkin_make --source Modules/controllers --build build/controllers
-catkin_make --source Modules/sensors --build build/sensors
+catkin_make --source Modules/control --build build/control
+catkin_make --source Modules/perception --build build/perception
 catkin_make --source Modules/slam --build build/slam -j2
 catkin_make --source Modules/planning --build build/planning -j2

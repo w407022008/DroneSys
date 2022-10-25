@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>controllers</name>
+  <name>control</name>
   <version>0.0.0</version>
-  <description>The controllers package</description>
+  <description>The control package</description>
 
   <maintainer email="wangze@isir.upmc.fr">Ze</maintainer>
   <license>TODO</license>
