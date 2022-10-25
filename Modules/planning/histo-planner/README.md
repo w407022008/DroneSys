@@ -5,7 +5,7 @@ Histo-Planner : A Real-time Local Planner for MAVs Teleoperation based on Histog
 **Histo-Planner** is a histogram-based local planner without relying on the global 3D occupancy grid, which is designed to work on MAVs with limited computational power for tele-operation. It has a significantly lower total planning time compared to state-of-the-art methods ([Ego-planner](https://github.com/ZJU-FAST-Lab/ego-planner) and [Fast-Planner](https://github.com/HKUST-Aerial-Robotics/Fast-Planner)). The map update time will remain around 0.3 ms.
 
 <p align = "center">
-<img src="documentation/figures/feature.jpg" width = "968" height = "544" border="1" />
+<img src="https://github.com/w407022008/histo-planner/blob/main/documentation/figures/feature.jpg?raw=true" width = "968" height = "544" border="1" />
 </p>
 
 **Video Links:** 
