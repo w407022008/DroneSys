@@ -18,11 +18,11 @@
 		<arg name="resolution" default="0.1" />
 
 		<arg name="depth_image_proc" default="false"/>                   <!-- if data_type == 2 & camera-->
-		<arg name="points" default="/camera/local_pointclouds" />        <!-- if depth_image_proc -->
+		<arg name="points_out" default="/camera/local_pointclouds" />        <!-- if depth_image_proc -->
 		<arg name="is_rgbd" default="1" /> <!-- if data_type == 2, 0: 3dLidar; 1: rgbd camera-->
 		
-		<arg name="camera_info" default="/camera/depth/camera_info"/>    <!-- if data_type == 3 -->
-		<arg name="image_rect" default="/camera/depth/image_rect_raw" /> <!-- if data_type == 3 -->
+		<arg name="dep_camera_info" default="/camera/depth/camera_info"/>    <!-- if data_type == 3 -->
+		<arg name="dep_img_rect" default="/camera/depth/image_rect_raw" /> <!-- if data_type == 3 -->
 		<arg name="cut_edge" default="1" /> <!-- if data_type==3 -->
 		<arg name="interval" default="2" /> <!-- if data_type==3 -->
 		<arg name="dist_min" default="0.1" /> <!-- if data_type==3 -->	

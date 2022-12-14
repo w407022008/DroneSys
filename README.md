@@ -40,6 +40,7 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 	ros-${ROS_VERSION_NAME}-vrpn-client-ros
 	ros-${ROS_VERSION_NAME}-velodyne-gazebo-plugins
 	ros-${ROS_VERSION_NAME}-roslint
+	libdw-dev
 ```
 
 2. We use [**NLopt**](https://nlopt.readthedocs.io/en/latest/NLopt_Installation) as the optimization solver in Histo-planner to solve the non-linear optimization problem, which can be installed by the following commands.
@@ -85,8 +86,9 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 2. Installing Ceres for VINS:
 ```
   sudo apt-get install libgoogle-glog-dev libgflags-dev libatlas-base-dev libeigen3-dev 
-  git clone https://ceres-solver.googlesource.com/ceres-solver
-  cd ceres-solver
+  wget https://github.com/ceres-solver/ceres-solver/archive/refs/tags/2.1.0.zip
+  unzip ceres-solver-2.1.0.zip && rm ceres-solver-2.1.0.zip
+  cd ceres-solver-2.1.0
   mkdir build && cd build
   cmake ..
   make
@@ -127,6 +129,7 @@ If you encounter problems in this step, please first refer to existing __issues_
   libusb-dev # if missing libusb
   libspnav-dev # if missing spnav.h
   libbluetooth-dev # if missing bluetooth.h
+  
   # if missing cwiid.h:
   git clone https://github.com/abstrakraft/cwiid.git
   cd cwiid
@@ -145,6 +148,9 @@ If you encounter problems in this step, please first refer to existing __issues_
   ## if there is an error about wmdemo
     # ignore it and go ahead
   sudo make install
+  
+  # if missing libdw.h
+  sudo apt install libdw-dev
 ```
 ## 2. Run Simulations
 
