@@ -94,7 +94,7 @@
 		<!-- Yaw auto-hold? -->
 		<param name="histo_planner/yaw_tracking_mode" value="1" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
 		<param name="histo_planner/spinning_once_first" value="false" type="bool"/>  <!-- Spinning once turn first before starting tracking a new traj -->
-		<param name="histo_planner/yaw_rate" value="1.0" type="double"/>             <!-- Maximum steering speed (whenever auto_hold or joy control) -->
+		<param name="histo_planner/yaw_rate" value="2.0" type="double"/>             <!-- Maximum steering speed (whenever auto_hold or joy control) -->
 		<param name="histo_planner/time_forward_facing_toward" value="2.0" type="double"/> <!-- Towards the waypoint in n second later -->
 		<!-- Goal Regenerate, when it is unreachable ? -->
 			<!-- 1: Move the original goal in the direction of the falling gradient of the obstacle map! [Not recommended] -->

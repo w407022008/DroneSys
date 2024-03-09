@@ -46,8 +46,6 @@ Eigen::Matrix3f euler2matrix(float phi, float theta, float psi)
     return Rota_Mat;
 }
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
 void drone_state_cb(const drone_msgs::DroneStateConstPtr& msg)
 {
   _DroneState = *msg; // in ENU frame
@@ -283,7 +281,6 @@ void joy_raw_cb(const sensor_msgs::Joy::ConstPtr &msg)
   }
 }
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "joy_remote");

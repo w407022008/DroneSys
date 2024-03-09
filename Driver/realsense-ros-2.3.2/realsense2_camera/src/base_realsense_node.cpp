@@ -2421,12 +2421,11 @@ void BaseRealSenseNode::publishFrame(rs2::frame f, const ros::Time& t,
                                      const std::map<rs2_stream, std::string>& encoding,
                                      bool copy_data_from_frame)
 {
-
-static int skip=0;
-if(stream == DEPTH){
-	if(++skip < 2) {return;}
-	else {skip = 0;}
-}
+//static int skip=0;
+//if(stream == DEPTH){
+//	if(++skip < 2) {return;}
+//	else {skip = 0;}
+//}
     ROS_DEBUG("publishFrame(...)");
     unsigned int width = 0;
     unsigned int height = 0;

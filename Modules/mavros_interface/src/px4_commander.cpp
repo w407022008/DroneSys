@@ -9,7 +9,6 @@
 #define NODE_NAME "px4_commander"
 
 using namespace std;
- //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 float cur_time;
 float dt = 0;
 float Takeoff_height;
@@ -155,7 +154,6 @@ int main(int argc, char **argv)
 
     while(ros::ok())
     {
-        // 当前时间
         cur_time = get_time_in_sec(begin_time);
         dt = cur_time  - last_time;
         dt = max(0.02f,min(0.1f,dt)); // 10hz ~ 50hz
