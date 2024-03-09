@@ -1,6 +1,6 @@
 <launch>
 
-	<arg name="joystick" default="3"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="joystick" default="0"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
   <arg name="type_in_goal" default="false"/>
   <arg name="drone_model" default="0"/> <!-- 0: Gazebo Model; 1: Simple Model; 2:Real Model -->
 	
@@ -49,44 +49,45 @@
 
 
   <!-- Drone Model -->
-    <include if="$(eval arg('drone_model') == 0)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
-      <arg name="gazebo_gui" default="false"/>
-      <arg name="world" value="$(find simulation_gazebo)/worlds/empty.world"/>
-      <arg name="mode" value=""/>
-      <arg name="x" value="0.0"/>
-      <arg name="y" value="0.0"/>
-      <arg name="z" value="1.0"/>
-    </include>
-    <node if="$(eval arg('drone_model') == 1)" pkg="planning_simulator" name="uav_sim" type="uav_sim" output="screen">	
-      <param name="init_pos_x" value="0.0" type="double"/>
-      <param name="init_pos_y" value="0.0" type="double"/>
-      <param name="init_pos_z" value="1.0" type="double"/>
-      <param name="planner_type" value="0" type="int"/>
-      <param name="color/a" value="1.0"/>    
-      <param name="color/r" value="0.0"/>        
-      <param name="color/g" value="0.0"/>        
-      <param name="color/b" value="0.0"/>       
-      <param name="robot_scale" value="1.0"/>
-      <param name="mesh_resource" value="$(find planning_simulator)/meshes/hummingbird.mesh"/>
-    </node>
-    <include if="$(eval arg('drone_model') == 2)" file="$(find drone_experiment)/launch/px4_base_onboard.launch">
+  <!-- Gazebo Model -->
+  <include if="$(eval arg('drone_model') == 0)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+    <arg name="gazebo_gui" default="false"/>
+    <arg name="world" value=""/>
+    <arg name="mode" value=""/>
+    <arg name="x" value="0.0"/>
+    <arg name="y" value="0.0"/>
+    <arg name="z" value="1.0"/>
+  </include>
+  <!-- Simple Model -->
+  <node if="$(eval arg('drone_model') == 1)" pkg="planning_simulator" name="uav_sim" type="uav_sim" output="screen">	
+    <param name="init_pos_x" value="0.0" type="double"/>
+    <param name="init_pos_y" value="0.0" type="double"/>
+    <param name="init_pos_z" value="1.0" type="double"/>
+    <param name="planner_type" value="0" type="int"/>
+    <param name="color/a" value="1.0"/>    
+    <param name="color/r" value="0.0"/>        
+    <param name="color/g" value="0.0"/>        
+    <param name="color/b" value="0.0"/>       
+    <param name="robot_scale" value="1.0"/>
+    <param name="mesh_resource" value="$(find planning_simulator)/meshes/hummingbird.mesh"/>
+  </node>
+  <!-- Real Model -->
+  <group if="$(eval arg('drone_model') == 2)">
+    <include file="$(find drone_experiment)/launch/px4_base_onboard.launch">
       <arg name="input_source" default="4"/> <!-- -1 Enable Mavros+sender, 0 Enable sender, 1 for Vicon 3 for gazebo ground truth, 5 SLAM  -->
       <arg name="SLAM_source" default="4"/> <!--  0 for MonoVision(Worst)， 1 for RGBD(medium), 2 for StereoVision(Best), 3 fro Mono-IMU(medium), 4 for Stereo-IMU(Best)  -->
       <arg name="fcu_url" default="/dev/ttyPX4:4000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b -->
       <arg name="gcs_url" default="udp-b://192.168.0.100:14555@14550"/> <!-- ip addr on board, it seem that u dont need to set anythin in QGC -->
     </include>
+    <!-- run the ground_station_msg.cpp -->
+    <node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+    <!-- run the ground_station.cpp -->
+    <node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --">	
+      <param name="refresh_time" value="1.0" type="double"/>	<!-- release cycle -->
+      <param name="mission_type" value="0" type="int"/>	<!-- vision detection -->
+    </node>
+  </group>
 	
-
-  <!-- run the ground_station_msg.cpp -->
-  <node if="$(eval arg('drone_model') == 2)" pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
-	
-  <!-- run the ground_station.cpp -->
-  <node if="$(eval arg('drone_model') == 2)" pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --">	
-    <param name="refresh_time" value="1.0" type="double"/>	<!-- release cycle -->
-    <param name="mission_type" value="0" type="int"/>	<!-- vision detection -->
-  </node>
-	
-      	
   <!-- RVIZ -->
   <arg name="visualization" default="true"/>
   <group if="$(arg visualization)">

@@ -6,8 +6,8 @@
 	<arg name="max_vel" default="2.0" />
 	<arg name="max_acc" default="1.5" />
 
-	<arg name="ground_height" default="0.5" />
-	<arg name="ceil_height" default="2.2" />
+	<arg name="ground_height" default="0.3" />
+	<arg name="ceil_height" default="2.0" />
 	
 	<!-- Planner -->
 	<!-- <env name="GMON_OUT_PREFIX" value="histo_planner_main" /> -->
@@ -48,7 +48,7 @@
 		
 		<!-- Histogram -->
 		<param name="histogram/h_cnt" value="60" type="double"/>
-		<param name="histogram/v_cnt" value="20" type="double"/>
+		<param name="histogram/v_cnt" value="30" type="double"/>
 		<param name="histogram/min_vel_default" value="0.2" type="double"/>
 		<param name="histogram/max_planning_vel" value="$(arg max_vel)" type="double"/>            <!-- Maximum speed, the smaller the setting the safer -->
 		<param name="histogram/isCylindrical" value="false" type="bool"/>          <!-- if 3D, histogram with cylindrical histogram -->

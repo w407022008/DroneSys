@@ -64,7 +64,7 @@ add_executable(histo_planner_main
 		src/histogram.cpp
 		src/sdf_map.cpp
 		src/bspline_optimizer.cpp 
-		src/uniform_bspline.cpp
+		src/bspline.cpp
 		src/planning_visualization.cpp 
 	)
 

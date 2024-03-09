@@ -2,7 +2,7 @@
 
 	<arg name="input_source" default="4"/> <!-- -1 Enable Mavros+sender, 0 Enable sender, 1 for Vicon, 4 VINS-Fusion, 5 SLAM  -->
 	<arg name="camera_type" default="4"/> <!--  0 for MonoVision， 1 for RGBD, 2 for StereoVision, 3 fro Mono-IMU, 4 for Stereo-IMU  -->
-	<arg name="fcu_url" default="/dev/ttyPX4:4000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b S3 on khadas -->
+	<arg name="fcu_url" default="/dev/ttyPX4:4000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b S3 on khadas, or udp://:14550@192.168.4.1:14555 with ESP32 wifi module -->
 	<arg name="gcs_url" default=""/> <!-- ip addr on board e.g udp-b://192.168.0.100:14555@14550, it seem that u dont need to set anythin in QGC -->
 	
     <!-- vrpn with mavros -->

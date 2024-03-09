@@ -1,7 +1,7 @@
 <launch>
 
   <arg name="gazebo_enable" default="true"/>
-	<arg name="joystick" default="2"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="joystick" default="0"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
   <arg name="type_in_goal" default="false"/>
 	
   <arg name="map_resolution" default="0.1" />
