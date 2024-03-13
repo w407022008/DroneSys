@@ -19,7 +19,9 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 ```
 	ros-${ROS_VERSION_NAME}-ros-base
 	ros-${ROS_VERSION_NAME}-gazebo-ros
+	ros-${ROS_VERSION_NAME}-gazebo-plugins
 	ros-${ROS_VERSION_NAME}-camera-info-manager
+	ros-${ROS_VERSION_NAME}-velodyne-gazebo-plugins
 	ros-${ROS_VERSION_NAME}-xacro
 	ros-${ROS_VERSION_NAME}-tf2-ros
 	ros-${ROS_VERSION_NAME}-tf2-eigen
@@ -30,6 +32,7 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 	ros-${ROS_VERSION_NAME}-cv-bridge
 	libarmadillo-dev
 	ros-${ROS_VERSION_NAME}-rviz
+	ros-${ROS_VERSION_NAME}-octomap-rviz-plugins
 	ros-${ROS_VERSION_NAME}-pcl-ros
 	ros-${ROS_VERSION_NAME}-hector-trajectory-server
 	ros-${ROS_VERSION_NAME}-octomap
@@ -54,12 +57,12 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 
 1. The DroneSys has been tested to communicate with PX4 via the mavlink protocol. In order to test the complete DroneSys, we need to install the PX4 system. 
 ```
-    git clone https://github.com/SyRoCo-ISIR/Firmware_PX4_v1.12.3.git --depth 1 PX4_v1.12.3 --recursive
-    cd PX4_v1.12.3
-    git tag v1.12.3
+    git clone https://github.com/SyRoCo-ISIR/Firmware_PX4_v1.14.2.git --depth 1 PX4_v1.14.2 --recursive
+    cd PX4_v1.14.2
+    git tag v1.14.2
     sudo bash Tools/setup/ubuntu.sh
     # Restart the computer on completion. And then
-    cd PX4_v1.12.3 && sudo make px4_sitl_default
+    cd PX4_v1.14.2 && sudo make px4_sitl_default gazebo
 ```
 
 1. Installing RealSense SDK:
@@ -114,9 +117,9 @@ source ~/src/DroneSys/devel/setup.bash
 export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:~/src/DroneSys/devel/lib
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/src/DroneSys/Simulator/gazebo_simulator/models
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/src/DroneSys/Simulator/gazebo_simulator/drone_models
-source ~/src/PX4_v1.12.3/Tools/setup_gazebo.bash ~/src/PX4_v1.12.3 ~/src/PX4_v1.12.3/build/px4_sitl_default
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.12.3
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.12.3/Tools/sitl_gazebo
+source ~/src/PX4_v1.14.2/Tools/setup_gazebo.bash ~/src/PX4_v1.14.2 ~/src/PX4_v1.14.2/build/px4_sitl_default
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.14.2
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.14.2/Tools/sitl_gazebo
 ```
 
 If you encounter problems in this step, please first refer to existing __issues__, __pull requests__ and __Google__ before raising a new issue.
