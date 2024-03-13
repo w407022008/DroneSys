@@ -2,10 +2,9 @@
 rosrun camera_models Calibrations --help
 
 # example pinhole model.
-rosrun camera_models Calibrations -w 12 -h 8 -s 80 -i DATA/left --camera-model pinhole
+rosrun camera_models Calibrations -w 12 -h 8 -s 80 -i calibrationdata --camera-model pinhole
 
 # example mei model.
-rosrun camera_models Calibrations -w 12 -h 8 -s 80 -i DATA/left --camera-model mei
-
+rosrun camera_models Calibrations -w 12 -h 8 -s 80 -i calibrationdata --camera-model mei
 # save imgae
 rosrun image_view image_saver image:=camera/infra1/image_rect_raw

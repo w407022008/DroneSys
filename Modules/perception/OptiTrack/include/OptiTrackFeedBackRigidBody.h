@@ -5,7 +5,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PoseStamped.h"
 //#include "UtilityFunctions.h"
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Eigen>
 //maximum window size
 #ifndef max_windowsize
 #define max_windowsize 10

@@ -78,7 +78,7 @@
     <remap from="/ego_planner/grid_map/cloud" to="$(arg cloud_topic)"/>
 
     <!-- traj_server -->
-		<remap from="/ego_planner/position_cmd" to="/drone_msg/control_command"/>
+    <remap from="/ego_planner/position_cmd" to="/drone_msg/control_command"/>
     <remap from="/ego_planner/odom_world" to="$(arg odom_topic)"/>
     <param name="traj_server/time_forward" value="1.0" type="double"/>
     

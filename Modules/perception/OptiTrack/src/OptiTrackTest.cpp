@@ -1,6 +1,6 @@
 #include "ros/ros.h"
 #include "OptiTrackFeedBackRigidBody.h"
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Eigen>
 using namespace std;
 using namespace Eigen;
 int angular_window, linear_window, Control_Rate;

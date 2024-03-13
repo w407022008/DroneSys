@@ -62,7 +62,6 @@ add_executable(histo_planner_main
 		src/histo_planner_node.cpp
 		src/histo_planning.cpp
 		src/histogram.cpp
-		src/sdf_map.cpp
 		src/bspline_optimizer.cpp 
 		src/bspline.cpp
 		src/planning_visualization.cpp 

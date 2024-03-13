@@ -212,8 +212,8 @@ Chessboard::findChessboardCornersImproved(const cv::Mat& image,
             // homogeneous dilation is performed, which is crucial for small,
             // distorted checkers. Use the CROSS kernel first, since its action
             // on the image is more subtle
-            cv::Mat kernel1 = cv::getStructuringElement(CV_SHAPE_CROSS, cv::Size(3,3), cv::Point(1,1));
-            cv::Mat kernel2 = cv::getStructuringElement(CV_SHAPE_RECT, cv::Size(3,3), cv::Point(1,1));
+            cv::Mat kernel1 = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3,3), cv::Point(1,1));
+            cv::Mat kernel2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3), cv::Point(1,1));
 
             if (dilations >= 1)
                 cv::dilate(thresh_img, thresh_img, kernel1);
@@ -317,7 +317,7 @@ Chessboard::findChessboardCornersImproved(const cv::Mat& image,
         }
 
         cv::cornerSubPix(image, corners, cv::Size(11, 11), cv::Size(-1,-1),
-                         cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+                         cv::TermCriteria(cv::TermCriteria::Type::EPS + cv::TermCriteria::Type::MAX_ITER, 30, 0.1));
 
         return true;
     }
@@ -1172,7 +1172,7 @@ Chessboard::generateQuads(std::vector<ChessboardQuadPtr>& quads,
     std::vector<cv::Vec4i> hierarchy;
 
     // Initialize contour retrieving routine
-    cv::findContours(image, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+    cv::findContours(image, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
 
     std::vector< std::vector<cv::Point> > quadContours;
 
@@ -1589,14 +1589,14 @@ Chessboard::checkChessboard(const cv::Mat& image, cv::Size patternSize) const
         std::vector<cv::Vec4i> hierarchy;
 
         // Initialize contour retrieving routine
-        cv::findContours(thresh, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+        cv::findContours(thresh, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
 
         std::vector<std::pair<float, int> > quads;
         getQuadrangleHypotheses(contours, quads, 1);
 
         cv::threshold(black, thresh, threshLevel, 255, cv::THRESH_BINARY_INV);
 
-        cv::findContours(thresh, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+        cv::findContours(thresh, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
         getQuadrangleHypotheses(contours, quads, 0);
 
         const size_t min_quads_count = patternSize.width * patternSize.height / 2;

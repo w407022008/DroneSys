@@ -1,7 +1,7 @@
 #ifndef MATH_UTILS_H
 #define MATH_UTILS_H
 
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Eigen>
 #include <math.h>
 
 using namespace std;
