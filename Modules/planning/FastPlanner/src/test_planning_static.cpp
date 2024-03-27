@@ -173,7 +173,7 @@ int main(int argc,char** argv)
 
     // 2. 发布odom和点云地图
     odom_pub = node_.advertise<nav_msgs::Odometry>("/drone_msg/drone_odom", 50);
-    map_pub =node_.advertise<sensor_msgs::PointCloud2>("/drone_msg/planning/global_pcl",1);
+    map_pub =node_.advertise<sensor_msgs::PointCloud2>("/fast_planner/global_pcl",1);
     // waypoint_pub = node_.advertise<geometry_msgs::PoseStamped>("/fast_planner/waypoint", 50);
     // ros::Subscriber waypoint_sub_ = node_.subscribe("/fast_planner/goal", 1, &waypointCallback);
 

@@ -82,17 +82,17 @@ void Histo_Planner::init(ros::NodeHandle& nh)
   // [SUB] goal
   user_yaw_sub = nh.subscribe<sensor_msgs::Imu>("/wit/imu", 10, &Histo_Planner::user_yaw_cb, this);
   manual_control_sub = nh.subscribe<drone_msgs::RCInput>("/joy/RCInput", 10, &Histo_Planner::manual_control_cb, this);// Radio Control input
-  goal_sub = nh.subscribe<geometry_msgs::PoseStamped>("/drone_msg/planning/goal", 1, &Histo_Planner::goal_cb, this);// terminal input
+  goal_sub = nh.subscribe<geometry_msgs::PoseStamped>("/histo_planner/goal", 1, &Histo_Planner::goal_cb, this);// terminal input
 
   // [SUB] drone state
-  drone_state_sub = nh.subscribe<drone_msgs::DroneState>("/drone_msg/drone_state", 10, &Histo_Planner::drone_state_cb, this);
+  drone_state_sub = nh.subscribe<drone_msgs::DroneState>("/histo_planner/drone_state", 10, &Histo_Planner::drone_state_cb, this);
   
   // [SUB] point cloud
-  local_point_clound_sub = nh.subscribe<sensor_msgs::PointCloud2>("/planning/local_pcl", 1, &Histo_Planner::localcloudCallback, this);
+  local_point_clound_sub = nh.subscribe<sensor_msgs::PointCloud2>("/histo_planner/local_pcl", 1, &Histo_Planner::localcloudCallback, this);
   
   /* ---------- [PUB] ---------- */
   // [PUB] Flight commands
-  command_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 10);
+  command_pub = nh.advertise<drone_msgs::ControlCommand>("/histo_planner/control_command", 10);
   
   // [PUB] message
   message_pub = nh.advertise<drone_msgs::Message>("/drone_msg/message", 10);

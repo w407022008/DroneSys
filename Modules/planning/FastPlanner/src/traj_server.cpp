@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 
   ros::Subscriber replan_sub = node.subscribe("/fast_planner/replan", 10, replanCallback);
 
-  ros::Subscriber odom_sub = node.subscribe("/drone_msg/drone_odom", 50, odomCallbck);
+  ros::Subscriber odom_sub = node.subscribe("/fast_planner/odometry", 50, odomCallbck);
 
   // 发布当前机器人指令状态
   ros::Timer cmd_timer = node.createTimer(ros::Duration(0.01), cmdCallback);

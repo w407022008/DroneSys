@@ -8,21 +8,18 @@ namespace dyn_planner
 void PlanningFSM::init(ros::NodeHandle& nh)
 {
   /* ---------- init global param---------- */
-  // B样条 - 速度限制、加速度限制、ratio限制?
   nh.param("bspline/limit_vel", NonUniformBspline::limit_vel_, -1.0);
   nh.param("bspline/limit_acc", NonUniformBspline::limit_acc_, -1.0);
   nh.param("bspline/limit_ratio", NonUniformBspline::limit_ratio_, -1.0);
 
   /* ---------- fsm param ---------- */
-    // 选择算法，　0 代表A_star (Not support now, TBD); 1 代表混合A_star
-  nh.param("fsm/algorithm_mode", algorithm_mode, 1); 
+  nh.param("fsm/algorithm_mode", algorithm_mode, 1); // 0: A*; 1:kino_A*
   nh.param("fsm/flight_type", flight_type_, -1);
   nh.param("fsm/thresh_replan", thresh_replan_, -1.0);
   nh.param("fsm/thresh_no_replan", thresh_no_replan_, -1.0);
   nh.param("fsm/safety_distance", safety_distance, 0.01);
   nh.param("fsm/wp_num", wp_num_, -1);
 
-  // 怎么使用的
   for (int i = 0; i < wp_num_; i++)
   {
     nh.param("fsm/wp" + to_string(i) + "_x", waypoints_[i][0], -1.0);
@@ -73,14 +70,12 @@ void PlanningFSM::init(ros::NodeHandle& nh)
 
   // init local optimization - bspline optimizer 
   // ROS_INFO("---init bspline optimizer!---");
-  // 初始化本地优化器
   bspline_optimizer_.reset(new BsplineOptimizer);
   bspline_optimizer_->setParam(nh);
   bspline_optimizer_->setEnvironment(edt_env_);
 
   // init planner manage 
   // ROS_INFO("---init planner manage!---");
-  // 初始化
   planner_manager_.reset(new DynPlannerManager);
   planner_manager_->setParam(nh);
   if(algorithm_mode==0){
@@ -98,31 +93,26 @@ void PlanningFSM::init(ros::NodeHandle& nh)
   visualization_.reset(new PlanningVisualization(nh));
 
   /* ---------- callback ---------- */
-  // [PUB]0.02秒执行一次，50Hz
   exec_timer_ = node_.createTimer(ros::Duration(0.02), &PlanningFSM::execFSMCallback, this);
-
-  // [PUB]安全检查，4Hz
   safety_timer_ = node_.createTimer(ros::Duration(0.25), &PlanningFSM::safetyCallback, this);
 
-  // [SUB]订阅目标点
-  waypoint_sub_ = node_.subscribe("/drone_msg/planning/goal", 1, &PlanningFSM::waypointCallback, this);
+  /* ---------- sub -----------*/
+  waypoint_sub_ = node_.subscribe("/fast_planner/goal", 1, &PlanningFSM::waypointCallback, this);
 
-  // [SUB]订阅开关
   swith_sub = node_.subscribe<std_msgs::Bool>("/fast_planner/switch", 10, &PlanningFSM::switchCallback, this);  
 
-  // [PUB]发布新的目标点
-  goalpoint_pub_ = node_.advertise<geometry_msgs::PoseStamped>("/drone_msg/planning/goal", 10);
+  /* ---------- pub -----------*/
+  // new goal
+  goalpoint_pub_ = node_.advertise<geometry_msgs::PoseStamped>("/fast_planner/goal", 10);
   
-  // [PUB]发布重规划
+  // 
   replan_pub_ = node_.advertise<std_msgs::Empty>("/fast_planner/replan", 10);
   
-  // [PUB]发布紧急停止指令
+  // emergency stop
   safety_pub_ = node_.advertise<std_msgs::Int8>("/fast_planner/stop_cmd", 10);
   
-  // [PUB]发布B样条
   bspline_pub_ = node_.advertise<drone_msgs::Bspline>("/fast_planner/bspline", 10);
-  
-  // [PUB]发布消息
+
   message_pub = node_.advertise<drone_msgs::Message>("/drone_msg/message", 10);
   
   // ROS_INFO("---planning_fsm: init finished!---");
@@ -164,7 +154,6 @@ void PlanningFSM::waypointCallback(const geometry_msgs::PoseStampedConstPtr& msg
     // end_pt_ << msg->pose.position.x, msg->pose.position.y, 1.0;
     // if (msg->pose.position.z < 0.3) goal_z = 0.3;
     // if (msg->pose.position.z > 3.5) goal_z = 3.5;
-    // 对z轴高度进行限制
     goal_z = conf(msg->pose.position.z, 1.0, 2.0);
     end_pt_ << msg->pose.position.x, msg->pose.position.y, goal_z;
   }
@@ -187,7 +176,6 @@ void PlanningFSM::waypointCallback(const geometry_msgs::PoseStampedConstPtr& msg
   end_vel_.setZero();
   have_goal_ = true;
 
-  // 如果当前状态是等待，则变为生成新轨迹;若当前状态为执行轨迹，则变为重规划轨迹
   if (exec_state_ == EXEC_TRAJ)
     changeExecState(REPLAN_TRAJ, "TRIG");
 }
@@ -213,7 +201,6 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
   static int fsm_num = 0;
   static int num_gen_traj = 0;
   fsm_num++;
-  // 2秒打印一次状态,50Hz pub
   if (fsm_num == 100)
   {
     printExecState();
@@ -251,7 +238,6 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
 
     case WAIT_GOAL:
     {
-      // 获得目标点后，切换为执行新轨迹
       if (!have_goal_)
         return;
       else
@@ -273,10 +259,8 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
       start_vel_(1) = odom.twist.twist.linear.y;
       start_vel_(2) = odom.twist.twist.linear.z;
 
-      // 初始加速度设置为0
       start_acc_.setZero();
 
-      // 核心算法：路径最优搜索
       bool success = planSearchOpt();
 
       if (success)
@@ -284,14 +268,13 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
 #ifdef DEBUG
       ROS_INFO("---planing_fsm: planning successful!---");
 #endif
-        // 若规划成功，则切换为执行轨迹
+
         changeExecState(EXEC_TRAJ, "FSM");
         num_gen_traj = 0;
       }
       else
       {
         num_gen_traj++;
-        // 连续规划三次失败，切换为等待目标，否则继续规划
         if (num_gen_traj >= 3){
           have_goal_ = false;
           changeExecState(WAIT_GOAL, "FSM");
@@ -335,7 +318,6 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
       }
       else
       {
-        // 切换为重规划的逻辑：时间?或
         // changeExecState(REPLAN_TRAJ, "FSM");
       }
       break;
@@ -363,7 +345,7 @@ void PlanningFSM::execFSMCallback(const ros::TimerEvent& e)
 
       /* inform server */
       std_msgs::Empty replan_msg;
-      replan_pub_.publish(replan_msg);//在0.01s后停止发布轨迹
+      replan_pub_.publish(replan_msg);
 
       bool success = planSearchOpt();
       if (success)
@@ -402,7 +384,7 @@ void PlanningFSM::safetyCallback(const ros::TimerEvent& e)
     pub_message(message_pub, drone_msgs::Message::WARN,  NODE_NAME, "[safetyCallback]: current position dangerous, stop and wait a new goal\n");
     changeExecState(WAIT_GOAL, "FSM");
     std_msgs::Empty emt;
-    replan_pub_.publish(emt);//在0.01s后停止发布轨迹
+    replan_pub_.publish(emt);
   }else{
     replan.data = 0;
   }
@@ -501,7 +483,7 @@ void PlanningFSM::safetyCallback(const ros::TimerEvent& e)
               cout << "goal near collision, stop and wait a new goal" << endl;
 #endif
         std_msgs::Empty emt;
-        replan_pub_.publish(emt);//在0.01s后停止发布轨迹
+        replan_pub_.publish(emt);
       }
     }
   }
@@ -547,7 +529,7 @@ bool PlanningFSM::planSearchOpt()
     {
       bspline.knots.push_back(knots(i));
     }
-    // 发布B样条，自定义的消息类型
+    
     bspline_pub_.publish(bspline);
 
     /* visulization */
@@ -576,5 +558,4 @@ void PlanningFSM::switchCallback(const std_msgs::Bool::ConstPtr &msg){
     trigger_= msg->data;
 }
 
-// PlanningFSM::
-}  // namespace dyn_planner
+}

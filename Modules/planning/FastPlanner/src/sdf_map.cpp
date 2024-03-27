@@ -603,16 +603,13 @@ namespace dyn_planner {
         cout << "map size: " << map_size_.transpose() << endl;
         cout << "resolution: " << resolution_sdf_ << endl;
 
-        /* ---------- sub and pub ---------- */
-        odom_sub_ = node_.subscribe<nav_msgs::Odometry>("/drone_msg/drone_odom", 10, &SDFMap::odomCallback, this);
+        odom_sub_ = node_.subscribe<nav_msgs::Odometry>("/fast_planner/odometry", 10, &SDFMap::odomCallback, this);
         octomap_sub_ = node_.subscribe<octomap_msgs::Octomap>("/fast_planner/local_octomap", 1, &SDFMap::octomapCallback, this);
-
-        cloud_sub_ = node_.subscribe<sensor_msgs::PointCloud2>("/fast_planner/local_pointclouds", 1, &SDFMap::cloudCallback,
-                                                               this);
-
-        update_timer_ = node_.createTimer(ros::Duration(1.0/update_rate_), &SDFMap::updateCallback, this);
+        cloud_sub_ = node_.subscribe<sensor_msgs::PointCloud2>("/fast_planner/local_pointclouds", 1, &SDFMap::cloudCallback, this);
 
         inflate_cloud_pub_ = node_.advertise<sensor_msgs::PointCloud2>("/fast_planner/sdf_map/inflate_cloud", 1);
+
+        update_timer_ = node_.createTimer(ros::Duration(1.0/update_rate_), &SDFMap::updateCallback, this);
 
         /* ---------- setting ---------- */
         have_odom_ = false;

@@ -69,7 +69,8 @@
 		
 	<!-- Histo Planner -->
 	<node pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">
-		<remap from="/planning/local_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
+		<remap from="/histo_planner/local_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
+		<remap from="/histo_planner/goal" to="/drone_msg/planning/goal" />
 		
 		<param name="histo_planner/sim_mode" value="true" type="bool"/>				<!-- if False: pls manually set mode and arm -->
 		<param name="histo_planner/path_tracking_enable" value="true" type="bool"/>	<!-- Whether to enable track tracking and pub reference -->
@@ -92,7 +93,7 @@
 		<param name="histo_planner/joy_goal_xy_max" value="4.0" type="double"/>		<!-- Horizontal furthest distance (when joy control) -->
 		<param name="histo_planner/joy_goal_z_max" value="2.0" type="double"/>		<!-- Vertical furthest distance (when joy control) -->
 		<!-- Yaw auto-hold? -->
-		<param name="histo_planner/yaw_tracking_mode" value="1" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
+		<param name="histo_planner/yaw_tracking_mode" value="0" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
 		<param name="histo_planner/spinning_once_first" value="false" type="bool"/>  <!-- Spinning once turn first before starting tracking a new traj -->
 		<param name="histo_planner/yaw_rate" value="2.0" type="double"/>             <!-- Maximum steering speed (whenever auto_hold or joy control) -->
 		<param name="histo_planner/time_forward_facing_toward" value="2.0" type="double"/> <!-- Towards the waypoint in n second later -->

@@ -50,7 +50,7 @@ namespace ego_planner
     rviz_closest_pub = nh.advertise<geometry_msgs::PointStamped >("/ego_planner/closest", 10); // closest obs
 
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
-      waypoint_sub_ = nh.subscribe("/drone_msg/planning/goal", 1, &EGOReplanFSM::goalPointCallback, this);
+      waypoint_sub_ = nh.subscribe("/ego_planner/goal", 1, &EGOReplanFSM::goalPointCallback, this);
     else if (target_type_ == TARGET_TYPE::PRESET_TARGET)
     {
       ros::Duration(1.0).sleep();

@@ -1,0 +1,148 @@
+<launch>
+
+  <!-- Initialize Environment, Publish global / local point clouds -->
+  <node pkg="planning_simulator" name="random_forest" type="random_forest" output="screen">
+    <!-- Drone initial postion -->
+    <param name="init_pos_x" value="0.0" type="double"/>
+    <param name="init_pos_y" value="0.0" type="double"/>
+    <!-- Map size, number of obstacles, resolution -->
+    <param name="global_map/x_size" value="20.0" type="double"/> <!-- Global map limited space -->
+    <param name="global_map/y_size" value="20.0" type="double"/>
+    <param name="global_map/z_size" value="4.0" type="double"/>
+    <param name="map/resolution" value="0.1" type="double"/> <!-- points resolution -->
+    <param name="map/pillar_num" value="80" type="double"/> <!-- Num of colum to be created -->
+    <param name="map/circle_num" value="30" type="double"/> <!-- Num of circle to be created -->
+    <param name="map/min_distance_init" value="1.0" type="double"/> <!-- Initial free space -->
+    <param name="map/min_distance" value="1.5" type="double"/> <!-- Minimum distance between obstacles(Column or circle) -->
+    <!-- Definition of obstacle shapes -->
+    <param name="pillar_shape/min_radius" value="0.1" type="double"/>
+    <param name="pillar_shape/max_radius" value="0.2" type="double"/> <!-- Column diameter -->
+    <param name="pillar_shape/min_height" value="1.0" type="double"/>
+    <param name="pillar_shape/max_height" value="5.0" type="double"/>
+    <param name="circle_shape/min_radius" value="1.0" type="double"/> <!-- Long and short diameter of the ellipse -->
+    <param name="circle_shape/max_radius" value="3.0" type="double"/>
+    <param name="circle_shape/min_height" value="1.0" type="double"/> <!-- Height of circle center  -->
+    <param name="circle_shape/max_height" value="2.0" type="double"/>
+    <param name="circle_shape/theta" value="0.5" type="double"/> <!-- Random z-axis rotation -->
+    <!-- Env Sense -->
+    <param name="sensing/sense_range" value="2.0" type="double"/> <!-- Sensory range -->
+    <param name="sensing/sense_rate" value="30.0" type="double"/> <!-- pcl pub rate -->
+  </node>
+
+  <!-- Simple Model -->
+  <node pkg="planning_simulator" name="uav_sim" type="uav_sim" output="screen">	
+    <param name="init_pos_x" value="0.0" type="double"/>
+    <param name="init_pos_y" value="0.0" type="double"/>
+    <param name="init_pos_z" value="1.0" type="double"/>
+    <param name="planner_type" value="0" type="int"/>
+    <param name="color/a" value="1.0"/>    
+    <param name="color/r" value="0.0"/>        
+    <param name="color/g" value="0.0"/>        
+    <param name="color/b" value="0.0"/>       
+    <param name="robot_scale" value="1.0"/>
+    <param name="mesh_resource" value="$(find planning_simulator)/meshes/hummingbird.mesh"/>
+  </node>
+
+  <!-- goal point topic sub-->
+  <arg name="goal_topic" value="/drone_msg/planning/goal" />
+  <!-- pcl with odom topic sub **or** camera -->
+  <arg name="odom_topic" value="/drone_msg/drone_odom" />
+  <arg name="pcl_topic" value="/drone_msg/planning/local_enu_pcl_sim" />
+  <!-- traj topic pub -->
+  <arg name="traj_topic" value="/drone_msg/control_command" />
+
+	<arg name="max_vel" value="3.0" />
+	<arg name="max_acc" value="2.0" />
+	<arg name="dynamic" value="1" />
+  <arg name="local_sdf" value="true" />
+
+	<!-- Fast planner-->
+	<node pkg="fast_planner" name="fast_planner" type="dyn_planner_node" output="screen">
+		<remap unless="$(arg local_sdf)" from="/fast_planner/global_pcl" to="/drone_msg/pcl_groundtruth" />
+		<remap if="$(arg local_sdf)" from="/fast_planner/local_pointclouds" to="$(arg pcl_topic)" />
+
+		<remap from="/fast_planner/goal" to="$(arg goal_topic)" />
+		<remap from="/fast_planner/odometry" to="$(arg odom_topic)"/>
+		<remap from="/fast_planner/position_cmd" to="$(arg traj_topic)"/>
+
+		<!-- planning_fsm.cpp -->
+		<param if="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="0" type="int"/>	<!-- 0: local sdf; 1: global sdf -->
+		<param unless="$(arg local_sdf)" name="sdf_map/SDF_MODE" value="1" type="int"/>
+		<param name="fsm/flight_type" value="1" type="int"/>	<!-- 1: 手动设置末点, 2: 自定义轨迹点 -->
+		<param name="fsm/safety_distance" value="0.3" type="double"/> <!-- for current point, smaller than margin -->
+		<param name="fsm/thresh_replan" value="1.0" type="double"/>	<!-- 起点区域 -->
+		<param name="fsm/thresh_no_replan" value="1.0" type="double"/>	<!-- 终点区域 -->
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+		<param name="bspline/limit_ratio" value="1.1" type="double"/>
+
+		<!-- dyn_planner_manager.cpp -->
+		<param name="manager/time_sample" value="0.5" type="double"/>
+		<param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="manager/dynamic" value="$(arg dynamic)" type="int"/>
+		<param name="manager/margin" value="0.3" type="double"/> <!-- for trajectory, equal to inflate -->
+
+		<!-- sdf_map.cp -->
+		<param name="sdf_map/origin_x" value="-10.0" type="double"/>
+		<param name="sdf_map/origin_y" value="-10.0" type="double"/>
+		<param name="sdf_map/origin_z" value="0.0" type="double"/>
+		<param name="sdf_map/map_size_x" value="40.0" type="double"/>
+		<param name="sdf_map/map_size_y" value="40.0" type="double"/>
+		<param name="sdf_map/map_size_z" value="5.0" type="double"/>
+		<param name="sdf_map/resolution_sdf" value="0.1" type="double"/>
+		<param name="sdf_map/ceil_height" value="3.5" type="double"/>
+		<param name="sdf_map/update_rate" value="10.0" type="double"/>
+		<param name="sdf_map/update_range" value="4.0" type="double"/>
+		<param name="sdf_map/inflate" value="0.2" type="double"/>	<!-- occupancy space cor to obs -->
+		<param name="sdf_map/radius_ignore" value="0.2" type="double"/> <!-- useless -->
+
+		<!-- A* path searching -->
+		<param name="astar/lambda_heu" value="10.0" type="double"/>
+		<param name="astar/resolution_astar" value="0.1" type="double"/>
+		<param name="astar/time_resolution" value="0.8" type="double"/>
+		<param name="astar/margin" value="0.3" type="double"/>
+		<param name="astar/allocate_num" value="100000" type="int"/>
+		<!-- kinodynamic path searching -->
+		<param name="search/max_tau" value="0.8" type="double"/>
+		<param name="search/init_max_tau" value="0.8" type="double"/>
+		<param name="search/max_vel" value="$(arg max_vel)" type="double"/>
+		<param name="search/max_acc" value="$(arg max_acc)" type="double"/>
+		<param name="search/w_time" value="15.0" type="double"/>
+		<param name="search/horizon" value="7.0" type="double"/>
+		<param name="search/lambda_heu" value="10.0" type="double"/>
+		<param name="search/resolution_astar" value="0.1" type="double"/>
+		<param name="search/time_resolution" value="0.8" type="double"/>
+		<param name="search/margin" value="0.3" type="double"/>	 <!-- for trajectory, equal to inflate -->
+		<param name="search/allocate_num" value="100000" type="int"/>
+		<param name="search/check_num" value="5" type="int"/>
+
+		<!-- Bspline trajectory optimization -->
+		<param name="optimization/lamda1" value="0.1" type="double"/>	<!-- smoothness jerk-->
+		<param name="optimization/lamda2" value="1.0" type="double"/>	<!-- distance -->
+		<param name="optimization/lamda3" value="0.1" type="double"/>	<!-- feasibility vel&acc -->
+		<param name="optimization/lamda4" value="0.01" type="double"/>	<!-- endpoint pos -->
+		<param name="optimization/lamda5" value="17.0" type="double"/>	<!-- tensile strength -->
+		<param name="optimization/dist0" value="0.5" type="double"/>	<!-- bigger than inflate -->
+		<param name="optimization/dist1" value="1.0" type="double"/>	<!-- efficient distance to sense obs -->
+		<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>	<!-- 最大速度要求 -->
+		<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>	<!-- 最大加速度要求 -->
+		<param name="optimization/algorithm" value="40" type="int"/>	<!-- 优化算法选择 40: SLSQP(constrained), 11 LBFGS(unconstrained barrier) -->
+		<param name="optimization/max_iteration_num" value="100" type="int"/>	<!-- 最大优化迭代次数 -->
+		<param name="optimization/order" value="3" type="int"/>		<!-- 样条连续阶数 -->
+	</node>
+
+	<!-- traj server -->
+	<node pkg="fast_planner" name="traj_server" type="traj_server" output="screen">
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+	</node>
+
+	<!-- traj tracking -->
+	<node pkg="fast_planner" type="planning_tracking" name="fast_planning_tracking" output="screen" launch-prefix="gnome-terminal --tab --">	
+		<param name="fast_planning_tracking/sim_mode" value="true" type="bool"/>
+		<param name="fast_planning_tracking/yaw_tracking_mode" value="false" type="bool"/>
+	</node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find fast_planner)/launch/default.rviz" required="true" />
+
+</launch>

@@ -120,7 +120,7 @@ int main(int argc, char **argv)
         cout << "Takeoff"<<endl;
     }
 
-    while (fabs(_DroneState.velocity[2])>0.3 || fabs(_DroneState.position[2])<0.1){
+    while (fabs(_DroneState.position[2])<0.9){
         ros::spinOnce();
         ros::Duration(1.0).sleep();
     }
