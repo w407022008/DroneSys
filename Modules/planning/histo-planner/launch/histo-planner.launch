@@ -71,6 +71,8 @@
 	<node pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">
 		<remap from="/histo_planner/local_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
 		<remap from="/histo_planner/goal" to="/drone_msg/planning/goal" />
+		<remap from="/histo_planner/drone_state" to="/drone_msg/drone_state"/>
+		<remap from="/histo_planner/control_command" to="/drone_msg/control_command"/>
 		
 		<param name="histo_planner/sim_mode" value="true" type="bool"/>				<!-- if False: pls manually set mode and arm -->
 		<param name="histo_planner/path_tracking_enable" value="true" type="bool"/>	<!-- Whether to enable track tracking and pub reference -->
