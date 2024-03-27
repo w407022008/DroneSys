@@ -136,7 +136,6 @@ void Histo_Planner::init(ros::NodeHandle& nh)
 
   // Initialisation of planner state parameters
   exec_state = EXEC_STATE::WAIT_GOAL;
-  planner_enable = true;
   odom_ready = false;
   drone_ready = false;
   goal_ready = false;
@@ -209,6 +208,7 @@ void Histo_Planner::init(ros::NodeHandle& nh)
     ros::spinOnce();
     cout << "[Init]: wait for odom" << endl;
   }
+  planner_enable = true;
   stop_pos = cur_pos;
   cur_pos_ref = cur_pos;
   cur_vel_ref.setZero();
@@ -1284,7 +1284,7 @@ void Histo_Planner::mission_cb(const ros::TimerEvent& e)
 // Trajectory tracking, publishing reference position and orientation.
 void Histo_Planner::control_cb(const ros::TimerEvent& e)
 {
-  if (!odom_ready || !drone_ready || !tracking_controller_enable)
+  if (!odom_ready || !drone_ready || !tracking_controller_enable || !planner_enable)
     return;
 		
   if (!path_ok)
