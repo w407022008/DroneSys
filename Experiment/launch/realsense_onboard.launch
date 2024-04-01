@@ -5,6 +5,7 @@
 	<arg name="color_enable" default="false"/>
 	<arg name="raw_pointcloud" default="false"/>
 	<arg name="emitter_on_off" default="false"/>
+	<arg name="emitter_enabled" default="2"/>
 	<arg name="depth_fps" default="60"/>
 	<arg name="infra_fps" default="60"/>
 	<arg name="color_fps" default="60"/>
@@ -42,7 +43,10 @@
 		<arg name="clip_distance"       value="$(arg sensor_max_range)"/>
 		<arg name="emitter_on_off"      value="$(arg emitter_on_off)"/>
 	</include>
-	<rosparam> /camera/stereo_module/emitter_enabled: 1</rosparam>
+	<!-- 0:Disable 1:Enable 2:AUTO -->
+	<rosparam param="/camera/stereo_module/emitter_enabled" subst_value="True">$(arg emitter_enabled)</rosparam>
+	<rosparam param="/camera/stereo_module/emitter_on_off" subst_value="True">$(arg emitter_on_off)</rosparam>
+
 
 	<!-- run the px4_transceiver.cpp -->
 	<node if="$(arg mavros_in)" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">

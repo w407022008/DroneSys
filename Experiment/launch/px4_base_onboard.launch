@@ -31,6 +31,8 @@
 			<arg name="mavros_in" value="true" />
 			<arg name="mavros_ok" value="true" />
 
+			<arg name="emitter_enabled" default="1"/><!-- 0:Disable 1:Enable 2:AUTO -->
+			<arg name="emitter_on_off" default="true"/>
 			<arg name="infra1_enable" default="true"/>
 			<arg name="depth_fps" default="60"/>
 			<arg name="infra_fps" default="60"/>
@@ -40,11 +42,9 @@
 			<arg name="gcs_url" value="$(arg gcs_url)" />
 			<arg name="rate_hz" value="50.0"/>
 			
-			<arg name="slam_driver" default="$(arg input_source)"/>  <!-- 0 for vicon， 4 VINS-Fusion, 5 ORB-SLAM3,2 for gazebo,  1 for Cartographer, 3 Intel T265 dual camera -->
+			<arg name="slam_driver" default="$(arg input_source)"/>  <!-- 4 VINS-Fusion, 5 ORB-SLAM3, 1 for Cartographer, 3 Intel T265 dual camera -->
 			
 		</include>
-		<rosparam> /camera/stereo_module/emitter_enabled: 1</rosparam> <!-- 0:Disable 1:Enable 2:AUTO -->
-		<rosparam> /camera/stereo_module/emitter_on_off: true</rosparam>
 	</group>
 
     <!-- orb-slam3 with mavros -->
@@ -53,6 +53,8 @@
 			<arg name="mavros_in" value="true" />
 			<arg name="mavros_ok" value="true" />
 			
+			<arg name="emitter_enabled" default="1"/><!-- 0:Disable 1:Enable 2:AUTO -->
+			<arg name="emitter_on_off" default="true"/>
 			<arg name="infra1_enable" default="true"/>
 			<arg name="infra2_enable" default="true"/>
 			<arg name="depth_fps" default="60"/>
@@ -63,11 +65,9 @@
 			<arg name="gcs_url" value="$(arg gcs_url)" />
 			<arg name="rate_hz" value="50.0"/>
 			
-			<arg name="slam_driver" default="$(arg input_source)"/>  <!-- 0 for vicon， 4 VINS-Fusion, 5 ORB-SLAM3,2 for gazebo,  1 for Cartographer, 3 Intel T265 dual camera -->
+			<arg name="slam_driver" default="$(arg input_source)"/>  <!-- 4 VINS-Fusion, 5 ORB-SLAM3, 1 for Cartographer, 3 Intel T265 dual camera -->
 			
 		</include>
-		<rosparam> /camera/stereo_module/emitter_enabled: 1</rosparam> <!-- 0:Disable 1:Enable 2:AUTO -->
-		<rosparam> /camera/stereo_module/emitter_on_off: true</rosparam>
 	</group>
 
 
