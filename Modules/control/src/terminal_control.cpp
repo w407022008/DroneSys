@@ -6,6 +6,8 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
+#include <drone_msgs/DroneState.h>
 
 #include "trajectory_generation.h"
 #include "KeyboardEvent.h"
@@ -26,10 +28,18 @@ std::vector<geometry_msgs::PoseStamped> posehistory_vector_;
 float time_trajectory = 0.0;
 // 轨迹追踪总时长，键盘控制时固定时长，指令输入控制可调
 float trajectory_total_time = 50.0;
+float cur_pos[3];
 
-
+ros::Subscriber velocity_sub;
 ros::Publisher move_pub;
 ros::Publisher ref_trajectory_pub;
+
+void odom_cb(const nav_msgs::Odometry::ConstPtr &msg)
+{
+    cur_pos[0] = msg->pose.pose.position.x;
+    cur_pos[1] = msg->pose.pose.position.y;
+    cur_pos[2] = msg->pose.pose.position.z;
+}
 
 void mainloop1();
 void mainloop2();
@@ -53,6 +63,8 @@ int main(int argc, char **argv)
     cout<<setprecision(2);
     cout.setf(ios::left);
     cout.setf(ios::showpoint);
+
+    velocity_sub=nh.subscribe<nav_msgs::Odometry>("/drone_msg/drone_odom", 100, odom_cb);
 
     // [PUB] control command
     move_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 10);
@@ -200,6 +212,33 @@ void mainloop1()
                         }else if(Trjectory_mode == 3)
                         {
                             Command_to_pub.Reference_State = Traj_gen.Line_trajectory_generation(time_trajectory);
+                        }
+
+                        if(time_trajectory<0.05)
+                        {
+                            ros::spinOnce();
+                            // std::cout<<cur_pos[0]<<' '<<cur_pos[1]<<' '<<cur_pos[2]<<std::endl;
+                            float dis=0.0, dif[3];
+                            for(int i=0;i<3;i++)
+                            {
+                                dif[i] = Command_to_pub.Reference_State.position_ref[i]-cur_pos[i];
+                                dis += dif[i]*dif[i];
+                            }
+                            dis = sqrt(dis);
+                            // std::cout<<dif[0]<<' '<<dif[1]<<' '<<dif[2]<<std::endl;
+                            if(dis > 0.1)
+                            {
+                                Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_VEL;
+                                Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
+                                Command_to_pub.Reference_State.time_from_start = 0.0;
+                                Command_to_pub.Reference_State.velocity_ref[0] = dif[0]/dis;
+                                Command_to_pub.Reference_State.velocity_ref[1] = dif[1]/dis;
+                                Command_to_pub.Reference_State.velocity_ref[2] = dif[2]/dis;
+                                Command_to_pub.Reference_State.yaw_ref = 0.0;
+                                move_pub.publish(Command_to_pub);
+                                continue;
+                            }
+                            time_trajectory = time_trajectory + 0.01;
                         }
 
                         move_pub.publish(Command_to_pub);

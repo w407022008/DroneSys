@@ -11,6 +11,7 @@
 #include <mavros_msgs/AttitudeTarget.h>
 #include <mavros_msgs/Altitude.h>
 #include <mavros_msgs/PositionTarget.h>
+#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <mavros_msgs/ActuatorControl.h>
@@ -50,17 +51,21 @@ class state_from_mavros
         // Mavros/plugins/sys_status.cpp: Mavlink message (MAVLINK_MSG_ID_EXTENDED_SYS_STATE (#245)) <- uORB message (vehicle_land_detected.msg)
         extended_state_sub = state_nh.subscribe<mavros_msgs::ExtendedState>(uav_name + "/mavros/extended_state", 10, &state_from_mavros::extended_state_cb,this);
 
+        // Drone state in ENU_ROS frame, NED frame used in PX4
+        // Mavros/plugins/local_position.cpp: Mavlink message (LOCAL_POSITION_NED (#32) & ATTITUDE (#30)) <- uORB message (vehicle_local_position.msg & vehicle_attitude.msg)
+        odometry_sub = state_nh.subscribe<nav_msgs::Odometry>(uav_name + "/mavros/local_position/odom", 10, &state_from_mavros::odom_cb,this);
+
         // Drone state in ENU_ROS frame, defined in NED_PX4 frame in PX4
         // Mavros/plugins/local_position.cpp: Mavlink message (LOCAL_POSITION_NED (#32) & ATTITUDE (#30)) <- uORB message (vehicle_local_position.msg & vehicle_attitude.msg)
-        position_sub = state_nh.subscribe<geometry_msgs::PoseStamped>(uav_name + "/mavros/local_position/pose", 10, &state_from_mavros::pos_cb,this);
+        // position_sub = state_nh.subscribe<geometry_msgs::PoseStamped>(uav_name + "/mavros/local_position/pose", 10, &state_from_mavros::pos_cb,this);
 
         // Drone velocity
         // Mavros/plugins/local_position.cpp: Mavlink message (LOCAL_POSITION_NED (#32) & ATTITUDE (#30)) <- uORB message (vehicle_local_position.msg & vehicle_angular_velocity.msg)
-        velocity_sub = state_nh.subscribe<geometry_msgs::TwistStamped>(uav_name + "/mavros/local_position/velocity_local", 10, &state_from_mavros::vel_cb,this);
+        // velocity_sub = state_nh.subscribe<geometry_msgs::TwistStamped>(uav_name + "/mavros/local_position/velocity_local", 10, &state_from_mavros::vel_cb,this);
 
         // Drone attitude and Imu
         // Mavros/plugins/imu.cpp: Mavlink message (ATTITUDE (#30) & MAVLINK_MSG_ID_HIGHRES_IMU (#105)) <- uORB message (vehicle_attitude.msg & vehicle_imu.msg)
-        attitude_sub = state_nh.subscribe<sensor_msgs::Imu>(uav_name + "/mavros/imu/data", 10, &state_from_mavros::att_cb,this); 
+        // attitude_sub = state_nh.subscribe<sensor_msgs::Imu>(uav_name + "/mavros/imu/data", 10, &state_from_mavros::att_cb,this); 
 
         // Drone altitude
         // Mavros/plugins/altitude.cpp: Mavlink message (MAVLINK_MSG_ID_ALTITUDE (#141)) <- uORB message (vehicle_local_position.msg & home_position.msg)
@@ -80,6 +85,7 @@ class state_from_mavros
         ros::NodeHandle state_nh;
 
         ros::Subscriber state_sub;
+        ros::Subscriber odometry_sub;
         ros::Subscriber position_sub;
         ros::Subscriber velocity_sub;
         ros::Subscriber attitude_sub, alt_sub;
@@ -103,6 +109,40 @@ class state_from_mavros
             {
                 _DroneState.landed = false;
             }
+        }
+
+        void odom_cb(const nav_msgs::Odometry::ConstPtr &msg)
+        {
+            _DroneState.header.stamp = msg->header.stamp;
+
+            _DroneState.position[0] = msg->pose.pose.position.x;
+            _DroneState.position[1] = msg->pose.pose.position.y;
+            _DroneState.position[2] = msg->pose.pose.position.z;
+
+            _DroneState.velocity[0] = msg->twist.twist.linear.x;
+            _DroneState.velocity[1] = msg->twist.twist.linear.y;
+            _DroneState.velocity[2] = msg->twist.twist.linear.z;
+
+            Eigen::Quaterniond q_fcu = Eigen::Quaterniond(
+                msg->pose.pose.orientation.w, 
+                msg->pose.pose.orientation.x, 
+                msg->pose.pose.orientation.y, 
+                msg->pose.pose.orientation.z);
+
+            Eigen::Vector3d euler_fcu = quaternion_to_euler(q_fcu);
+            _DroneState.attitude[0] = euler_fcu[0];
+            _DroneState.attitude[1] = euler_fcu[1];
+            _DroneState.attitude[2] = euler_fcu[2];
+            
+            Eigen::Quaterniond q_ = quaternion_from_rpy(euler_fcu);
+            _DroneState.attitude_q.w = q_.w();
+            _DroneState.attitude_q.x = q_.x();
+            _DroneState.attitude_q.y = q_.y();
+            _DroneState.attitude_q.z = q_.z();
+
+            _DroneState.attitude_rate[0] = msg->twist.twist.angular.x;
+            _DroneState.attitude_rate[1] = msg->twist.twist.angular.y;
+            _DroneState.attitude_rate[2] = msg->twist.twist.angular.z;
         }
 
         void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)

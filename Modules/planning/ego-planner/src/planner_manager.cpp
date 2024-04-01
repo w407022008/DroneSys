@@ -200,7 +200,7 @@ namespace ego_planner
         start_end_derivatives.push_back(local_data_.acceleration_traj_.evaluateDeBoorT(t_cur));
         start_end_derivatives.push_back(Eigen::Vector3d::Zero());
 
-        if (point_set.size() > pp_.planning_horizen_ / pp_.ctrl_pt_dist * 3) // The initial path is unnormally too long!
+        if (point_set.size() > pp_.planning_horizen_ / pp_.ctrl_pt_dist * 3) // The initial path is too long, if use previous traj!
         {
           flag_force_polynomial = true;
           flag_regenerate = true;
@@ -471,7 +471,7 @@ namespace ego_planner
     // double length = bspline.getLength(0.1);
     // int seg_num = ceil(length / pp_.ctrl_pt_dist);
 
-    bspline.lengthenTime(ratio);
+    bspline.lengthenTime(ratio); // still uniform bspline
     double duration = bspline.getTimeSum();
     dt = duration / double(seg_num);
     time_inc = duration - time_origin;

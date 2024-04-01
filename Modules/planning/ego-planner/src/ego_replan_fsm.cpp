@@ -12,13 +12,13 @@ namespace ego_planner
     have_odom_ = false;
 
     /*  fsm param  */
-    nh.param("fsm/tracking", tracking_enable, true);
+    nh.param("fsm/tracking", tracking_enable, true); // if tracking pub cmd
     nh.param("fsm/flight_type", target_type_, -1);
-    nh.param("fsm/thresh_replan", replan_thresh_, -1.0);
-    nh.param("fsm/thresh_no_replan", no_replan_thresh_, -1.0);
-    nh.param("fsm/planning_horizon", planning_horizen_, -1.0);
-    nh.param("fsm/planning_horizen_time", planning_horizen_time_, -1.0);
-    nh.param("fsm/emergency_time_", emergency_time_, 1.0);
+    nh.param("fsm/thresh_replan", replan_thresh_, -1.0); // useless
+    nh.param("fsm/thresh_no_replan", no_replan_thresh_, -1.0); // stop plan
+    nh.param("fsm/planning_horizon", planning_horizen_, -1.0); //get local target from start_point
+    nh.param("fsm/planning_horizen_time", planning_horizen_time_, -1.0); //useless
+    nh.param("fsm/emergency_time_", emergency_time_, 1.0); // useless
 
     nh.param("fsm/waypoint_num", waypoint_num_, -1);
     for (int i = 0; i < waypoint_num_; i++)
