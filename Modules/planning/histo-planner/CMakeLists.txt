@@ -7,8 +7,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.7 REQUIRED COMPONENT common io)
-find_package(octomap REQUIRED)
-include_directories(${OCTOMAP_INCLUDE_DIRS})
 
 find_package(catkin REQUIRED COMPONENTS
 		roscpp
@@ -69,7 +67,6 @@ add_executable(histo_planner_main
 
 target_link_libraries(histo_planner_main
        ${catkin_LIBRARIES}
-       ${OCTOMAP_LIBRARIES}
 	   ${PCL_LIBRARIES}
     	/usr/local/lib/libnlopt.so
 		dw

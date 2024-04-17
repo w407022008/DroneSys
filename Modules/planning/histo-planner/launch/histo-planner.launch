@@ -68,7 +68,7 @@
 		
 		
 	<!-- Histo Planner -->
-	<node pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">
+	<node pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen">
 		<remap from="/histo_planner/local_pcl" to="/drone_msg/planning/local_enu_pcl_sim" />
 		<remap from="/histo_planner/goal" to="/drone_msg/planning/goal" />
 		<remap from="/histo_planner/drone_state" to="/drone_msg/drone_state"/>
