@@ -31,12 +31,29 @@ sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/VINS-Fusion/vins_estimato
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/planning_simulator/CMakeLists.txt
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/globle_planner/CMakeLists.txt
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/local_planner/CMakeLists.txt
-sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/histo-planner/CMakeLists.txt
-sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/planning/ego-planner/CMakeLists.txt
-sed -i -e s/"mat_jerk(i, j)"/"mat_jerk((int)i, (int)j)"/g ./Modules/planning/ego-planner/include/polynomial_traj.h
+sed -i '16,19d' ./Modules/planning/local_planner/src/geo_guide_apf.cpp
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/FastPlanner/CMakeLists.txt
 sed -i '65i add_compile_options(-std=c++17)' ./Modules/planning/FastPlanner/ThirdParty/sdf_tools/CMakeLists.txt
 sed -i -e s/"-std=c++0x"/"-std=c++17"/g ./Modules/planning/FastPlanner/ThirdParty/sdf_tools/CMakeLists.txt
 sed -i '5i #include <stdlib.h>' ./Modules/planning/FastPlanner/ThirdParty/arc_utilities/include/arc_utilities/first_order_deformation.h
-sed -i '16,19d' ./Modules/planning/local_planner/src/geo_guide_apf.cpp
 
+sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/ego-planner/CMakeLists.txt
+sed -i -e s/"mat_jerk(i, j)"/"mat_jerk((int)i, (int)j)"/g ./Modules/planning/ego-planner/include/polynomial_traj.h
+sed -i '11i find_package(cv_bridge REQUIRED)'  ./Modules/planning/ego-planner/CMakeLists.txt
+sed -i '11i find_package(visualization_msgs REQUIRED)'  ./Modules/planning/ego-planner/CMakeLists.txt
+sed -i '11i find_package(drone_msgs REQUIRED)'  ./Modules/planning/ego-planner/CMakeLists.txt
+sed -i '11i find_package(message_filters REQUIRED)'  ./Modules/planning/ego-planner/CMakeLists.txt
+sed -i '11i find_package(roscpp REQUIRED)'  ./Modules/planning/ego-planner/CMakeLists.txt
+
+sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(cv_bridge REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(image_transport REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(tf REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(mavros_msgs REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(drone_msgs REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(visualization_msgs REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(nav_msgs REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(pcl_conversions REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(pcl_ros REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(rospy REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt
+sed -i '10i find_package(roscpp REQUIRED)'  ./Modules/planning/histo-planner/CMakeLists.txt

@@ -11,9 +11,9 @@ find_package(PCL 1.7 REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  std_msgs
-  geometry_msgs
-  message_generation
+#  std_msgs
+#  geometry_msgs
+#  message_generation
   message_filters
   drone_msgs
   visualization_msgs
@@ -23,11 +23,11 @@ find_package(catkin REQUIRED COMPONENTS
 # Generate messages in the 'msg' folder
   
 # Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-)
+#generate_messages(
+#  DEPENDENCIES
+#  std_msgs
+#  geometry_msgs
+#)
 
 # catkin_package(CATKIN_DEPENDS message_runtime)
 catkin_package(
@@ -63,7 +63,7 @@ target_link_libraries(ego_planner_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   )
-add_dependencies(ego_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+#add_dependencies(ego_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 
 
