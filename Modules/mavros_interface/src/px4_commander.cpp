@@ -169,7 +169,23 @@ int main(int argc, char **argv)
 
         switch (Command_Now.Mode)
         {
-        // ================================ Idle =================================
+        // ================================= Disarm =================================
+        case drone_msgs::ControlCommand::Disarm:
+            if(_DroneState.armed)
+            {
+                _command_to_mavros.arm_cmd.request.value = false;
+                _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
+            }else{
+                // _command_to_mavros.idle();
+                if(_DroneState.mode == "OFFBOARD")
+                {
+                    _command_to_mavros.mode_cmd.request.custom_mode = "ALTCTL";
+                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
+                }
+            }
+            break;
+
+        // ================================ Arming =================================
         case drone_msgs::ControlCommand::Idle:
             
             _command_to_mavros.idle(); 
@@ -217,6 +233,11 @@ int main(int argc, char **argv)
                 state_sp = Eigen::Vector3d(Takeoff_position[0],Takeoff_position[1],Takeoff_position[2] + Takeoff_height);
                 yaw_sp = Takeoff_position[3]; //rad
                 ref_pos = state_sp;
+
+                if(fabs(_DroneState.position[2] - Takeoff_height)<0.1)
+                {
+                    Command_Now.Mode = drone_msgs::ControlCommand::Hold;
+                }
             }
             _command_to_mavros.send_pos_setpoint(state_sp, yaw_sp);
 
@@ -224,7 +245,7 @@ int main(int argc, char **argv)
 
         // ================================= Hold =================================
         case drone_msgs::ControlCommand::Hold:
-            if (Command_Last.Mode != drone_msgs::ControlCommand::Hold)
+            if (Command_Last.Mode != drone_msgs::ControlCommand::Hold && !_DroneState.landed)
             {
                 Command_Now.Reference_State.Move_mode       = drone_msgs::PositionReference::XYZ_POS;
                 Command_Now.Reference_State.Move_frame      = drone_msgs::PositionReference::ENU_FRAME;
@@ -246,98 +267,105 @@ int main(int argc, char **argv)
         //  0：当前位置原地降落，降落后会自动上锁，且切换为Idle模式
         //  1：当前位置原地降落，降落中到达Disarm_height后，切换为飞控中land模式
         case drone_msgs::ControlCommand::Land:
-
-            if(Land_mode == 1){
-               // if (Command_Last.Mode != drone_msgs::ControlCommand::Land)
-                {
-                    Command_Now.Reference_State.Move_mode       = drone_msgs::PositionReference::XY_POS_Z_VEL;
-                    Command_Now.Reference_State.Move_frame      = drone_msgs::PositionReference::ENU_FRAME;
-                    Command_Now.Reference_State.position_ref[0] = _DroneState.position[0];
-                    Command_Now.Reference_State.position_ref[1] = _DroneState.position[1];              
-                    Command_Now.Reference_State.yaw_ref         = _DroneState.attitude[2]; //rad
-                }
-                //如果距离起飞高度小于Disarm_height，则直接切换为land模式；
-                if(_DroneState.position[2] <= Disarm_height)
-                {
-                    if(_DroneState.mode != "AUTO.LAND") // 无效
+            if(!_DroneState.landed)
+            {
+                if(Land_mode == 1){
+                    if (Command_Last.Mode != drone_msgs::ControlCommand::Land)
                     {
-                        _command_to_mavros.mode_cmd.request.custom_mode = "AUTO.LAND";
-                        _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
-                        pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "LAND: inter AUTO LAND filght mode");
+                        Command_Now.Reference_State.Move_mode       = drone_msgs::PositionReference::XY_POS_Z_VEL;
+                        Command_Now.Reference_State.Move_frame      = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_Now.Reference_State.position_ref[0] = _DroneState.position[0];
+                        Command_Now.Reference_State.position_ref[1] = _DroneState.position[1];              
+                        Command_Now.Reference_State.yaw_ref         = _DroneState.attitude[2]; //rad
+                    }
+                    //如果距离起飞高度小于Disarm_height，则直接切换为land模式；
+                    if(_DroneState.position[2] <= Disarm_height)
+                    {
+                        if(_DroneState.mode != "AUTO.LAND") // 无效
+                        {
+                            _command_to_mavros.mode_cmd.request.custom_mode = "AUTO.LAND";
+                            _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
+                            pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "LAND: inter AUTO LAND filght mode");
+                        }
+                    }
+                    else if(_DroneState.position[2] > Disarm_height)
+                    {
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] - Land_speed * dt ;
+                        Command_Now.Reference_State.velocity_ref[0] = 0.0;
+                        Command_Now.Reference_State.velocity_ref[1] = 0.0;
+                        Command_Now.Reference_State.velocity_ref[2] = - Land_speed; //Land_speed
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        state_vel_sp = Eigen::Vector3d(0.0,0.0,Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                        _command_to_mavros.send_pos_vel_xyz_setpoint(state_sp,state_vel_sp,yaw_sp);
+                    }
+                    
+                    if(_DroneState.landed)
+                    {
+                        Command_Now.Mode = drone_msgs::ControlCommand::Idle;
+                    }
+                }else{
+                    if (Command_Last.Mode != drone_msgs::ControlCommand::Land)
+                    {
+                        Command_Now.Reference_State.Move_mode       = drone_msgs::PositionReference::XY_POS_Z_VEL;
+                        Command_Now.Reference_State.Move_frame      = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_Now.Reference_State.position_ref[0] = _DroneState.position[0];
+                        Command_Now.Reference_State.position_ref[1] = _DroneState.position[1];
+                        Command_Now.Reference_State.yaw_ref         = _DroneState.attitude[2]; //rad
+                    }
+                    if(_DroneState.position[2] > Disarm_height)
+                    {
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] - Land_speed * dt ;
+                        Command_Now.Reference_State.velocity_ref[0] = 0.0;
+                        Command_Now.Reference_State.velocity_ref[1] =  0.0;
+                        Command_Now.Reference_State.velocity_ref[2] = - Land_speed; //Land_speed
+
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1], Command_Now.Reference_State.position_ref[2] );
+                        state_vel_sp = Eigen::Vector3d(0.0, 0.0 , Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                        _command_to_mavros.send_pos_vel_xyz_setpoint(state_sp, state_vel_sp, yaw_sp);
+                        
+                    }else
+                    {
+                        Command_Now.Mode = drone_msgs::ControlCommand::Idle;
                     }
                 }
-                else if(_DroneState.position[2] > Disarm_height)
-                {
-                    Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] - Land_speed * dt ;
-                    Command_Now.Reference_State.velocity_ref[0] = 0.0;
-                    Command_Now.Reference_State.velocity_ref[1] = 0.0;
-                    Command_Now.Reference_State.velocity_ref[2] = - Land_speed; //Land_speed
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                    state_vel_sp = Eigen::Vector3d(0.0,0.0,Command_Now.Reference_State.velocity_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                    _command_to_mavros.send_pos_vel_xyz_setpoint(state_sp,state_vel_sp,yaw_sp);
-                }
-                
-                if(_DroneState.landed)
-                {
-                    Command_Now.Mode = drone_msgs::ControlCommand::Idle;
-                }
-            }else{
-                if (Command_Last.Mode != drone_msgs::ControlCommand::Land)
-                {
-                    Command_Now.Reference_State.Move_mode       = drone_msgs::PositionReference::XYZ_POS;
-                    Command_Now.Reference_State.Move_frame      = drone_msgs::PositionReference::ENU_FRAME;
-                    Command_Now.Reference_State.position_ref[0] = _DroneState.position[0];
-                    Command_Now.Reference_State.position_ref[1] = _DroneState.position[1];
-                    Command_Now.Reference_State.yaw_ref         = _DroneState.attitude[2]; //rad
-                }
-                if(_DroneState.position[2] > Disarm_height)
-                {
-                    Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] - Land_speed * dt ;
-                    Command_Now.Reference_State.velocity_ref[0] = 0.0;
-                    Command_Now.Reference_State.velocity_ref[1] =  0.0;
-                    Command_Now.Reference_State.velocity_ref[2] = - Land_speed; //Land_speed
-
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1], Command_Now.Reference_State.position_ref[2] );
-                    state_vel_sp = Eigen::Vector3d(0.0, 0.0 , Command_Now.Reference_State.velocity_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                    _command_to_mavros.send_pos_vel_xyz_setpoint(state_sp, state_vel_sp, yaw_sp);
-                }else
-                {
-                    Command_Now.Mode = drone_msgs::ControlCommand::Idle;
-                }
+                Takeoff_position << state_sp[0], state_sp[1], Takeoff_position[2], yaw_sp;
             }
 			ref_pos = state_sp;
             break;
 
         // ================================= Move =================================
         case drone_msgs::ControlCommand::Move:
-            // PX4暂不支持轨迹模式
-            // PX4暂不支持位置－速度复合模式（详细见mavlink_receiver.cpp）
+            // 暂不支持轨迹模式
+            // 暂不支持位置－速度复合模式（详细见mavlink_receiver.cpp in PX4）
             if(Command_Now.Reference_State.Move_frame  == drone_msgs::PositionReference::ENU_FRAME)
             {
-                if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
+                if( Command_Now.Command_ID  >  Command_Last.Command_ID)
                 {
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
-                {
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
-                {
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
-                {
-                    Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                    state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
-                }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
-                {
-                    state_sp = Eigen::Vector3d(Command_Now.Reference_State.acceleration_ref[0],Command_Now.Reference_State.acceleration_ref[1],Command_Now.Reference_State.acceleration_ref[2]);
-                    yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
+                    {
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.acceleration_ref[0],Command_Now.Reference_State.acceleration_ref[1],Command_Now.Reference_State.acceleration_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }
                 }
             }
             else
@@ -407,7 +435,7 @@ int main(int argc, char **argv)
                 }
             }
 
-            if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
+            if( Command_Now.Command_ID == Command_Last.Command_ID ||Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
             {
                 _command_to_mavros.send_pos_setpoint(state_sp, yaw_sp);
                 ref_pos = state_sp;
@@ -435,7 +463,6 @@ int main(int argc, char **argv)
                 ref_pos = dt*Eigen::Vector3d(state_sp[0],state_sp[1],0.0) + Eigen::Vector3d(_DroneState.position[0],_DroneState.position[1],state_sp[2]);
             }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
             {
-                // 特殊情况，一般也用不到
                 _command_to_mavros.send_pos_vel_xyz_setpoint(state_sp, state_vel_sp, yaw_sp);
                 ref_pos = dt*Eigen::Vector3d(0.0,0.0,state_sp[2]) + Eigen::Vector3d(state_sp[0],state_sp[1],0.0);
             }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
@@ -444,6 +471,7 @@ int main(int argc, char **argv)
                 ref_pos = 0.5*dt*dt*state_sp + Eigen::Vector3d(_DroneState.position[0],_DroneState.position[1],_DroneState.position[2]);
             }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::TRAJECTORY )
             {
+                // 暂不支持轨迹模式
                 state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
                 state_vel_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1] ,Command_Now.Reference_State.velocity_ref[2]);
                 yaw_sp = Command_Now.Reference_State.yaw_ref;
@@ -465,22 +493,6 @@ int main(int argc, char **argv)
 				ref_pos = hold_pos;
             
                 _command_to_mavros.send_pos_setpoint(state_sp, yaw_sp);
-            }
-            break;
-
-        // ================================= Disarm =================================
-        case drone_msgs::ControlCommand::Disarm:
-            if(_DroneState.armed)
-            {
-                _command_to_mavros.arm_cmd.request.value = false;
-                _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
-            }else{
-                _command_to_mavros.idle();
-                if(_DroneState.mode == "OFFBOARD")
-                {
-                    _command_to_mavros.mode_cmd.request.custom_mode = "ALTCTL";
-                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
-                }
             }
             break;
 
@@ -533,7 +545,7 @@ geometry_msgs::PoseStamped get_rviz_ref_posistion(const drone_msgs::ControlComma
     {
         ref_pose.pose.position.x = cmd.Reference_State.position_ref[0];
         ref_pose.pose.position.y = cmd.Reference_State.position_ref[1];
-        ref_pose.pose.position.z = 0.0;
+        ref_pose.pose.position.z = Disarm_height;
         ref_pose.pose.orientation = _DroneState.attitude_q;
     }
     else if(cmd.Mode == drone_msgs::ControlCommand::Move)
@@ -576,7 +588,7 @@ geometry_msgs::PoseStamped get_rviz_ref_posistion(const drone_msgs::ControlComma
     {
         ref_pose.pose.position.x = _DroneState.position[0];
         ref_pose.pose.position.y = _DroneState.position[1];
-        ref_pose.pose.position.z = 0.0;
+        ref_pose.pose.position.z = Disarm_height;
         ref_pose.pose.orientation = _DroneState.attitude_q;
     }
     else

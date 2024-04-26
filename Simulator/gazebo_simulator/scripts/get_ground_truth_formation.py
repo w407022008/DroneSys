@@ -13,7 +13,7 @@ import tf
 def get_odom(id):
     try:
         handle = rospy.ServiceProxy('gazebo/get_model_state',GetModelState)
-        response = handle('P300_uav'+str(id),'ground_plane')
+        response = handle('UAV'+str(id),'ground_plane')
         return response
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e

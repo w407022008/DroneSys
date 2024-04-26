@@ -9,21 +9,21 @@ project(drone_experiment)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   message_generation  
-  roscpp
-  geometry_msgs
-  nav_msgs
-  sensor_msgs
-  mavros
-  std_msgs
-  std_srvs
-  tf2_ros
-  tf2_eigen
-  mavros_msgs
-  drone_msgs
+  # roscpp
+  # geometry_msgs
+  # nav_msgs
+  # sensor_msgs
+  # mavros
+  # std_msgs
+  # std_srvs
+  # tf2_ros
+  # tf2_eigen
+  # mavros_msgs
+  # drone_msgs
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
 
@@ -34,10 +34,10 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  geometry_msgs 
-  nav_msgs
-  sensor_msgs
-  std_msgs
+  # geometry_msgs 
+  # nav_msgs
+  # sensor_msgs
+  # std_msgs
 )
 
 

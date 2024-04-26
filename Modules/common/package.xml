@@ -4,12 +4,8 @@
   <version>0.0.0</version>
   <description>The ground_station package</description>
 
-  <maintainer email="fatmoonqyp@126.com">Yuhua Qi</maintainer>
-  <author email="fatmoonqyp@126.com">Yuhua Qi</author>
+  <maintainer email="w407022008@gmail.com">ze wang</maintainer>
   <license>TODO</license>
-
-  <url type="website">http://www.amovauto.com/</url>
-  <url type="repository">https://github.com/potato77/ground_station.git</url>
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>

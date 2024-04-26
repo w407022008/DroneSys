@@ -2,9 +2,11 @@
 #include <termios.h>
 #include <sstream>
 #include <vector>
+#include <set>
 #include "ros/ros.h"
 
 # define U_KEY_NONE -1
+# define U_KEY_PASS -2
 # define U_KEY_SPACE 32
 # define U_KEY_LEFT 37
 # define U_KEY_UP 38
@@ -43,6 +45,12 @@
 # define U_KEY_Y 121
 # define U_KEY_Z 122
 
+set<int> joymove = {U_KEY_W, 
+U_KEY_D, U_KEY_S, U_KEY_A, U_KEY_Q,
+U_KEY_E, U_KEY_K, U_KEY_M};
+
+set<int> trajmove = {U_KEY_7, U_KEY_8, U_KEY_9, U_KEY_0};
+
 int  input_flag;
 char buff;
 
@@ -62,19 +70,18 @@ class KeyboardEvent{
         FD_SET(filedesc, &set);
 
         timeout.tv_sec = 0;
-        //timeout.tv_usec = 1000;//
         timeout.tv_usec = 1000;
         rv = select(filedesc + 1, &set, NULL, NULL, &timeout);
 
         struct termios old = {0};
         if (tcgetattr(filedesc, &old) < 0)
-                ROS_ERROR("tcsetattr()");
+            ROS_ERROR("tcsetattr()");
         old.c_lflag &= ~ICANON;
         old.c_lflag &= ~ECHO;
         old.c_cc[VMIN] = 1;
         old.c_cc[VTIME] = 0;
         if (tcsetattr(filedesc, TCSANOW, &old) < 0)
-                ROS_ERROR("tcsetattr ICANON");
+            ROS_ERROR("tcsetattr ICANON");
 
         if(rv == -1){
                 ROS_ERROR("select");
@@ -84,8 +91,10 @@ class KeyboardEvent{
                 //{ROS_INFO("-----");
         }
         else
-        {read(filedesc, &buff, len);
-        input_flag = 1;}
+        {
+            read(filedesc, &buff, len);
+            input_flag = 1;
+        }
 
         old.c_lflag |= ICANON;
         old.c_lflag |= ECHO;
@@ -98,19 +107,16 @@ public:
         input_flag = -1;
         buff = 0;
     }
-    char GetPressedKey()
+    char GetKeyOnce()
     {
+        getch();
         char key;
         if(input_flag>-1)//if keyboard is pressed, then perform the callbacks
         {
             key = buff;
         }else{
-        key = U_KEY_NONE;
+            key = U_KEY_NONE;
         }
         return key;
-    }
-    void RosWhileLoopRun() // this should be placed inside the ros while loop
-    {
-        getch();
     }
 };

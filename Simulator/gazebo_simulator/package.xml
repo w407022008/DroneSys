@@ -6,7 +6,7 @@
 
   <license>BSD</license>
   <author>colin</author>
-  <maintainer email="lcyfly1@163.com">colin</maintainer>
+  <maintainer email="w407022008@gmail.com">ze wang</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend>

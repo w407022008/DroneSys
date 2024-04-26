@@ -1,12 +1,12 @@
 <launch>
-	<!-- 初始位置 -->
+	<!-- Inital position -->
 	<arg name="x" default="1.0"/>
 	<arg name="y" default="3.0"/>
 	<arg name="z" default="0.2"/>
 	<arg name="R" default="0"/>
 	<arg name="P" default="0"/>
 	<arg name="Y" default="0.0"/>
-	<!-- 启动PX4中的SITL功能 -->
+	<!-- SITL for PX4 -->
 	<arg name="gazebo_gui" default="false"/>
 	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
 	<arg name="mode" default=""/>
@@ -15,11 +15,11 @@
 	<arg name="model" default="iris"/> 
 	
 	<arg name="sdf" default="$(find simulation_gazebo)/drone_models/mav_isir$(arg mode)/mav_isir$(arg mode).sdf"/>
-	<!-- 这里的环境变量将传递到rcS启动脚本中-->
-	<!-- 参看 PX4/ROMFS/px4fmu_common/init.d-posix/rcS 中的修改内容 -->
+	<!-- Env Variables in rcs-->
+	<!-- reff to PX4/ROMFS/px4fmu_common/init.d-posix/rcS -->
 	<env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg model)" />
 	<env name="PX4_ESTIMATOR" value="ekf2"/>
-	<!-- 仿真速度因子 1.0代表与真实时间同步，大于1加快仿真速度，小于1则减慢 （电脑性能较差，可选择减小该参数）-->
+	<!-- low computing performance low factor -->
 	<env name="PX4_SIM_SPEED_FACTOR" value="1.0" />
 	
 	<!-- PX4 configs -->
@@ -31,7 +31,6 @@
 	<node name="sitl" pkg="px4" type="px4" output="screen" 
 		args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS $(arg px4_command_arg1)"/>
 
-	<!-- 启动Gazebo -->
 	<!-- Gazebo configs -->
 	<arg name="debug" default="false"/>
 	<arg name="verbose" default="false"/>
@@ -53,7 +52,7 @@
 		args="-sdf -file $(arg sdf) -model $(arg model) -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)">
 	</node>
 
-	<!-- 启动MAVROS -->
+	<!-- MAVROS -->
 	<node pkg="mavros" type="mavros_node" name="mavros" output="screen">
 		<param name="fcu_url" value="udp://:14540@localhost:14557" />
 		<param name="gcs_url" value="" />
@@ -64,7 +63,7 @@
 	</node>
 
 	
-	<!-- 定义传感器TF transform -->
+	<!-- TF transform -->
 	<include file="$(find simulation_gazebo)/launch_basic/tf_transform.launch">
 		<arg name="x" value="$(arg x)"/>
 		<arg name="y" value="$(arg y)"/>
@@ -72,25 +71,21 @@
 	</include>
 
 	<!-- run the px4_transceiver.cpp -->
-	<!-- 仅订阅发布消息 -->
 	<node pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
-		<!-- 定位数据输入源 0 for vicon， 1 for 激光SLAM, 2 for gazebo ground truth, 3 for Intel T265 dual camera slam，4 for SLAM (but where pub?), 9 for outdoor (with rel_alt)-->
+		<!-- positioning source: 0 for vicon， 1 for L-SLAM, 2 for gazebo ground truth, 3 for Intel T265 dual camera slam，4 for V-SLAM-->
 		<param name="input_source" value="2" />
 		<param name="rate_hz" value="30" />
 	</node>
 	
 	<!-- run the px4_commander.cpp -->
-	<!-- 通过MAVLink协议发布pos_vel_setpoint到px4 -->
 	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen">
 		<rosparam command="load" file="$(find simulation_gazebo)/config/control_config/px4_commander.yaml"/>
 	</node>
 
 	<!-- run the ground_station.cpp -->
-	<!-- 打印飞行消息到终端 -->
 	<node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 	<!-- run the ground_station_msg.cpp -->
-	<!-- 订阅规划&识别消息 -->
 	<node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 </launch>

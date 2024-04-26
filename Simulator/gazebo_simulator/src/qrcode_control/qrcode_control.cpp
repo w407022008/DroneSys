@@ -1,8 +1,6 @@
-//ROS 头文件
 #include <ros/ros.h>
 #include <iostream>
 
-//topic 头文件
 #include <gazebo_msgs/ModelState.h>
 #include <gazebo_msgs/ModelStates.h>
 #include <geometry_msgs/Pose.h>
@@ -34,7 +32,7 @@ void drone_state_cb(const drone_msgs::DroneState::ConstPtr& msg)
     _Drone_state = *msg;
 }
 void printf_result();
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "qrcode_control");
@@ -78,15 +76,10 @@ int main(int argc, char **argv)
 
 void printf_result()
 {
-    //固定的浮点显示
     cout.setf(ios::fixed);
-    //setprecision(n) 设显示小数精度为n位
     cout<<setprecision(4);
-    //左对齐
     cout.setf(ios::left);
-    // 强制显示小数点
     cout.setf(ios::showpoint);
-    // 强制显示符号
     cout.setf(ios::showpos);
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>Autonomous Landing Test<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;

@@ -4,7 +4,7 @@
   <version>0.0.0</version>
   <description>The control package</description>
 
-  <maintainer email="wangze@isir.upmc.fr">Ze</maintainer>
+  <maintainer email="w407022008@gmail.com">Ze</maintainer>
   <license>TODO</license>
 
   <build_depend>message_generation</build_depend>

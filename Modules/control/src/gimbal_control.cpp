@@ -14,31 +14,23 @@ Eigen::Vector3d gimbal_att;
 Eigen::Vector3d gimbal_att_deg;
 Eigen::Vector3d gimbal_att_rate;
 Eigen::Vector3d gimbal_att_rate_deg;
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "gimbal_control");
     ros::NodeHandle nh("~");
 
-    // 节点运行频率： 10hz 
     ros::Rate rate(10.0);
 
     gimbal_control gimbal_control_;
 
-    //固定的浮点显示
     cout.setf(ios::fixed);
-    //setprecision(n) 设显示小数精度为n位
     cout<<setprecision(2);
-    //左对齐
     cout.setf(ios::left);
-    // 强制显示小数点
     cout.setf(ios::showpoint);
-    // 强制显示符号
     cout.setf(ios::showpos);
 
     float gimbal_att_sp_deg[3];
 
-    // 
     while(ros::ok())
     {
         cout << ">>>>>>>>>>>>>>>>>>>>>>>>>Gimbal Control Mission<<<<<<<<<<<<<<<<<<<<<< "<< endl;
@@ -50,11 +42,6 @@ int main(int argc, char **argv)
         cout << "Yaw [deg] "<<endl;
         cin >> gimbal_att_sp_deg[2];
         
-        // 注意必须要解锁飞机后才可控制云台
-        // 注意：使用角度值直接进行控制
-        // 面向相机朝向的方向，逆时针旋转roll为正，但roll通道一般不控制
-        // pitch向上抬头为正
-        // 面向相机朝向的方向，向右转头yaw为正(与飞机yaw相反)
         gimbal_att_sp[0] = gimbal_att_sp_deg[0];
         gimbal_att_sp[1] = gimbal_att_sp_deg[1];
         gimbal_att_sp[2] = gimbal_att_sp_deg[2];

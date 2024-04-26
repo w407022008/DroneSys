@@ -23,8 +23,6 @@ add_message_files(
   Arduino.msg
   #DetectionInfo.msg
   #MultiDetectionInfo.msg
-  #BoundingBox.msg
-  #BoundingBoxes.msg
   Bspline.msg
   ControlCommand.msg
   PositionReference.msg
@@ -32,10 +30,6 @@ add_message_files(
   DroneState.msg
   ControlOutput.msg
   Message.msg
-  #LogMessage.msg
-  #LogMessageControl.msg
-  #ArucoInfo.msg
-  #IndoorSearch.msg
   RCInput.msg
 )
 

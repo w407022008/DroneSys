@@ -1,7 +1,6 @@
 #ifndef GIMBAL_CONTROL_H
 #define GIMBAL_CONTROL_H
 
-// PX4云台控制类
 #include <ros/ros.h>
 #include <Eigen/Eigen>
 #include <math.h>
@@ -24,7 +23,7 @@ using namespace std;
 #define DIS_THRES 0.1
 #define VISION_THRES 10
 
-//相机安装OFFSET
+// Camera mount offset
 #define FRONT_CAMERA_OFFSET_X 0.2
 #define FRONT_CAMERA_OFFSET_Y 0.0
 #define FRONT_CAMERA_OFFSET_Z -0.05
@@ -106,7 +105,7 @@ float min(float data1,float data2)
     }
 }
 
-//旋转矩阵：机体系到惯性系
+// Rotation: Body to ENU
 Eigen::Matrix3f get_rotation_matrix(float phi, float theta, float psi)
 {
     Eigen::Matrix3f R_Body_to_ENU;
@@ -131,13 +130,13 @@ class gimbal_control
     gimbal_control(void):
         nh("~")
     {
-        // 订阅云台当前角度
+        // [SUB] camera orientation
         gimbal_att_sub = nh.subscribe<geometry_msgs::Quaternion>("/mavros/mount_control/orientation", 10, &gimbal_control::gimbal_att_cb,this);
 
-        // 云台控制：本话题要发送至飞控(通过Mavros_extra功能包 /plugins/mount_control.cpp发送)
+        // [PUB] camera mount control(Mavros_extra: /plugins/mount_control.cpp)
         mount_control_pub = nh.advertise<mavros_msgs::MountControl>( "/mavros/mount_control/command", 1);
 
-        // 云台角度初始化
+        // Init
         gimbal_att        = Eigen::Vector3d(0.0,0.0,0.0);
         gimbal_att_last   = Eigen::Vector3d(0.0,0.0,0.0);
 
@@ -148,19 +147,14 @@ class gimbal_control
         last_time = get_time_in_sec(begin_time);
     }
 
-    // 云台角度
     Eigen::Vector3d gimbal_att;
-    // 上一时刻云台角度
     Eigen::Vector3d gimbal_att_last;
-    // 估算的云台角速度
     Eigen::Vector3d gimbal_att_rate;
 
-    // 估算云台角速度
     ros::Time begin_time;
     float last_time;
     float dt_time;
 
-    //发送云台控制指令API函数
     void send_mount_control_command(const Eigen::Vector3d& gimbal_att_sp);
 
     Eigen::Vector3d get_gimbal_att();

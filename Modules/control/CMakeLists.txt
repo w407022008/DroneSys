@@ -60,10 +60,6 @@ include_directories(
 )
 
 
-###############################
-##      声明可执行cpp文件     ##
-###############################
-
 ###### Lib File ##########
 
 ###### Main File ##########
@@ -73,7 +69,7 @@ add_dependencies(terminal_control control_gencpp)
 target_link_libraries(terminal_control ${catkin_LIBRARIES})
 
 ##goal publisher
-add_executable(pub_goal src/pub_goal.cpp)
+add_executable(pub_goal src/pub_planning_goal.cpp)
 add_dependencies(pub_goal control_gencpp)
 target_link_libraries(pub_goal ${catkin_LIBRARIES})
 

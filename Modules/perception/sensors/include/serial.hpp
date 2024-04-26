@@ -117,7 +117,7 @@ int Serial::set_opt(int fd,int nSpeed, int nBits, char nEvent, int nStop)
     return 0;  
 }  
   
-int Serial::open_portUSB(int comport)                 //通过参数，打开相应的串口  
+int Serial::open_portUSB(int comport) 
 {  
     string serial_port_adr("/dev/ttyUSB"+ to_string(comport));
     cout << serial_port_adr << endl;
@@ -130,7 +130,7 @@ int Serial::open_portUSB(int comport)                 //通过参数，打开相
 }  
 
 
-int Serial::open_port_ultrasonic()                //通过参数，打开相应的串口
+int Serial::open_port_ultrasonic() 
 {
     string serial_port_adr("/dev/ultrasonic");
     cout << serial_port_adr << endl;
