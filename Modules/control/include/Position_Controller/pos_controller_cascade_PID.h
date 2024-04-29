@@ -191,7 +191,7 @@ void pos_controller_cascade_PID::_positionController
     }
     
     // Only for controller test
-    if(_Reference_State.Move_mode == drone_msgs::PositionReference::TRAJECTORY)
+    if(_Reference_State.Move_mode == drone_msgs::PositionReference::XYZ_POS_VEL)
     {
         vel_setpoint[0] =  Kp_xy * (_Reference_State.position_ref[0] - _DroneState.position[0]);
         vel_setpoint[1] =  Kp_xy * (_Reference_State.position_ref[1] - _DroneState.position[1]);

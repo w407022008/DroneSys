@@ -85,7 +85,7 @@ drone_msgs::PositionReference Traj_gen::Circle_trajectory_generation(float time_
 
     Circle_trajectory.time_from_start = time_from_start;
 
-    Circle_trajectory.Move_mode = drone_msgs::PositionReference::TRAJECTORY;
+    Circle_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
 
     Circle_trajectory.position_ref[0] = radius * cos_angle + center_x;
     Circle_trajectory.position_ref[1] = radius * sin_angle + center_y;
@@ -114,7 +114,7 @@ drone_msgs::PositionReference Traj_gen::Line_trajectory_generation(float time_fr
 
     Line_trajectory.time_from_start = time_from_start;
 
-    Line_trajectory.Move_mode = drone_msgs::PositionReference::TRAJECTORY;
+    Line_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
     
     Line_trajectory.position_ref[0] = cos(angle_3) * radius * sin_angle + center_x;
     Line_trajectory.position_ref[1] = sin(angle_3) * radius * sin_angle + center_y;
@@ -168,7 +168,7 @@ drone_msgs::PositionReference Traj_gen::Eight_trajectory_generation(float time_f
 
     Eight_trajectory.time_from_start = time_from_start;
 
-    Eight_trajectory.Move_mode = drone_msgs::PositionReference::TRAJECTORY;
+    Eight_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
 
     Eight_trajectory.position_ref[0] = position[0];
     Eight_trajectory.position_ref[1] = position[1];
@@ -192,7 +192,7 @@ drone_msgs::PositionReference Traj_gen::Step_trajectory_generation(float time_fr
 
     Step_trajectory.time_from_start = time_from_start;
 
-    Step_trajectory.Move_mode = drone_msgs::PositionReference::TRAJECTORY;
+    Step_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
 
     int i = time_from_start / step_interval;
 

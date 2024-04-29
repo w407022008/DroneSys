@@ -132,7 +132,7 @@ void printf_info()
     if(Command_Now.Mode == drone_msgs::ControlCommand::Move)
     {
         //Only for TRAJECTORY tracking
-        if(Command_Now.Reference_State.Move_mode == drone_msgs::PositionReference::TRAJECTORY)
+        if(Command_Now.Reference_State.Move_mode == drone_msgs::PositionReference::XYZ_POS_VEL)
         {
             cout <<">>>>>>>>>>>>>>>>>>>>>>>> Tracking Error <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
@@ -197,8 +197,8 @@ void printf_command_control(const drone_msgs::ControlCommand& Command_Now)
                 case drone_msgs::PositionReference::XYZ_VEL:
                     cout << "Command: [ Move ] Move_mode: [ XYZ_VEL ] " <<endl;
                     break;
-                case drone_msgs::PositionReference::TRAJECTORY:
-                    cout << "Command: [ Move ] Move_mode: [ TRAJECTORY ] " <<endl;
+                case drone_msgs::PositionReference::XYZ_POS_VEL:
+                    cout << "Command: [ Move ] Move_mode: [ XYZ_POS_VEL ] " <<endl;
                     break;
             }
             if(Command_Now.Reference_State.Move_frame == drone_msgs::PositionReference::ENU_FRAME)

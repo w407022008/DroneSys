@@ -740,7 +740,7 @@ void EGOReplanFSM::cmdCallback(const ros::TimerEvent &e)
   cmd.Mode                       = drone_msgs::ControlCommand::Move;
   cmd.Command_ID                 = cmd.Command_ID + 1;
   cmd.source                     = "Ego_Planner [main]";
-  cmd.Reference_State.Move_mode  = drone_msgs::PositionReference::TRAJECTORY;
+  cmd.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_POS_VEL;
   cmd.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
 //  cmd.trajectory_id = bspline.traj_id;
 

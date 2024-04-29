@@ -398,7 +398,7 @@ void command_to_mavros::send_attitude_setpoint(const drone_msgs::AttitudeReferen
     att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
     att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
 
-    att_setpoint.thrust = _AttitudeReference.desired_throttle;
+    att_setpoint.thrust = _AttitudeReference.desired_thrust;
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
@@ -419,7 +419,7 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::Attitud
     att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
     att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
 
-    att_setpoint.thrust = _AttitudeReference.desired_throttle;
+    att_setpoint.thrust = _AttitudeReference.desired_thrust;
 
     att_setpoint.body_rate.x = 0.0;
     att_setpoint.body_rate.y = 0.0;

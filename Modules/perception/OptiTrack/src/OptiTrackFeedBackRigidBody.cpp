@@ -199,10 +199,10 @@ void OptiTrackFeedBackRigidBody::GetState(rigidbody_state& state)
     state.Euler(0) = euler_temp[0];// euler angle
     state.Euler(1) = euler_temp[1];// euler angle
     state.Euler(2) = euler_temp[2];// euler angle
-    state.Quaterion(0) = pose[0].q0;
-    state.Quaterion(1) = pose[0].q1;
-    state.Quaterion(2) = pose[0].q2;
-    state.Quaterion(3) = pose[0].q3;
+    state.Quaternion(0) = pose[0].q0;
+    state.Quaternion(1) = pose[0].q1;
+    state.Quaternion(2) = pose[0].q2;
+    state.Quaternion(3) = pose[0].q3;
 }
 void OptiTrackFeedBackRigidBody::GetRaWVelocity(Vector3d& linear_velocity,Vector3d& angular_velocity)
 {

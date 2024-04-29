@@ -67,7 +67,7 @@ void planner_cmd_cb(const drone_msgs::ControlCommand& msg)
         _DroneState.attitude_q.y = q_now.y();
         _DroneState.attitude_q.z = q_now.z();
 
-        if(command_now.Reference_State.Move_mode == drone_msgs::PositionReference::TRAJECTORY){
+        if(command_now.Reference_State.Move_mode == drone_msgs::PositionReference::XYZ_POS_VEL){
 		    _DroneState.position[0] = position_now[0];
 		    _DroneState.position[1] = position_now[1];
 		    _DroneState.position[2] = position_now[2];

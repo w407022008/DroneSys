@@ -1293,7 +1293,7 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
     Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
     Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
     Command_Now.source                              = NODE_NAME;
-    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::TRAJECTORY;
+    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_POS_VEL;
     Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
     Command_Now.Reference_State.position_ref[0]     = stop_pos[0];
     Command_Now.Reference_State.position_ref[1]     = stop_pos[1];
@@ -1320,7 +1320,7 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
     Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
     Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
     Command_Now.source                              = NODE_NAME;
-    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::TRAJECTORY;
+    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_POS_VEL;
     Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
     Command_Now.Reference_State.position_ref[0]     = goal_pos[0];
     Command_Now.Reference_State.position_ref[1]     = goal_pos[1];
@@ -1519,7 +1519,7 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
     Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
     Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
     Command_Now.source                              = NODE_NAME;
-    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::TRAJECTORY;
+    Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_POS_VEL;
     Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
     Command_Now.Reference_State.position_ref[0]     = stop_pos[0];
     Command_Now.Reference_State.position_ref[1]     = stop_pos[1];
@@ -1551,7 +1551,7 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
   Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
   Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
   Command_Now.source                              = NODE_NAME;
-  Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::TRAJECTORY;
+  Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_POS_VEL;
   Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
   Command_Now.Reference_State.position_ref[0]     = pos[0];
   Command_Now.Reference_State.position_ref[1]     = pos[1];

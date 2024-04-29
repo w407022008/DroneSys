@@ -1,7 +1,7 @@
 std_msgs/Header header
 
-## 位置控制器输出： 期望油门 + 期望角度
-float32[3] throttle_sp                 ## [0-1] 惯性系下的油门量
-float32 desired_throttle               ## [0-1] 机体系z轴
-float32[3] desired_attitude            ## [rad]
-geometry_msgs/Quaternion desired_att_q ## 四元数
+## Setpoint Attitude + T
+float32[3] throttle_sp                 ## [0-1] Throttle setpoint
+float32 desired_thrust               ## [0~1] Axis Body_Z Thrust septoint
+float32[3] desired_attitude            ## [rad] Eurler angle setpoint
+geometry_msgs/Quaternion desired_att_q ## quat setpoint

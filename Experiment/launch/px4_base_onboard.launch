@@ -1,9 +1,9 @@
 <launch>
 
-	<arg name="input_source" default="4"/> <!-- -1 Enable Mavros+sender, 0 Only sender, 1 for Vicon, 4 VINS-Fusion, 5 SLAM  -->
+	<arg name="input_source" default="1"/> <!-- -1 Enable Mavros+sender, 0 Only sender, 1 for Vicon, 4 VINS-Fusion, 5 SLAM  -->
 	<arg name="camera_type" default="4"/> <!--  0 for MonoVision， 1 for RGBD, 2 for StereoVision, 3 fro Mono-IMU, 4 for Stereo-IMU  -->
-	<arg name="fcu_url" default="/dev/ttyPX4:4000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b S3 on khadas, or udp://:14550@192.168.4.1:14555 with ESP32 wifi module -->
-	<arg name="gcs_url" default=""/> <!-- ip addr on board e.g udp-b://192.168.0.100:14555@14550, it seem that u dont need to set anythin in QGC -->
+	<arg name="fcu_url" default="/dev/ttyACM0:2000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b S3 on khadas, or udp://:14550@192.168.4.1:14555 with ESP32 wifi module -->
+	<arg name="gcs_url" default="udp-b://192.168.1.101:14555@14550"/> <!-- ip addr on board e.g udp-b://192.168.0.100:14555@14550, it seem that u dont need to set anythin in QGC -->
 	
     <!-- only mavros -->
 	<node if="$(eval arg('input_source') == -1)" pkg="mavros" type="mavros_node" name="mavros" output="screen">
@@ -18,7 +18,7 @@
     <!-- vrpn with mavros -->
 	<group if="$(eval arg('input_source') == 1)">
 		<include file="$(find drone_experiment)/launch/Optitrack_onboard.launch">
-			<arg name="server" value="192.168.0.104"/>
+			<arg name="server" value="192.168.1.102"/>
 			<arg name="fcu_url" value="$(arg fcu_url)" />
 			<arg name="gcs_url" value="$(arg gcs_url)" />
 			<arg name="rate_hz" value="50.0"/>
@@ -79,7 +79,6 @@
 		<rosparam command="load" file="$(find drone_experiment)/config/control_config/geofence.yaml"/>
 		<param name="Takeoff_height" value="1.0"/>
 		<param name="Land_speed" value="0.2"/>
-		<param name="Land_mode" value="0"/> <!-- Landed then IDLE -->
 		<param name="Disarm_height" value="0.12"/>
 		<param name="Command_rate" value="50.0"/>
 	</node>

@@ -203,7 +203,7 @@ void cmdCallback(const ros::TimerEvent& e)
   cmd.header.stamp = time_now;
   cmd.header.frame_id = "map";
 
-  cmd.Move_mode = drone_msgs::PositionReference::TRAJECTORY;  //TRAJECTORY
+  cmd.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;  //TRAJECTORY
   cmd.Move_frame = drone_msgs::PositionReference::ENU_FRAME; //ENU_FRAME
   cmd.time_from_start = t_cur;
 

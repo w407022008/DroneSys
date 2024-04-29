@@ -27,11 +27,28 @@ void modelStatesCallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
         }
     }
 }
+
 void drone_state_cb(const drone_msgs::DroneState::ConstPtr& msg)
 {
     _Drone_state = *msg;
 }
-void printf_result();
+
+void printf_result()
+{
+    cout.setf(ios::fixed);
+    cout<<setprecision(4);
+    cout.setf(ios::left);
+    cout.setf(ios::showpoint);
+    cout.setf(ios::showpos);
+
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>Autonomous Landing Test<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+
+    cout << "qrcode_pose      : " << qrcode_pose.position.x << " [m]   " << qrcode_pose.position.y << " [m]   " << qrcode_pose.position.z << " [m]   "<<endl;
+    cout << "qrcode_twist     : " << qrcode_twist.linear.x  << " [m/s] " << qrcode_twist.linear.y  << " [m/s] " << qrcode_twist.linear.z  << " [m/s] "<<endl;
+    cout << "Position [X Y Z] : " << _Drone_state.position[0] << " [ m ] "<< _Drone_state.position[1]<<" [ m ] "<<_Drone_state.position[2]<<" [ m ] "<<endl;
+    cout << "Velocity [X Y Z] : " << _Drone_state.velocity[0] << " [m/s] "<< _Drone_state.velocity[1]<<" [m/s] "<<_Drone_state.velocity[2]<<" [m/s] "<<endl;
+ 
+}
 
 int main(int argc, char **argv)
 {
@@ -71,23 +88,5 @@ int main(int argc, char **argv)
 
     return 0;
 
-}
-
-
-void printf_result()
-{
-    cout.setf(ios::fixed);
-    cout<<setprecision(4);
-    cout.setf(ios::left);
-    cout.setf(ios::showpoint);
-    cout.setf(ios::showpos);
-
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>Autonomous Landing Test<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-
-    cout << "qrcode_pose      : " << qrcode_pose.position.x << " [m]   " << qrcode_pose.position.y << " [m]   " << qrcode_pose.position.z << " [m]   "<<endl;
-    cout << "qrcode_twist     : " << qrcode_twist.linear.x  << " [m/s] " << qrcode_twist.linear.y  << " [m/s] " << qrcode_twist.linear.z  << " [m/s] "<<endl;
-    cout << "Position [X Y Z] : " << _Drone_state.position[0] << " [ m ] "<< _Drone_state.position[1]<<" [ m ] "<<_Drone_state.position[2]<<" [ m ] "<<endl;
-    cout << "Velocity [X Y Z] : " << _Drone_state.velocity[0] << " [m/s] "<< _Drone_state.velocity[1]<<" [m/s] "<<_Drone_state.velocity[2]<<" [m/s] "<<endl;
- 
 }
 

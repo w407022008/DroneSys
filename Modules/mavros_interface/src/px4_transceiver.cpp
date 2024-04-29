@@ -15,14 +15,17 @@ using namespace std;
 
 // general param
 int input_source;
-int optitrack_frame;
 float rate_hz;
-Eigen::Vector3f device_pos_, cur_pos;
 float yaw_offset;
-bool armed_last = false, armed_cur=false;
 ros::Time cur_pos_time;
-// ros::Time last_stamp_lidar, last_stamp_t265, last_stamp_mocap, last_stamp_gazebo, last_stamp_slam;
+// reset origin before taking off
+bool reset_origin;
+bool armed_last = false, armed_cur=false;
+Eigen::Vector3f reset_origin_, cur_pos;
+// Optitrack
+int optitrack_frame;
 string object_name;
+// Vision
 bool d435i_with_imu;
 
 // interpolation
@@ -60,20 +63,18 @@ ros::Subscriber vins_fusion_sub;
 ros::Subscriber orb_slam3_sub;
 ros::Subscriber joy_sub;
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Helper Funcion <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void vision_pos_interpolation();
 void pub_to_nodes(drone_msgs::DroneState State_from_fcu);
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Callback Function <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void lidar_cb(const tf2_msgs::TFMessage::ConstPtr &msg)
 {
     if (msg->transforms[0].header.frame_id == "map" && msg->transforms[0].child_frame_id == "base_link" && input_source == 1)  
     {
         geometry_msgs::PoseStamped pose_msg;
 
-        pose_msg.pose.position.x = msg->transforms[0].transform.translation.x - device_pos_[0];
-        pose_msg.pose.position.y = msg->transforms[0].transform.translation.y - device_pos_[1];
-        pose_msg.pose.position.z = msg->transforms[0].transform.translation.z - device_pos_[2]; 
+        pose_msg.pose.position.x = msg->transforms[0].transform.translation.x - reset_origin_[0];
+        pose_msg.pose.position.y = msg->transforms[0].transform.translation.y - reset_origin_[1];
+        pose_msg.pose.position.z = msg->transforms[0].transform.translation.z - reset_origin_[2]; 
 
         // Read the Quaternion from the Carto Package [Frame: lidar[ENU]]
         Eigen::Quaterniond q_(msg->transforms[0].transform.rotation.w, msg->transforms[0].transform.rotation.x, msg->transforms[0].transform.rotation.y, msg->transforms[0].transform.rotation.z);
@@ -119,9 +120,9 @@ void t265_cb(const nav_msgs::Odometry::ConstPtr &msg)
     if (msg->header.frame_id == "t265_odom_frame")
     {
         geometry_msgs::PoseStamped pose_msg;
-        pose_msg.pose.position.x = msg->pose.pose.position.x - device_pos_[0];
-        pose_msg.pose.position.y = msg->pose.pose.position.y - device_pos_[1];
-        pose_msg.pose.position.z = msg->pose.pose.position.z - device_pos_[2];
+        pose_msg.pose.position.x = msg->pose.pose.position.x - reset_origin_[0];
+        pose_msg.pose.position.y = msg->pose.pose.position.y - reset_origin_[1];
+        pose_msg.pose.position.z = msg->pose.pose.position.z - reset_origin_[2];
 
         Eigen::Quaterniond q_ = Eigen::Quaterniond(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
         if(fabs(yaw_offset)>0.001){
@@ -284,9 +285,9 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
         if(d435i_with_imu)
         {
             // ENU(vins) msg --> NED(efk) pose_msg
-            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - device_pos_[0];
-            pose_msg.pose.pose.position.x = msg->pose.pose.position.y - device_pos_[1];
-            pose_msg.pose.pose.position.z = -(msg->pose.pose.position.z - device_pos_[2]);
+            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - reset_origin_[0];
+            pose_msg.pose.pose.position.x = msg->pose.pose.position.y - reset_origin_[1];
+            pose_msg.pose.pose.position.z = -(msg->pose.pose.position.z - reset_origin_[2]);
 
             pose_msg.twist.twist.linear.y = msg->twist.twist.linear.x;
             pose_msg.twist.twist.linear.x = msg->twist.twist.linear.y;
@@ -303,9 +304,9 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
         else
         {
             // ENU(vins)msg --> NED(efk)pose_msg
-            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - device_pos_[0];
-            pose_msg.pose.pose.position.x = msg->pose.pose.position.z - device_pos_[1];
-            pose_msg.pose.pose.position.z = -(-msg->pose.pose.position.y - device_pos_[2]);
+            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - reset_origin_[0];
+            pose_msg.pose.pose.position.x = msg->pose.pose.position.z - reset_origin_[1];
+            pose_msg.pose.pose.position.z = -(-msg->pose.pose.position.y - reset_origin_[2]);
             
             pose_msg.twist.twist.linear.y = msg->twist.twist.linear.x;
             pose_msg.twist.twist.linear.x = msg->twist.twist.linear.z;
@@ -376,9 +377,9 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     if (msg->header.frame_id == "world")
     {
         geometry_msgs::PoseStamped pose_msg;
-        pose_msg.pose.position.x = msg->pose.position.x - device_pos_[0];
-        pose_msg.pose.position.y = msg->pose.position.y - device_pos_[1];
-        pose_msg.pose.position.z = msg->pose.position.z - device_pos_[2];
+        pose_msg.pose.position.x = msg->pose.position.x - reset_origin_[0];
+        pose_msg.pose.position.y = msg->pose.position.y - reset_origin_[1];
+        pose_msg.pose.position.z = msg->pose.position.z - reset_origin_[2];
         
         Eigen::Quaterniond q_;
         if(d435i_with_imu)
@@ -493,6 +494,8 @@ int main(int argc, char **argv)
     nh.param<float>("offset_yaw", yaw_offset, 0);
     // Joystick half dead band
     nh.param<float>("dead_band", dead_band, 0.1);
+    // reset origin before taking off
+    nh.param<bool>("reset_origin", reset_origin, false);
     // interpolation
     nh.param<bool>("interpolation", interpolation, false);
     nh.param<float>("interpolation_rate", interpolation_rate, 50.0);
@@ -501,11 +504,12 @@ int main(int argc, char **argv)
 
     // print
     cout<<"[perception]:input_source: "<<input_source<<endl;
+    cout<<"[perception]:rate_hz: "<<rate_hz<<endl;
+    cout<<"[perception]:offset_yaw: "<<yaw_offset<<endl;
     if(input_source==0) cout<<"[perception]:optitrack_frame: "<<optitrack_frame<<endl;
     cout<<"[perception]:object_name: "<<object_name<<endl;
     if(input_source>=4)cout<<"[perception]:d435i_with_imu: "<<d435i_with_imu<<endl;
-    cout<<"[perception]:rate_hz: "<<rate_hz<<endl;
-    cout<<"[perception]:offset_yaw: "<<yaw_offset<<endl;
+    cout<<"[perception]:reset_origin: "<<reset_origin<<endl;
     cout<<"[perception]:interpolation: "<<interpolation<<endl;
     if(interpolation){
         cout<<"[perception]:interpolation_rate: "<<interpolation_rate<<endl;
@@ -566,11 +570,11 @@ int main(int argc, char **argv)
         cur_pos[2] = _state_from_mavros._DroneState.position[2];
 
         armed_cur = _state_from_mavros._DroneState.armed;
-        if(armed_cur > armed_last)
+        if(reset_origin && armed_cur > armed_last)
         {
-            device_pos_[0] += cur_pos[0];  // We assume that takeoff from pos 0
-            device_pos_[1] += cur_pos[1];  // We assume that takeoff from pos 0
-            device_pos_[2] += cur_pos[2];  // We assume that takeoff from alt 0
+            reset_origin_[0] += cur_pos[0];  // We assume that takeoff from pos 0
+            reset_origin_[1] += cur_pos[1];  // We assume that takeoff from pos 0
+            reset_origin_[2] += cur_pos[2];  // We assume that takeoff from alt 0
         }
         armed_last = armed_cur;
 
