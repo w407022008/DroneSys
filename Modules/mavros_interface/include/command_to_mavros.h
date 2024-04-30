@@ -296,7 +296,7 @@ void command_to_mavros::send_vel_xy_pos_z_setpoint(const Eigen::Vector3d& state_
     //Bitmask toindicate which dimensions should be ignored (1 means ignoring, 0 means selection; Bit 10 must be set to 0)
     //Bit 1:x, bit 2:y, bit 3:z, bit 4:vx, bit 5:vy, bit 6:vz, bit 7:ax, bit 8:ay, bit 9:az, bit 10:is_force_sp, bit 11:yaw, bit 12:yaw_rate
     //Bit 10 should be set as 0, which means it's not force sp
-    pos_setpoint.type_mask = 0b100111000011;   // 100 111 000 011  vx vy vz z + yaw
+    pos_setpoint.type_mask = 0b100111100011;   // 100 111 000 011  vx vy vz z + yaw
 
     //uint8 FRAME_LOCAL_NED = 1
     //uint8 FRAME_BODY_NED = 8
@@ -304,7 +304,6 @@ void command_to_mavros::send_vel_xy_pos_z_setpoint(const Eigen::Vector3d& state_
 
     pos_setpoint.velocity.x = state_sp[0];
     pos_setpoint.velocity.y = state_sp[1];
-    pos_setpoint.velocity.z = 0.0;
     pos_setpoint.position.z = state_sp[2];
 
     pos_setpoint.yaw = yaw_sp;
@@ -319,7 +318,7 @@ void command_to_mavros::send_vel_xy_pos_z_setpoint_yawrate(const Eigen::Vector3d
     //Bitmask toindicate which dimensions should be ignored (1 means ignoring, 0 means selection; Bit 10 must be set to 0)
     //Bit 1:x, bit 2:y, bit 3:z, bit 4:vx, bit 5:vy, bit 6:vz, bit 7:ax, bit 8:ay, bit 9:az, bit 10:is_force_sp, bit 11:yaw, bit 12:yaw_rate
     //Bit 10 should be set as 0, which means it's not force sp
-    pos_setpoint.type_mask = 0b010111000011;   // 100 111 000 011  vx vy vz z + yawrate
+    pos_setpoint.type_mask = 0b010111100011;   // 100 111 000 011  vx vy vz z + yawrate
 
     //uint8 FRAME_LOCAL_NED = 1
     //uint8 FRAME_BODY_NED = 8
@@ -327,7 +326,6 @@ void command_to_mavros::send_vel_xy_pos_z_setpoint_yawrate(const Eigen::Vector3d
 
     pos_setpoint.velocity.x = state_sp[0];
     pos_setpoint.velocity.y = state_sp[1];
-    pos_setpoint.velocity.z = 0.0;
     pos_setpoint.position.z = state_sp[2];
 
     pos_setpoint.yaw_rate = yaw_rate_sp;

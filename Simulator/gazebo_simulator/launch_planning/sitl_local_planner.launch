@@ -1,6 +1,6 @@
 <launch>
 	<arg name="sensor" default="2"/> <!-- 0: hokuyo_2dLidar; 1: 3dLidar; 2: Camera -->
-	<arg name="planner" default="1"/> <!-- 0: APF, 1: histogram-->
+	<arg name="planner" default="0"/> <!-- 0: APF, 1: histogram-->
 	<arg name="visualization" default="true"/>
 	<arg name="type_in_goal" default="false"/>
 	<arg name="joystick" default="2"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->

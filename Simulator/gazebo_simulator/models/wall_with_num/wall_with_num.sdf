@@ -30,7 +30,7 @@
         </visual>
     </link>
 
-    <link name="logo">
+    <link name="ground">
       <pose frame=''>-0.0 0.07 -0.0 0.0 0 0.0</pose>
       <collision name="collision">
           <geometry>
@@ -39,21 +39,6 @@
             </box>
           </geometry>
        </collision>
-       <visual name="visual">
-          <cast_shadows>false</cast_shadows>
-          <geometry>
-            <box>
-               <size>4.5 0.03 1.0</size>
-            </box>
-          </geometry>
-          <material>
-             <script>
-               <uri>model://logo_ground/materials/scripts</uri>
-               <uri>model://logo_ground/materials/textures</uri>
-               <name>Cube/logo_ground</name>
-             </script>
-          </material>
-       </visual>
     </link>
 
     <link name="num_0">

@@ -54,7 +54,6 @@ void Local_Planner::init(ros::NodeHandle& nh)
     
 
     // 订阅开关
-    planner_enable = planner_enable_default;
     planner_switch_sub = nh.subscribe<std_msgs::Bool>("/drone_msg/switch/local_planner", 10, &Local_Planner::planner_switch_cb, this);
 
 	// 订阅目标点，
@@ -110,7 +109,7 @@ void Local_Planner::init(ros::NodeHandle& nh)
         pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Histogram init.");
     }
 
-    // 规划器状态参数初始化
+    // init state machine
     exec_state = EXEC_STATE::WAIT_GOAL;
     odom_ready = false;
     drone_ready = false;
@@ -118,7 +117,7 @@ void Local_Planner::init(ros::NodeHandle& nh)
     sensor_ready = false;
     path_ok = false;
 
-    // 初始化发布的指令
+    // init command 
     Command_Now.header.stamp = ros::Time::now();
     Command_Now.Mode  = drone_msgs::ControlCommand::Idle;
     Command_Now.Command_ID = 0;
@@ -126,38 +125,47 @@ void Local_Planner::init(ros::NodeHandle& nh)
     desired_yaw = 0.0;
 
     //　仿真模式下直接发送切换模式与起飞指令
+    int start_flag = 0;
     if(sim_mode == true)
     {
-        // Waiting for input
-        int start_flag = 0;
+        // Waiting for type in 
         while(start_flag == 0)
         {
-            cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Local Planner<<<<<<<<<<<<<<<<<<<<<<<<<<< "<< endl;
-            cout << "Please type in 1 for start:"<<endl;
+            cout << "Please type in 1 for taking off:"<<endl;
             cin >> start_flag;
         }
-        // 起飞
+        // Takeoff
         Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode  = drone_msgs::ControlCommand::Idle;
-        Command_Now.Command_ID = Command_Now.Command_ID + 1;
+        Command_Now.Command_ID = 1;
         Command_Now.source = NODE_NAME;
         Command_Now.Reference_State.yaw_ref = 999;
         command_pub.publish(Command_Now);   
-        cout << "Switch to OFFBOARD and arm ..."<<endl;
-        ros::Duration(3.0).sleep();
-        
+        do{
+            ros::spinOnce();
+        }while(!drone_ready);
+        cout << "Switched to OFFBOARD and armed, drone will take off after 1.0s"<<endl;
+        ros::Duration(1.0).sleep();
+
         Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = drone_msgs::ControlCommand::Takeoff;
         Command_Now.Command_ID = Command_Now.Command_ID + 1;
         Command_Now.source = NODE_NAME;
         command_pub.publish(Command_Now);
-        cout << "Takeoff ..."<<endl;
-        ros::Duration(3.0).sleep();
+        cout << "Takeoff"<<endl;
+        ros::Duration(1.0).sleep();
+        do{
+            ros::spinOnce();
+        }while(fabs(_DroneState.velocity[2])>0.1);
     }else
     {
         //　真实飞行情况：等待飞机状态变为offboard模式，然后发送起飞指令
     }
 
+    goal_pos[0] = _DroneState.position[0];
+    goal_pos[1] = _DroneState.position[1];
+    goal_pos[2] = _DroneState.position[2];
+    planner_enable = planner_enable_default;
     ros::spin();
 }
 
@@ -186,13 +194,13 @@ void Local_Planner::goal_cb(const geometry_msgs::PoseStampedConstPtr& msg)
 		    cout << "Switch to OFFBOARD and arm ..."<<endl;
 		    ros::Duration(3.0).sleep();
 		    
-		    Command_Now.header.stamp = ros::Time::now();
-		    Command_Now.Mode = drone_msgs::ControlCommand::Takeoff;
-		    Command_Now.Command_ID = Command_Now.Command_ID + 1;
-		    Command_Now.source = NODE_NAME;
-		    command_pub.publish(Command_Now);
-		    cout << "Takeoff ..."<<endl;
-		    ros::Duration(3.0).sleep();
+		    // Command_Now.header.stamp = ros::Time::now();
+		    // Command_Now.Mode = drone_msgs::ControlCommand::Takeoff;
+		    // Command_Now.Command_ID = Command_Now.Command_ID + 1;
+		    // Command_Now.source = NODE_NAME;
+		    // command_pub.publish(Command_Now);
+		    // cout << "Takeoff ..."<<endl;
+		    // ros::Duration(3.0).sleep();
 		}
 	} else{
 		cout << "Disconnected!" << endl;
@@ -729,15 +737,18 @@ void Local_Planner::localcloudCallback(const sensor_msgs::PointCloud2ConstPtr &m
 
 void Local_Planner::control_cb(const ros::TimerEvent& e)
 {
-	if (!path_ok || !planner_enable_default){
+    if (!odom_ready || !drone_ready || !planner_enable)
+        return;
+		
+	if (!path_ok){
 		if (yaw_tracking_mode){
-			Command_Now.header.stamp                        = ros::Time::now();
+            Command_Now.header.stamp                        = ros::Time::now();
+            Command_Now.source                              = NODE_NAME;
+            Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
 			Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
-			Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
-			Command_Now.source                              = NODE_NAME;
 			Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XY_VEL_Z_POS;
 			Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
-		    Command_Now.Reference_State.position_ref[2]     = _DroneState.position[2];
+		    Command_Now.Reference_State.position_ref[2]     = goal_pos[2];
 			Command_Now.Reference_State.velocity_ref[0]     = 0.0;
 			Command_Now.Reference_State.velocity_ref[1]     = 0.0;
 			
@@ -750,13 +761,13 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
 
     distance_to_goal = Eigen::Vector3d((start_pos - goal_pos)[0],(start_pos - goal_pos)[1],0.0).norm();
 
-    // 抵达终点
+    // arrived
     if(distance_to_goal < MIN_DIS)
     {
         Command_Now.header.stamp                        = ros::Time::now();
-        Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
+        Command_Now.source                              = NODE_NAME;
         Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
-        Command_Now.source = NODE_NAME;
+        Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
         Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_POS;
         Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
         Command_Now.Reference_State.position_ref[0]     = goal_pos[0];
@@ -771,20 +782,17 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
         else
             pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Reach the goal! The planner is still enable.");
         
-        // 停止执行
+        // stop
         path_ok = false;
         planner_enable = planner_enable_default;
-        // 转换状态为等待目标
+        // wait for a new
         exec_state = EXEC_STATE::WAIT_GOAL;
         return;
     }
 
     if (is_2D)
     {
-		Command_Now.header.stamp                        = ros::Time::now();
 		Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
-		Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
-		Command_Now.source                              = NODE_NAME;
 		Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XY_VEL_Z_POS;
 		Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
 		Command_Now.Reference_State.velocity_ref[0]     = desired_vel[0];
@@ -792,10 +800,7 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
 		Command_Now.Reference_State.velocity_ref[2]     = 0.0;
 		Command_Now.Reference_State.position_ref[2]     = fly_height_2D;
     }else{
-		Command_Now.header.stamp                        = ros::Time::now();
 		Command_Now.Mode                                = drone_msgs::ControlCommand::Move;
-		Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
-		Command_Now.source                              = NODE_NAME;
 		Command_Now.Reference_State.Move_mode           = drone_msgs::PositionReference::XYZ_VEL;
 		Command_Now.Reference_State.Move_frame          = drone_msgs::PositionReference::ENU_FRAME;
 		Command_Now.Reference_State.velocity_ref[0]     = desired_vel[0];
@@ -804,7 +809,7 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
     }
 		
 
-    // 更新期望偏航角
+    // desired yaw
     if (yaw_tracking_mode == 1)
     {
         auto sign=[](double v)->double
@@ -833,7 +838,7 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
         }
     		
     }else if (yaw_tracking_mode == 2)
-		desired_yaw = desired_yaw + _max_manual_yaw_rate * 0.05 * rc_r; // 0.05 -> 轨迹追踪环，20Hz
+		desired_yaw = desired_yaw + _max_manual_yaw_rate * 0.05 * rc_r; // 0.05 -> tracking_loop，20Hz
 		
     else
         desired_yaw = 0.0;
@@ -846,6 +851,9 @@ void Local_Planner::control_cb(const ros::TimerEvent& e)
 
     Command_Now.Reference_State.yaw_ref             = desired_yaw;
 
+    Command_Now.header.stamp                        = ros::Time::now();
+    Command_Now.source                              = NODE_NAME;
+    Command_Now.Command_ID                          = Command_Now.Command_ID + 1;
     command_pub.publish(Command_Now);
 
 }
@@ -855,11 +863,8 @@ void Local_Planner::mainloop_cb(const ros::TimerEvent& e)
     static int exec_num=0;
     exec_num++;
 
-    // 检查当前状态，不满足规划条件则直接退出主循环
-    // 此处打印消息与后面的冲突了，逻辑上存在问题
     if(!odom_ready || !drone_ready || !sensor_ready || !planner_enable)
     {
-        // 此处改为根据循环时间计算的数值
         if(exec_num == 10)
         {
             if(!planner_enable)
@@ -883,7 +888,6 @@ void Local_Planner::mainloop_cb(const ros::TimerEvent& e)
         return;
     }else
     {
-        // 对检查的状态进行重置
         odom_ready = false;
         drone_ready = false;
         sensor_ready = false;
@@ -904,7 +908,6 @@ void Local_Planner::mainloop_cb(const ros::TimerEvent& e)
                 }
             }else
             {
-                // 获取到目标点后，生成新轨迹
                 exec_state = EXEC_STATE::PLANNING;
                 goal_ready = false;
             }
@@ -913,8 +916,9 @@ void Local_Planner::mainloop_cb(const ros::TimerEvent& e)
         }
         case PLANNING:
         {
-            // desired_vel是返回的规划速度；如果planner_state为2时,飞机不安全(距离障碍物太近)
-            planner_state = local_alg_ptr->generate(goal_pos, desired_vel);
+            Eigen::Vector3d vel_;
+            static Eigen::Vector3d vel_last_;
+            planner_state = local_alg_ptr->generate(goal_pos, vel_);
 			
 			if(!planner_state){
 				exec_state = EXEC_STATE::LANDING;
@@ -926,15 +930,18 @@ void Local_Planner::mainloop_cb(const ros::TimerEvent& e)
 			guide_rviz.header.seq++;
 	        guide_rviz.header.stamp = ros::Time::now();
 	        guide_rviz.header.frame_id = "world";
-	        //　发布rviz显示
-	        guide_rviz.point.x = _DroneState.position[0]+desired_vel[0];
-	        guide_rviz.point.y = _DroneState.position[1]+desired_vel[1];
-	        guide_rviz.point.z = _DroneState.position[2]+desired_vel[2];
-	        double desired_vel_norm = desired_vel.norm();
-	        if(desired_vel_norm > max_planning_vel){
-	        	desired_vel /= desired_vel_norm / max_planning_vel;
+	        //　rviz
+	        guide_rviz.point.x = _DroneState.position[0]+vel_[0];
+	        guide_rviz.point.y = _DroneState.position[1]+vel_[1];
+	        guide_rviz.point.z = _DroneState.position[2]+vel_[2];
+	        double vel_norm = vel_.norm();
+	        if(vel_norm > max_planning_vel){
+	        	vel_ *= max_planning_vel / vel_norm;
 	        }
-	        cout << "planned_vel: " << desired_vel_norm << " max_planning_vel: " << max_planning_vel << " z vel: " << desired_vel(2) << endl;
+            desired_vel = 0.5*vel_last_ + 0.5*vel_;
+            vel_last_ = vel_;
+	        cout << "planned_vel: " << vel_norm << " max_planning_vel: " << max_planning_vel << 
+                    " vel: " << desired_vel(0) << " " << desired_vel(1) << " " << desired_vel(2) << endl;
 	        rviz_guide_pub.publish(guide_rviz);
 
             if(exec_num==20)

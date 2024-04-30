@@ -20,7 +20,7 @@
     </gui>
 
     <!-- 地面 -->
-    <model name="logo_ground">
+    <model name="ground">
       <pose>0 0 0.01 0 0 1.57</pose>
       <static>true</static>
       <link name="link">
@@ -31,13 +31,6 @@
               <size>10 10 0.01</size>
             </box>
           </geometry>
-          <material>
-            <script>
-              <uri>model://logo_ground/materials/scripts</uri>
-              <uri>model://logo_ground/materials/textures</uri>
-              <name>Cube/logo_ground</name>
-            </script>
-          </material>
         </visual>
       </link>
     </model>

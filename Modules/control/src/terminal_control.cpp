@@ -98,7 +98,13 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         // system ("clear");
-        if(Remote_Mode == -1)
+        if(Remote_Mode == 0)
+        {
+            setpointIn();
+        }else if(Remote_Mode == 1)
+        {
+            keyboardControl();
+        }else//(Remote_Mode == -1)
         {
             system ("clear");
             cout << ">>>>>>>>>>>>>>>> Terminal Control <<<<<<<<<<<<<<<<"<< endl;
@@ -114,59 +120,129 @@ int main(int argc, char **argv)
                 cout << "Move (XYZ_VEL) in (BODY_FRAME): w/s for body_x, a/d for body_y, k/m for body_z, q/e for body_yaw" <<endl;
                 cout << "SPACE to pause." <<endl;
                 cout << "Z to roll back." <<endl;
+            }else if(Remote_Mode == 0)
+            {
+                system ("clear");
+                cout << "Type R for arming or disarm" <<endl;
+                cout << "Type T for takeoff" <<endl;
+                cout << "Type Z to roll back" <<endl;
+                cout << "Type S to set a setpoint" <<endl;
             }
-        }
-        if(Remote_Mode == 0)
-        {
-            setpointIn();
-        }
-        if(Remote_Mode == 1)
-        {
-            keyboardControl();
+            sleep(0.1);
         }
         ros::spinOnce();
-        sleep(0.1);
     }
 }
 
 void setpointIn()
 {
     KeyboardEvent keyboardcontrol;
+    key_now = keyboardcontrol.GetKeyOnce();
+
     int Move_mode = 0;
     int Move_frame = 0;
     float state_desired[4];
+    switch(key_now){
+        // If type in S: set setpoint
+        case U_KEY_S:
+            cout << "Please choose the Command.Reference_State.Move_mode: 0 for XYZ_POS, 1 for XY_POS_Z_VEL, 2 for XY_VEL_Z_POS, 3 for XYZ_VEL"<<endl;
+            cin >> Move_mode;
+            if(Move_mode == 999){Remote_Mode=-1;return;}
+            cout << "Please choose the Command.Reference_State.Move_frame: 0 for ENU_FRAME, 1 for BODY_FRAME"<<endl;
+            cin >> Move_frame; 
+            if(Move_frame == 999){Remote_Mode=-1;return;}
+            cout << "Please input the reference state [x y z yaw]: "<< endl;
+            cout << "setpoint --- x [m or m/s] : ";
+            cin >> state_desired[0];
+            if(state_desired[0] == 999){Remote_Mode=-1;return;}
+            cout << "\nsetpoint --- y [m or m/s] : ";
+            cin >> state_desired[1];
+            if(state_desired[1] == 999){Remote_Mode=-1;return;}
+            cout << "\nsetpoint --- z [m or m/s] : ";
+            cin >> state_desired[2];
+            if(state_desired[2] == 999){Remote_Mode=-1;return;}
+            cout << "\nsetpoint --- yaw [deg or deg/s] : ";
+            cin >> state_desired[3];
+            if(state_desired[3] == 999){Remote_Mode=-1;return;}
 
-    system ("clear");
-    cout << "If want to roll back, type 999." <<endl;
-    cout << "Please choose the Command.Reference_State.Move_mode: 0 for XYZ_POS, 1 for XY_POS_Z_VEL, 2 for XY_VEL_Z_POS, 3 for XYZ_VEL"<<endl;
-    cin >> Move_mode;
-    if(Move_mode == 999){Remote_Mode=-1;return;}
-    cout << "Please choose the Command.Reference_State.Move_frame: 0 for ENU_FRAME, 1 for BODY_FRAME"<<endl;
-    cin >> Move_frame; 
-    if(Move_frame == 999){Remote_Mode=-1;return;}
-    cout << "Please input the reference state [x y z yaw]: "<< endl;
-    cout << "setpoint --- x [m] : ";
-    cin >> state_desired[0];
-    if(state_desired[0] == 999){Remote_Mode=-1;return;}
-    cout << "\nsetpoint --- y [m] : ";
-    cin >> state_desired[1];
-    if(state_desired[1] == 999){Remote_Mode=-1;return;}
-    cout << "\nsetpoint --- z [m] : ";
-    cin >> state_desired[2];
-    if(state_desired[2] == 999){Remote_Mode=-1;return;}
-    cout << "\nsetpoint --- yaw [deg] : ";
-    cin >> state_desired[3];
-    if(state_desired[3] == 999){Remote_Mode=-1;return;}
+            Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
+            Command_to_pub.source = NODE_NAME;
+            Command_to_pub.Reference_State.Move_mode  = Move_mode;
+            Command_to_pub.Reference_State.Move_frame = Move_frame;
+            Command_to_pub.Reference_State.time_from_start = 0.0;
+            generate_com(Move_mode, state_desired);
 
+            system ("clear");
+            cout << "Type R for arming or disarm" <<endl;
+            cout << "Type T for takeoff" <<endl;
+            cout << "Type Z to roll back" <<endl;
+            cout << "Type S to set a setpoint" <<endl;
+            break;
+
+        // If type in R: switch to OFFBOARD mode and Arming or Disarm
+        case U_KEY_R:
+            if(armed){
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
+            
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
+                Command_to_pub.source = NODE_NAME;
+            }else{
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
+            
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
+                Command_to_pub.source = NODE_NAME;
+                Command_to_pub.Reference_State.yaw_ref = 999; // set to armed
+            }
+
+            break;
+
+        // If type in T: Takeoff
+        case U_KEY_T:
+            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Takeoff Mode.");
+
+            Command_to_pub.Mode = drone_msgs::ControlCommand::Takeoff;
+            Command_to_pub.Reference_State.yaw_ref = 0.0;
+            Command_to_pub.source = NODE_NAME;
+            
+            break;
+
+        // If type in L: Landing
+        case U_KEY_L:
+            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Land Mode.");
+        
+            Command_to_pub.Mode = drone_msgs::ControlCommand::Land;
+            Command_to_pub.source = NODE_NAME;
+            
+            break;
+
+        // If type in Z: roll back
+        case U_KEY_Z:
+            Remote_Mode = -1;
+            
+        // If type in H: Hovering
+        case U_KEY_H:
+            if(key_last != key_now){
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
+
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Hold;
+                Command_to_pub.source = NODE_NAME;
+                Command_to_pub.Reference_State.position_ref[0]     = cur_pos[0];
+                Command_to_pub.Reference_State.position_ref[1]     = cur_pos[1];
+                Command_to_pub.Reference_State.position_ref[2]     = cur_pos[2];
+                Command_to_pub.Reference_State.velocity_ref[0]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[1]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[2]     = 0;
+                Command_to_pub.Reference_State.acceleration_ref[0] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[1] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[2] = 0;
+
+            }
+            
+            break;
+
+    }
     Command_to_pub.header.stamp = ros::Time::now();
-    Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
     Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-    Command_to_pub.source = NODE_NAME;
-    Command_to_pub.Reference_State.Move_mode  = Move_mode;
-    Command_to_pub.Reference_State.Move_frame = Move_frame;
-    Command_to_pub.Reference_State.time_from_start = 0.0;
-    generate_com(Move_mode, state_desired);
-
     move_pub.publish(Command_to_pub);
 }
 
@@ -186,124 +262,6 @@ void keyboardControl()
         {
             key_now = U_KEY_PASS;
         }
-    }
-
-    switch (key_now)
-    {
-        case U_KEY_NONE:
-            sleep(0.5);
-            return;
-
-        // If type in Z: roll back
-        case U_KEY_Z:
-            Remote_Mode = -1;
-            return;
-
-        // If type in R: switch to OFFBOARD mode and Arming or Disarm
-        case U_KEY_R:
-            if(armed){
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
-            
-                Command_to_pub.header.stamp = ros::Time::now();
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
-                Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-                Command_to_pub.source = NODE_NAME;
-                move_pub.publish(Command_to_pub);
-            }else{
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
-            
-                Command_to_pub.header.stamp = ros::Time::now();
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
-                Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-                Command_to_pub.source = NODE_NAME;
-                Command_to_pub.Reference_State.yaw_ref = 999;
-                move_pub.publish(Command_to_pub);
-                sleep(1.0);
-            }
-            
-            return;
-
-        // If type in T: Takeoff
-        case U_KEY_T:
-            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Takeoff Mode.");
-
-            Command_to_pub.header.stamp = ros::Time::now();
-            Command_to_pub.Mode = drone_msgs::ControlCommand::Takeoff;
-            Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-            Command_to_pub.Reference_State.yaw_ref = 0.0;
-            Command_to_pub.source = NODE_NAME;
-            move_pub.publish(Command_to_pub);
-
-            sleep(1.0);
-
-            return;
-
-        // If type in L: Landing
-        case U_KEY_L:
-            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Land Mode.");
-        
-            Command_to_pub.header.stamp = ros::Time::now();
-            Command_to_pub.Mode = drone_msgs::ControlCommand::Land;
-            Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-            Command_to_pub.source = NODE_NAME;
-            move_pub.publish(Command_to_pub);
-            key_last = U_KEY_PASS;
-
-            return;
-
-        // If type in H: Hovering
-        case U_KEY_H:
-            if(key_last != key_now){
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
-
-                Command_to_pub.header.stamp = ros::Time::now();
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Hold;
-                Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-                Command_to_pub.source = NODE_NAME;
-                Command_to_pub.Reference_State.position_ref[0]     = cur_pos[0];
-                Command_to_pub.Reference_State.position_ref[1]     = cur_pos[1];
-                Command_to_pub.Reference_State.position_ref[2]     = cur_pos[2];
-                Command_to_pub.Reference_State.velocity_ref[0]     = 0;
-                Command_to_pub.Reference_State.velocity_ref[1]     = 0;
-                Command_to_pub.Reference_State.velocity_ref[2]     = 0;
-                Command_to_pub.Reference_State.acceleration_ref[0] = 0;
-                Command_to_pub.Reference_State.acceleration_ref[1] = 0;
-                Command_to_pub.Reference_State.acceleration_ref[2] = 0;
-                move_pub.publish(Command_to_pub);
-
-                sleep(1.0);
-            }
-            
-            return;
-
-        // If type in SPACE: pause
-        case U_KEY_SPACE:
-            if(trajmove.find(key_last) != trajmove.end())
-            {
-                _pause_ = !_pause_;
-                key_now = key_last;
-                break;
-            }else if(joymove.find(key_last) != joymove.end()){
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
-
-                Command_to_pub.header.stamp = ros::Time::now();
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Hold;
-                Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-                Command_to_pub.source = NODE_NAME;
-                Command_to_pub.Reference_State.position_ref[0]     = cur_pos[0];
-                Command_to_pub.Reference_State.position_ref[1]     = cur_pos[1];
-                Command_to_pub.Reference_State.position_ref[2]     = cur_pos[2];
-                Command_to_pub.Reference_State.velocity_ref[0]     = 0;
-                Command_to_pub.Reference_State.velocity_ref[1]     = 0;
-                Command_to_pub.Reference_State.velocity_ref[2]     = 0;
-                Command_to_pub.Reference_State.acceleration_ref[0] = 0;
-                Command_to_pub.Reference_State.acceleration_ref[1] = 0;
-                Command_to_pub.Reference_State.acceleration_ref[2] = 0;
-                move_pub.publish(Command_to_pub);
-                // key_now = key_last;
-                sleep(0.5);
-            }
-            return;
     }
 
     switch(key_now){
@@ -500,6 +458,8 @@ void keyboardControl()
                 Draw_in_rviz(Command_to_pub.Reference_State, true);
 
                 sleep(0.01);
+            }else{
+                key_now = U_KEY_H;
             }
             break;
 
@@ -556,6 +516,8 @@ void keyboardControl()
                 Draw_in_rviz(Command_to_pub.Reference_State, true);
 
                 sleep(0.01);
+            }else{
+                key_now = U_KEY_H;
             }
             break;
 
@@ -590,6 +552,8 @@ void keyboardControl()
                 Draw_in_rviz(Command_to_pub.Reference_State, true);
 
                 sleep(0.01);
+            }else{
+                key_now = U_KEY_H;
             }
             break;
 
@@ -624,7 +588,102 @@ void keyboardControl()
                 Draw_in_rviz(Command_to_pub.Reference_State, true);
 
                 sleep(0.01);
+            }else{
+                key_now = U_KEY_H;
             }
+            break;
+    }
+
+    switch (key_now)
+    {
+        case U_KEY_NONE:
+            return;
+
+        // If type in R: switch to OFFBOARD mode and Arming or Disarm
+        case U_KEY_R:
+            if(armed){
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
+            
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
+                Command_to_pub.source = NODE_NAME;
+            }else{
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
+            
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
+                Command_to_pub.source = NODE_NAME;
+                Command_to_pub.Reference_State.yaw_ref = 999; // set to armed
+            }
+
+            break;
+
+        // If type in T: Takeoff
+        case U_KEY_T:
+            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Takeoff Mode.");
+
+            Command_to_pub.Mode = drone_msgs::ControlCommand::Takeoff;
+            Command_to_pub.Reference_State.yaw_ref = 0.0;
+            Command_to_pub.source = NODE_NAME;
+            
+            break;
+
+        // If type in L: Landing
+        case U_KEY_L:
+            pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Land Mode.");
+        
+            Command_to_pub.Mode = drone_msgs::ControlCommand::Land;
+            Command_to_pub.source = NODE_NAME;
+            
+            break;
+
+        // If type in Z: roll back
+        case U_KEY_Z:
+            Remote_Mode = -1;
+            
+        // If type in H: Hovering
+        case U_KEY_H:
+            if(key_last != key_now){
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
+
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Hold;
+                Command_to_pub.source = NODE_NAME;
+                Command_to_pub.Reference_State.position_ref[0]     = cur_pos[0];
+                Command_to_pub.Reference_State.position_ref[1]     = cur_pos[1];
+                Command_to_pub.Reference_State.position_ref[2]     = cur_pos[2];
+                Command_to_pub.Reference_State.velocity_ref[0]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[1]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[2]     = 0;
+                Command_to_pub.Reference_State.acceleration_ref[0] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[1] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[2] = 0;
+
+            }
+            
+            break;
+
+        // If type in SPACE: pause
+        case U_KEY_SPACE:
+            if(trajmove.find(key_last) != trajmove.end())
+            {
+                _pause_ = !_pause_;
+                key_now = key_last;
+                break;
+            }else if(joymove.find(key_last) != joymove.end()){
+                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
+
+                Command_to_pub.Mode = drone_msgs::ControlCommand::Hold;
+                Command_to_pub.source = NODE_NAME;
+                Command_to_pub.Reference_State.position_ref[0]     = cur_pos[0];
+                Command_to_pub.Reference_State.position_ref[1]     = cur_pos[1];
+                Command_to_pub.Reference_State.position_ref[2]     = cur_pos[2];
+                Command_to_pub.Reference_State.velocity_ref[0]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[1]     = 0;
+                Command_to_pub.Reference_State.velocity_ref[2]     = 0;
+                Command_to_pub.Reference_State.acceleration_ref[0] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[1] = 0;
+                Command_to_pub.Reference_State.acceleration_ref[2] = 0;
+                
+            }
+            
             break;
     }
 
