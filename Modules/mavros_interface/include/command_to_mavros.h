@@ -24,107 +24,75 @@ class command_to_mavros
 private:
     ros::NodeHandle command_nh;
 
-    ros::Subscriber position_target_sub;
-    ros::Subscriber attitude_target_sub;
-    ros::Subscriber actuator_target_sub;
-    ros::Publisher local_pos_pub;
+    ros::Publisher local_pos_pub,attitude_pub,rate_pub,thrust_pub;
     ros::Publisher setpoint_raw_local_pub;
     ros::Publisher setpoint_raw_attitude_pub;
     ros::Publisher actuator_setpoint_pub;
     ros::Publisher mount_control_pub;
 
-    void pos_target_cb(const mavros_msgs::PositionTarget::ConstPtr& msg)
-    {
-        pos_drone_fcu_target = Eigen::Vector3d(msg->position.x, msg->position.y, msg->position.z);
-
-        vel_drone_fcu_target = Eigen::Vector3d(msg->velocity.x, msg->velocity.y, msg->velocity.z);
-
-        accel_drone_fcu_target = Eigen::Vector3d(msg->acceleration_or_force.x, msg->acceleration_or_force.y, msg->acceleration_or_force.z);
-    }
-
-    void att_target_cb(const mavros_msgs::AttitudeTarget::ConstPtr& msg)
-    {
-        q_fcu_target = Eigen::Quaterniond(msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z);
-
-        //Transform the Quaternion to euler Angles
-        euler_fcu_target = quaternion_to_euler(q_fcu_target);
-
-        rates_fcu_target = Eigen::Vector3d(msg->body_rate.x, msg->body_rate.y, msg->body_rate.z);
-
-        Thrust_target = msg->thrust;
-    }
-
-    void actuator_target_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg)
-    {
-        actuator_target = *msg;
-    }
-
 public:
     string uav_name;
-    // Setpoint state received from fcu via mavros
-    Eigen::Vector3d pos_drone_fcu_target;         // Position Setpoint [from fcu]
-    Eigen::Vector3d vel_drone_fcu_target;         // Velocity Setpoint [from fcu]
-    Eigen::Vector3d accel_drone_fcu_target;       // Acceleration Setpoint [from fcu]
-    Eigen::Quaterniond q_fcu_target;              // Quaternion Setpoint [from fcu]
-    Eigen::Vector3d euler_fcu_target;             // Euler angle Setpoint
-    Eigen::Vector3d rates_fcu_target;             // Rate Setpoint [from fcu]
-    float Thrust_target;                          // Throttle Setpoint [from fcu]
-    mavros_msgs::ActuatorControl actuator_target; // Actuator control Setpoint [from fcu]
 
-
-    command_to_mavros(string Uav_name = ""): command_nh("")
+    command_to_mavros(void): command_nh("")
     {
-        uav_name = Uav_name;
+        command_nh.param<string>("uav_name", uav_name, "/uav0");
+
+        if (uav_name == "/uav0")
+        {
+            uav_name = "";
+        }
+
         
-        pos_drone_fcu_target    = Eigen::Vector3d(0.0,0.0,0.0);
-        vel_drone_fcu_target    = Eigen::Vector3d(0.0,0.0,0.0);
-        accel_drone_fcu_target  = Eigen::Vector3d(0.0,0.0,0.0);
-        q_fcu_target            = Eigen::Quaterniond(0.0,0.0,0.0,0.0);
-        euler_fcu_target        = Eigen::Vector3d(0.0,0.0,0.0);
-        rates_fcu_target        = Eigen::Vector3d(0.0,0.0,0.0);
-        Thrust_target           = 0.0;
+        bool use_quaternion = false;
+        command_nh.getParam("/mavros/setpoint_attitude/use_quaternion", use_quaternion);
 
-        // [SUB]
-        // Pos / Vel / Acc [Local Fixed Frame ENU_ROS]
-        // Mavros/plugins/setpoint_raw.cpp: Mavlink message (POSITION_TARGET_LOCAL_NED) -> uORB message (vehicle_local_position_setpoint.msg)
-        position_target_sub = command_nh.subscribe<mavros_msgs::PositionTarget>(uav_name + "/mavros/setpoint_raw/target_local", 10, &command_to_mavros::pos_target_cb,this);
-
-        // Attitude / Rate [Local Fixed Frame ENU_ROS]
-        // Mavros/plugins/setpoint_raw.cpp: Mavlink message (ATTITUDE_TARGET (#83)) -> uORB (vehicle_attitude_setpoint.msg)
-        attitude_target_sub = command_nh.subscribe<mavros_msgs::AttitudeTarget>(uav_name + "/mavros/setpoint_raw/target_attitude", 10, &command_to_mavros::att_target_cb,this);
-
-        // Actuator contorl, throttle for each single rotation direction motor
-        // Mavros/plugins/actuator_control.cpp: Mavlink message (ACTUATOR_CONTROL_TARGET) -> uORB message (actuator_controls.msg)
-        actuator_target_sub = command_nh.subscribe<mavros_msgs::ActuatorControl>(uav_name + "/mavros/target_actuator_control", 10, &command_to_mavros::actuator_target_cb,this);
-
-        // [PUB]
-		// Pos / Attitude [Local Fixed Frame ENU_ROS]
-        // Mavros/plugins/setpoint_position.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) + (SET_POSITION_TARGET_LOCAL_NED (#84))
-		local_pos_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_position/local", 10);
-            
+        // =========================== [PUB] ===========================   
         // Pos / Vel / Acc / Yaw / Yaw_rate [Local Fixed Frame ENU_ROS]
-        // Mavros/plugins/setpoint_raw.cpp: Mavlink message (SET_POSITION_TARGET_LOCAL_NED (#84)) -> uORB message (position_setpoint_triplet.msg)
+        // mavros/src/plugins/setpoint_raw.cpp: Mavlink message (SET_POSITION_TARGET_LOCAL_NED (#84)) -> uORB message (trajectory_setpoint.msg)
+        // [Prioritized]
         setpoint_raw_local_pub = command_nh.advertise<mavros_msgs::PositionTarget>(uav_name + "/mavros/setpoint_raw/local", 10);
 
-        // Attitude / Rate [Local Fixed Frame ENU_ROS]
-        // Mavros/plugins/setpoint_raw.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_attitude_setpoint.msg) + (vehicle_rates_setpoint.msg)
+        // Thrust + Attitude / Rate [Local Fixed Frame ENU_ROS]
+        // mavros/src/plugins/setpoint_raw.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_attitude_setpoint.msg) + (vehicle_rates_setpoint.msg)
+        // [Prioritized]
         setpoint_raw_attitude_pub = command_nh.advertise<mavros_msgs::AttitudeTarget>(uav_name + "/mavros/setpoint_raw/attitude", 10);
 
+		// Pos / Attitude [Local Fixed Frame ENU_ROS]
+        // mavros/src/plugins/setpoint_position.cpp: Mavlink message (SET_POSITION_TARGET_LOCAL_NED (#84)) -> uORB message (trajectory_setpoint.msg)
+        // Ref to test_mavros/tests/offboard_control.h
+		local_pos_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_position/local", 10);
+         
+		// Thrust axis body_up (sign self-inverted in px4)
+        // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_rates_setpoint.msg)
+		thrust_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/thrust", 10);
+         
+		// Attitude [Local Fixed Frame ENU_ROS]
+        // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_attitude_setpoint.msg)
+		if(use_quaternion) attitude_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/attitude", 10);
+
+		// Rate [Body Frame FRD]
+        // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_rates_setpoint.msg)
+		else rate_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/cmd_vel", 10);
+         
         // Actuator contorl, throttle for each single rotation direction motor
-        // Mavros/plugins/actuator_control.cpp : Mavlink message (SET_ACTUATOR_CONTROL_TARGET) -> uORB message (actuator_controls.msg)
+        // mavros/src/plugins/actuator_control.cpp : Mavlink message (SET_ACTUATOR_CONTROL_TARGET) -> nothing
+        // [none sub]
         actuator_setpoint_pub = command_nh.advertise<mavros_msgs::ActuatorControl>(uav_name + "/mavros/actuator_control", 10);
 
         // Mount control
-        // Mavros_extra/plugins/mount_control.cpp
+        // mavros_extra/src/plugins/mount_control.cpp: Mavlink message (MAV_CMD_DO_MOUNT_CONTROL (#205)) -> nothing
+        // uorb message (gimbal_manager_set_attitude.msg) need Mavlink message (GIMBAL_MANAGER_SET_ATTITUDE (#282)) but none in mavros
+        // [none sub]
+        // Alternative Mavlink message (COMMAND_LONG (#76)) but need to add api in mavlink_receiver.cpp
         mount_control_pub = command_nh.advertise<mavros_msgs::MountControl>(uav_name + "/mavros/mount_control/command", 1);
 
-        // [SERVICE]
-        // Arming
-        // mavros/plugins/command.cpp
+        // =========================== [SERVICE] ===========================
+        // Arm / Disarm
+        // mavros/src/plugins/command.cpp: Mavlink message (COMMAND_LONG (#76)) -> uorb message (vehicle_command.msg in Commander.cpp)
         arming_client = command_nh.serviceClient<mavros_msgs::CommandBool>(uav_name + "/mavros/cmd/arming");
 
         // Mode Switcher
-        // mavros/plugins/command.cpp
+        // mavros/src/plugins/sys_status.cpp: Mavlink message (SET_MODE (#11)) -> uorb message (vehicle_command.msg in Commander.cpp)
         set_mode_client = command_nh.serviceClient<mavros_msgs::SetMode>(uav_name + "/mavros/set_mode");
     }
 

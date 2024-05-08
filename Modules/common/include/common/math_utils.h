@@ -41,6 +41,15 @@ Eigen::Vector3d quaternion_to_euler(const Eigen::Quaterniond &q)
     return ans;
 }
 
+Eigen::Vector3d quaternion_to_euler(const float w, const float x, const float y, const float z)
+{
+    Eigen::Vector3d ans;
+    ans[0] = atan2(2.0 * (z * y + w * x), 1.0 - 2.0 * (x * x + y * y));
+    ans[1] = asin(2.0 * (y * w - z * x));
+    ans[2] = atan2(2.0 * (z * w + x * y), 1.0 - 2.0 * (y * y + z * z));
+    return ans;
+}
+
 void rotation_to_euler(const Eigen::Matrix3d& dcm, Eigen::Vector3d& euler_angle)
 {
     double phi_val = atan2(dcm(2, 1), dcm(2, 2));

@@ -28,6 +28,7 @@ add_message_files(
   PositionReference.msg
   AttitudeReference.msg
   DroneState.msg
+  DroneTarget.msg
   ControlOutput.msg
   Message.msg
   RCInput.msg
@@ -44,6 +45,7 @@ generate_messages(
   geometry_msgs 
   sensor_msgs
   std_msgs
+  mavros_msgs
 )
 
 catkin_package(
@@ -54,6 +56,7 @@ catkin_package(
   sensor_msgs
   message_runtime
   std_msgs
+  mavros_msgs
 )
 
 include_directories(
