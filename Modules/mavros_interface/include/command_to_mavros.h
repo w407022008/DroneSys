@@ -11,6 +11,7 @@
 #include <mavros_msgs/PositionTarget.h>
 #include <mavros_msgs/ActuatorControl.h>
 #include <mavros_msgs/MountControl.h>
+#include <mavros_msgs/Thrust.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <sensor_msgs/Imu.h>
@@ -64,7 +65,7 @@ public:
          
 		// Thrust axis body_up (sign self-inverted in px4)
         // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_rates_setpoint.msg)
-		thrust_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/thrust", 10);
+		thrust_pub = command_nh.advertise<mavros_msgs::Thrust>(uav_name + "/mavros/setpoint_attitude/thrust", 10);
          
 		// Attitude [Local Fixed Frame ENU_ROS]
         // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_attitude_setpoint.msg)
@@ -72,7 +73,7 @@ public:
 
 		// Rate [Body Frame FRD]
         // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_rates_setpoint.msg)
-		else rate_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/cmd_vel", 10);
+		else rate_pub = command_nh.advertise<geometry_msgs::TwistStamped>(uav_name + "/mavros/setpoint_attitude/cmd_vel", 10);
          
         // Actuator contorl, throttle for each single rotation direction motor
         // mavros/src/plugins/actuator_control.cpp : Mavlink message (SET_ACTUATOR_CONTROL_TARGET) -> nothing

@@ -435,7 +435,7 @@ int main(int argc, char **argv)
                     ref_pos = state_sp;
                 }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::TRAJECTORY )
                 {
-                    // 暂不支持轨迹模式
+                    // ToDo with Command_Now.Reference_State.bspline
                 }else
                 {
                     pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "Move_mode not Defined. Hold there");

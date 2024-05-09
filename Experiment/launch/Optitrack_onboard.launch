@@ -1,18 +1,10 @@
 <!-- 本launch仅测试Optitrack消息 -->
 <launch>
-	<arg name="mavros_in" default="true"/>
-	<arg name="mavros_ok" default="true"/>
-	<arg name="fcu_url" default="/dev/ttyACM0:2000000"/>
-	<arg name="gcs_url" default="udp-b://192.168.1.101:14555@14550"/>
 	<arg name="rate_hz" default="50.0"/>
-	<arg name="server" default="192.168.1.102"/>
+	<rosparam command="load" file="$(find drone_experiment)/../device.yaml" />
 
     <!-- MAVROS -->
-	<!-- fcu_url: fcu communication address, dev port with baudrate, e.g: "/dev/ttyS4:921600" via UART4 or "/dev/ttyACM0:921600" via USB0 -->
-	<!-- gcs_url: gcs communication address, udp address with port, e.g: "udp-b://192.168.1.101:14555@14550" msg to gcs from ip address 192.168.1.101 with port 14555@14550 -->
-	<node if="$(arg mavros_ok)" pkg="mavros" type="mavros_node" name="mavros" output="screen">
-		<param name="fcu_url" value="$(arg fcu_url)" />
-		<param name="gcs_url" value="$(arg gcs_url)" />
+	<node if="true" pkg="mavros" type="mavros_node" name="mavros" output="screen">
 		<param name="target_system_id" value="1" />
 		<param name="target_component_id" value="1" />
 		<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_pluginlists.yaml" />
@@ -20,21 +12,14 @@
 	</node> 
 
 	<!-- vrpn -->
-	<include file="$(find vrpn_client_ros)/launch/sample.launch">
-		<arg name="server" value="$(arg server)"/>
-	</include>
+	<include file="$(find vrpn_client_ros)/launch/sample.launch"/>
 
 	<!-- TF camera_link in base_link -->
-	<node pkg="tf" type="static_transform_publisher" name="tf_base_camera" args="0.07 0.016 -0.04 -1.5707963 0 -1.5707963 base_link camera_link 100"/>
+	<node if="true" pkg="tf" type="static_transform_publisher" name="tf_base_camera" args="0.07 0.016 -0.04 -1.5707963 0 -1.5707963 base_link camera_link 100"/>
 
 	<!-- run the px4_transceiver.cpp -->
-	<node if="$(arg mavros_in)" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
-		<!-- 0 for vicon， 1 for L-SLAM, 2 for gazebo ground truth -->
-		<param name="input_source" value="0" />
-    	<!-- Optitrack frame convention 0: Z-up; 1: Y-up (See the configuration in the motive software) -->
-		<param name="optitrack_frame" value="0" />
-		<!-- rigid-body-name in Motive-VRPN -->
-		<param name="object_name" value="UAV"/>
+	<node if="true" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
+		<param name="input_source" value="0" /><!--  0 for vicon， 1 for Cartographer, 2 for gazebo, 3 Intel T265 dual camera, 4 VINS-Fusion, 5 ORB-SLAM3  -->
 		<param name="rate_hz" value="$(arg rate_hz)"/>
 	</node>
 	

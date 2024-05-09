@@ -64,7 +64,7 @@ ros::Subscriber orb_slam3_sub;
 ros::Subscriber joy_sub;
 
 void vision_pos_interpolation();
-void pub_to_nodes(drone_msgs::DroneState State_from_fcu);
+void publish(drone_msgs::DroneState State_from_fcu);
 
 void lidar_cb(const tf2_msgs::TFMessage::ConstPtr &msg)
 {
@@ -528,10 +528,12 @@ int main(int argc, char **argv)
     joy_sub = nh.subscribe<sensor_msgs::Joy>("/joy", 100, joy_cb);
 
     // [PUB]
-    // [mavros_extras/src/plugins/vision_pose_estimate.cpp]: MavLink message (VISION_POSITION_ESTIMATE(#102)) -> uORB message (vehicle_visual_odometry.msg)
+    // Position + Attitude
+    // mavros_extras/src/plugins/vision_pose_estimate.cpp: MavLink message (VISION_POSITION_ESTIMATE(#102)) -> uORB message (vehicle_visual_odometry.msg)
     vision_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 10);
 
-    // [mavros_extras/src/plugins/odom.cpp]: Mavlink message (ODOMETRY(#331)) -> uORB message (vehicle_visual_odometry.msg)
+    // Position + Velocity + Attitude + Rate
+    // mavros_extras/src/plugins/odom.cpp: Mavlink message (ODOMETRY(#331)) -> uORB message (vehicle_visual_odometry.msg)
     vision_odom_pub = nh.advertise<nav_msgs::Odometry>("/mavros/odometry/out", 10);
 
     // Drone state
@@ -582,7 +584,7 @@ int main(int argc, char **argv)
         if(interpolation) vision_pos_interpolation();
 
         // publish drone state from Autopilot
-        pub_to_nodes(_state_from_mavros._DroneState);
+        publish(_state_from_mavros._DroneState);
 
         // publish RC input from Joystick or Autopilot
         if(_RCInput.data_source == drone_msgs::RCInput::DRIVER_JOYSTICK){
@@ -723,7 +725,7 @@ void vision_pos_interpolation()
     }
 }
 
-void pub_to_nodes(drone_msgs::DroneState State_from_fcu)
+void publish(drone_msgs::DroneState State_from_fcu)
 {
     // drone_msgs::DroneState
     drone_msgs::DroneState Drone_State = State_from_fcu;
