@@ -1,13 +1,25 @@
 <launch>
 	<arg name="loop_closure" default="false"/>
 	<arg name="gps_global" default="false"/>
+	<arg name="onboard" default="true"/>
 	<arg name="rviz" default="false"/>
+	
+    <group if="$(arg onboard)">	
+    	<!-- VINS Fusion SLAM -->
+        <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="$(find drone_experiment)/config/sensor_config/realsense_stereo_imu_config.yaml" />
+		<!-- loop closure SLAM -->
+		<node if="$(arg loop_closure)" name="VINSLoop" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find drone_experiment)/../config/realsense_d435i/realsense_stereo_imu_config.yaml" launch-prefix="gnome-terminal --tab --"/>
+    </group>
 
-    <!-- VINS Fusion SLAM -->
-	<node name="VINSFUsion" pkg="vins" type="vins_node" output="screen" args="$(find vins)/../config/realsense_d435i/realsense_stereo_imu_config.yaml" />
-
-    <!-- loop closure SLAM -->
-	<node if="$(arg loop_closure)" name="VINSLoop" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find vins)/../config/realsense_d435i/realsense_stereo_imu_config.yaml" launch-prefix="gnome-terminal --tab --"/>
+    <group unless="$(arg onboard)">	
+		<!-- republish topic from compressed image -->
+		<node name="republish_infra1" type="republish" pkg="image_transport" args="compressed in:=/camera/infra1/image_rect_raw raw out:=/infra1" />
+		<node name="republish_infra2" type="republish" pkg="image_transport" args="compressed in:=/camera/infra2/image_rect_raw raw out:=/infra2" />
+    	<!-- VINS Fusion SLAM -->
+        <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="$(find drone_experiment)/config/sensor_config/realsense_stereo_compress_imu_config.yaml" />
+		<!-- loop closure SLAM -->
+		<node if="$(arg loop_closure)" name="VINSLoop" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find drone_experiment)/../config/realsense_d435i/realsense_stereo_compress_imu_config.yaml" launch-prefix="gnome-terminal --tab --"/>
+    </group>
 
     <!-- GPS global SLAM -->
 	<node if="$(arg gps_global)" name="VINSGlobal" pkg="global_fusion" type="global_fusion_node" output="screen" launch-prefix="gnome-terminal --tab --">

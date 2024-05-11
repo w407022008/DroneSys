@@ -40,3 +40,4 @@ Modules/tools/imu_cali/data
 
 ORBvoc.txt
 
+*.bag

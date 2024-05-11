@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
       Splitter Ratio: 0.5584045648574829
-    Tree Height: 720
+    Tree Height: 605
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -22,7 +22,6 @@ Panels:
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
-    Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: ""
@@ -50,6 +49,15 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: <Fixed Frame>
+      Show Trail: false
       Value: true
     - Class: rviz/Image
       Enabled: false
@@ -92,6 +100,7 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
+      Queue Size: 10
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
@@ -100,81 +109,19 @@ Visualization Manager:
       Value: false
     - Class: rviz/TF
       Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: true
-        base_link_frd:
-          Value: false
-        camera_accel_frame:
-          Value: false
-        camera_accel_optical_frame:
-          Value: false
-        camera_depth_frame:
-          Value: false
-        camera_depth_optical_frame:
-          Value: false
-        camera_gyro_frame:
-          Value: false
-        camera_imu_optical_frame:
-          Value: false
-        camera_infra1_frame:
-          Value: false
-        camera_infra1_optical_frame:
-          Value: false
-        camera_infra2_frame:
-          Value: false
-        camera_infra2_optical_frame:
-          Value: false
-        camera_link:
-          Value: true
-        laser_down:
-          Value: false
-        map:
-          Value: false
-        map_ned:
-          Value: false
-        odom:
-          Value: false
-        odom_ned:
-          Value: false
-        world:
-          Value: true
+      Marker Alpha: 1
       Marker Scale: 1
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: false
       Tree:
-        world:
-          base_link:
-            base_link_frd:
-              {}
-            camera_link:
-              camera_accel_frame:
-                camera_accel_optical_frame:
-                  {}
-              camera_depth_frame:
-                camera_depth_optical_frame:
-                  {}
-              camera_gyro_frame:
-                camera_imu_optical_frame:
-                  {}
-              camera_infra1_frame:
-                camera_infra1_optical_frame:
-                  {}
-              camera_infra2_frame:
-                camera_infra2_optical_frame:
-                  {}
-            laser_down:
-              {}
-          map:
-            map_ned:
-              {}
-          odom:
-            odom_ned:
-              {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -223,9 +170,10 @@ Visualization Manager:
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: Pose
+      Queue Size: 10
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
-      Shape: Arrow
+      Shape: Axes
       Topic: /orb_slam3_ros/camera
       Unreliable: false
       Value: true
@@ -257,12 +205,13 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.0307366847991943
+      Distance: 9.160520553588867
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
       Focal Point:
         X: 0.20620936155319214
         Y: -0.10722844302654266
@@ -274,7 +223,6 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.4297966957092285
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
       Yaw: 1.772015929222107
     Saved: ~
 Window Geometry:
@@ -287,7 +235,7 @@ Window Geometry:
     collapsed: false
   Image_raw:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001e20000030dfc020000000dfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000002e100000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000030d000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000140049006d006100670065005f004f00520042003300000001de000000fd0000001600fffffffb000000120049006d006100670065005f0072006100770000000226000001240000001600fffffffb0000000a0047007200610070006800000001e4000001290000000000000000fb0000000a004700720061007000680000000264000001450000000000000000fb00000014004c0069006e00650020006700720061007000680000000242000001670000000000000000000000010000010f0000034cfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a0056006900650077007300000000420000034c000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073d00000042fc0100000002fb0000000800540069006d006500000000000000073d000004f300fffffffb0000000800540069006d00650100000000000004500000000000000000000005530000030d00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001f7000002cbfc020000000dfb0000001200530065006c0065006300740069006f006e00000001e10000009b000000b000fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000002e100000185000000b0fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000006e000002cb0000018200fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000140049006d006100670065005f004f00520042003300000001de000000fd0000002600fffffffb000000120049006d006100670065005f0072006100770000000226000001240000002600fffffffb0000000a0047007200610070006800000001e4000001290000000000000000fb0000000a004700720061007000680000000264000001450000000000000000fb00000014004c0069006e00650020006700720061007000680000000242000001670000000000000000000000010000010f0000034cfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a0056006900650077007300000000420000034c0000013200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073d00000042fc0100000002fb0000000800540069006d006500000000000000073d0000077d00fffffffb0000000800540069006d0065010000000000000450000000000000000000000538000002cb00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -297,5 +245,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1851
-  X: 67
-  Y: 27
+  X: 144
+  Y: 54

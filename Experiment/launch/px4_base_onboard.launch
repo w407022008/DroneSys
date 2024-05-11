@@ -15,6 +15,8 @@
     <!-- vrpn with mavros -->
 	<group if="$(eval arg('input_source') == 1)">
 		<include file="$(find drone_experiment)/launch/Optitrack_onboard.launch">
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
 			<arg name="rate_hz" value="50.0"/>
 		</include>
 	</group>
@@ -29,9 +31,16 @@
 			<arg name="infra_fps" default="60"/>
 			<arg name="color_fps" default="60"/>		
 			
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
 			<arg name="rate_hz" value="50.0"/>
 			
 			<arg name="slam_driver" default="4"/><!-- 4 VINS-Fusion, 5 ORB-SLAM3  -->
+		</include>
+		<include file="$(find drone_experiment)/launch/VINSFusion.launch">
+			<arg name="loop_closure" value="false"/>
+			<arg name="gps_global" value="false"/>
+			<arg name="rviz" value="false"/>
 		</include>
 	</group>
 
@@ -46,10 +55,15 @@
 			<arg name="infra_fps" default="60"/>
 			<arg name="color_fps" default="60"/>	
 
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
 			<arg name="rate_hz" value="50.0"/>
 			
 			<arg name="slam_driver" default="5"/><!-- 4 VINS-Fusion, 5 ORB-SLAM3  -->
-			
+		</include>
+		<include file="$(find drone_experiment)/launch/orbslam.launch">
+			<arg name="onboard" value="true"/>
+			<arg name="rviz" value="false"/>
 		</include>
 	</group>
 
