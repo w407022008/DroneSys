@@ -1,0 +1,4 @@
+[submodule "Modules/tools/kalibr"]
+	path = Modules/tools/kalibr
+	url = https://github.com/ethz-asl/kalibr.git
+	branch = master
