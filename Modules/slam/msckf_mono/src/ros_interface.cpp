@@ -125,7 +125,7 @@ namespace msckf_mono
 
     nav_msgs::Odometry odom;
     odom.header.stamp = publish_time;
-    odom.header.frame_id = "map";
+    odom.header.frame_id = "world";
     odom.twist.twist.linear.x = imu_state.v_I_G[0];
     odom.twist.twist.linear.y = imu_state.v_I_G[1];
     odom.twist.twist.linear.z = imu_state.v_I_G[2];
@@ -138,6 +138,9 @@ namespace msckf_mono
     odom.pose.pose.orientation.x = q_out.x();
     odom.pose.pose.orientation.y = q_out.y();
     odom.pose.pose.orientation.z = q_out.z();
+    
+    printf("time: %f, t: %f %f %f q: %f %f %f %f \n", publish_time.toSec(), imu_state.p_I_G[0], imu_state.p_I_G[1], imu_state.p_I_G[2],
+                                                          q_out.w(), q_out.x(), q_out.y(), q_out.z());
 
     odom_pub_.publish(odom);
   }
@@ -197,7 +200,7 @@ namespace msckf_mono
 
     ROS_INFO_STREAM("\nInitial IMU State" <<
       "\n--p_I_G " << init_imu_state_.p_I_G.transpose() <<
-      "\n--q_IG " << q.w() << "," << q.x() << "," << q.y() << "," << q.x() <<
+      "\n--q_IG " << q.w() << "," << q.x() << "," << q.y() << "," << q.z() <<
       "\n--v_I_G " << init_imu_state_.v_I_G.transpose() <<
       "\n--b_a " << init_imu_state_.b_a.transpose() <<
       "\n--b_g " << init_imu_state_.b_g.transpose() <<

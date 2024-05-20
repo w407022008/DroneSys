@@ -37,7 +37,7 @@
     <param name="n_grid_rows" value="10"/>
     <param name="n_grid_cols" value="10"/>
 
-    <node pkg="msckf_mono" name="msckf_mono_node" type="msckf_mono_node">
+    <node pkg="msckf_mono" name="msckf_mono_node" type="msckf_mono_node" output="screen">
       <remap from="imu" to="/imu0"/>
       <remap from="image_mono" to="/cam0/image_raw"/>
     </node>

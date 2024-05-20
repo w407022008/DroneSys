@@ -4,7 +4,7 @@
   <arg name="onboard" default="true"/>
 
   <group ns="msckf_mono">	
-    <rosparam command="load" file="$(find drone_experiment)/realsense_stereo_imu_kalibr.yaml"/>
+    <rosparam command="load" file="$(find drone_experiment)/config/sensor_config/realsense_stereo_imu_kalibr.yaml"/>
     <param name="kalibr_camera_name" value="cam0"/>
 
     <param name="feature_cov" value="2"/>
