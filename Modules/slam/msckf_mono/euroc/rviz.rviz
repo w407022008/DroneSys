@@ -28,7 +28,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -317,12 +317,12 @@ Visualization Manager:
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
         Value: Axes
-      Topic: /vins/odometry
+      Topic: /vins_estimator/odometry
       Unreliable: true
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /vins/image_track
+      Image Topic: /vins_estimator/image_track
       Max Value: 1
       Median window: 5
       Min Value: 0
