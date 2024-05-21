@@ -420,19 +420,21 @@ void MsckfVio::featureCallback(
     processing_end_time - processing_start_time;
   if (processing_time > 1.0/frame_rate) {
     ++critical_time_cntr;
-    ROS_INFO("\033[1;31mTotal processing time %f/%d...\033[0m",
-        processing_time, critical_time_cntr);
-    //printf("IMU processing time: %f/%f\n",
+    printf("[msckf_vio]:No.%d\n",
+        critical_time_cntr);
+    printf("Total processing time %f/\033[1;31m%f\033[0m\n",
+        processing_time, 1.0/processing_time);
+    //printf("IMU processing time: %f, radio: %f\n",
     //    imu_processing_time, imu_processing_time/processing_time);
-    //printf("State augmentation time: %f/%f\n",
+    //printf("State augmentation time: %f, radio: %f\n",
     //    state_augmentation_time, state_augmentation_time/processing_time);
-    //printf("Add observations time: %f/%f\n",
+    //printf("Add observations time: %f, radio: %f\n",
     //    add_observations_time, add_observations_time/processing_time);
-    printf("Remove lost features time: %f/%f\n",
+    printf("Remove lost features time: %f, radio: %f\n",
         remove_lost_features_time, remove_lost_features_time/processing_time);
-    printf("Remove camera states time: %f/%f\n",
+    printf("Remove camera states time: %f, radio: %f\n",
         prune_cam_states_time, prune_cam_states_time/processing_time);
-    //printf("Publish time: %f/%f\n",
+    //printf("Publish time: %f, radio: %f\n",
     //    publish_time, publish_time/processing_time);
   }
 
@@ -1421,9 +1423,9 @@ void MsckfVio::publish(const ros::Time& time) {
       odom_msg.twist.covariance[i*6+j] = P_body_vel(i, j);
 
   odom_pub.publish(odom_msg);
-  printf("time: %f, t: %f %f %f q: %f %f %f %f \n", time.toSec(), 
-  odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.position.z,
-  odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
+  // printf("time: %f, t: %f %f %f q: %f %f %f %f \n", time.toSec(), 
+  // odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.position.z,
+  // odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
 
   // Publish the 3D positions of the features that
   // has been initialized.

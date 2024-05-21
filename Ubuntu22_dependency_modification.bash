@@ -26,6 +26,7 @@ sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/VINS-Fusion/loop_fusion/C
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/VINS-Fusion/global_fusion/CMakeLists.txt
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/slam/orb_slam3_ros_wrapper/CMakeLists.txt
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/VINS-Fusion/vins_estimator/CMakeLists.txt
+sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/msckf_vio/CMakeLists.txt
 
 ## planning
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/planning_simulator/CMakeLists.txt

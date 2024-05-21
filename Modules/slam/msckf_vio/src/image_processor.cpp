@@ -590,18 +590,18 @@ void ImageProcessor::trackFeatures() {
   for (const auto& item : *curr_features_ptr)
     curr_feature_num += item.second.size();
 
-  ROS_INFO_THROTTLE(0.5,
-      "\033[0;32m candidates: %d; track: %d; match: %d; ransac: %d/%d=%f\033[0m",
-      before_tracking, after_tracking, after_matching,
-      curr_feature_num, prev_feature_num,
-      static_cast<double>(curr_feature_num)/
-      (static_cast<double>(prev_feature_num)+1e-5));
-  //printf(
-  //    "\033[0;32m candidates: %d; raw track: %d; stereo match: %d; ransac: %d/%d=%f\033[0m\n",
-  //    before_tracking, after_tracking, after_matching,
-  //    curr_feature_num, prev_feature_num,
-  //    static_cast<double>(curr_feature_num)/
-  //    (static_cast<double>(prev_feature_num)+1e-5));
+  // ROS_INFO_THROTTLE(0.5,
+  //     "\033[0;32m candidates: %d; track: %d; match: %d; ransac: %d/%d=%f\033[0m",
+  //     before_tracking, after_tracking, after_matching,
+  //     curr_feature_num, prev_feature_num,
+  //     static_cast<double>(curr_feature_num)/
+  //     (static_cast<double>(prev_feature_num)+1e-5));
+  printf(
+     "[image_processor] \033[0;32m candidates: %d; raw track: %d; stereo match: %d; ransac: %d/%d=%f\033[0m\n",
+     before_tracking, after_tracking, after_matching,
+     curr_feature_num, prev_feature_num,
+     static_cast<double>(curr_feature_num)/
+     (static_cast<double>(prev_feature_num)+1e-5));
 
   return;
 }
