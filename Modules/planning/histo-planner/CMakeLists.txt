@@ -50,7 +50,7 @@ include_directories(
        ${catkin_INCLUDE_DIRS}
        ${Eigen3_INCLUDE_DIRS}
        ${PCL_INCLUDE_DIRS}
-       ${PROJECT_SOURCE_DIR}/../../common/include/common
+       ${PROJECT_SOURCE_DIR}/../../common/common/include/common
      )
 link_directories(${PCL_LIBRARY_DIRS})
 

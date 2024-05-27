@@ -53,7 +53,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
   /usr/local/include # add include path for nlopt
-  ${PROJECT_SOURCE_DIR}/../../common/include/common
+  ${PROJECT_SOURCE_DIR}/../../common/common/include/common
 )
 
          

@@ -32,7 +32,6 @@ catkin_package(
 # SET(USER_KEY, "Hello World")
 MESSAGE( STATUS "this lcal planner path:  ******** = ${PROJECT_SOURCE_DIR}.")
 
-
 include_directories(
        SYSTEM
        include
@@ -40,7 +39,7 @@ include_directories(
        ${catkin_INCLUDE_DIRS}
        ${Eigen3_INCLUDE_DIRS}
        ${PCL_INCLUDE_DIRS}
-       ${PROJECT_SOURCE_DIR}/../../common/include/common
+       ${PROJECT_SOURCE_DIR}/../../common/common/include/common
      )
 link_directories(${PCL_LIBRARY_DIRS})
 

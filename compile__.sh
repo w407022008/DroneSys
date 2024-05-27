@@ -3,7 +3,6 @@ catkin_make --source Driver/realsense-ros-2.3.2 --build build/Driver/realsense-r
 catkin_make --source Modules/msgs --build build/msgs
 catkin_make --source Modules/common --build build/common_util
 catkin_make --source Experiment --build build/drone_experiment
-catkin_make --source Modules/mavros_interface --build build/mavros_interface
 catkin_make --source Modules/control --build build/control
 catkin_make --source Modules/perception --build build/perception
 catkin_make --source Modules/tools/camera_models --build build/tools/camera_models -j3
