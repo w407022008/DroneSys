@@ -1,11 +1,20 @@
+## Driver
 catkin_make --source Driver --build build/Driver
-#catkin_make --source Driver/realsense-ros-2.3.2 --build build/Driver/realsense-ros -DCATKIN_ENABLE_TESTING=False -DCMAKE_BUILD_TYPE=Release
-catkin_make --source Modules/msgs --build build/msgs
-catkin_make --source Modules/common --build build/common_util
-catkin_make --source Modules/tools --build build/tools
-catkin_make --source Experiment --build build/drone_experiment
-catkin_make --source Modules/control --build build/control
+
+bash Tools/compile_base.sh
+## Controller
+bash Tools/compile_module_control.sh
+## Perception
 catkin_make --source Modules/perception --build build/perception
-catkin_make --source Modules/slam --build build/slam
-catkin_make --source Modules/planning --build build/planning -j10
-catkin_make --source Simulator --build build/simulator
+## SLAM
+bash Tools/compile_module_slam.sh
+## Planning
+catkin_make --source Modules/planning --build build/planning -j
+## Simulator
+catkin_make --source Simulator --build build/simulator -j
+#catkin_make --source Simulator/gazebo_simulator --build build/simulator/gazebo_simulator
+#catkin_make --source Simulator/rotors_simulator --build build/simulator/rotors_simulator
+#catkin_make --source Simulator/rpg_quadrotor_control --build build/simulator/rpg_quadrotor_control
+
+## Tools
+catkin_make --source Modules/tools --build build/tools

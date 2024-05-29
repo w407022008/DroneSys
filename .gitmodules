@@ -2,3 +2,7 @@
 	path = Modules/tools/kalibr
 	url = https://github.com/ethz-asl/kalibr.git
 	branch = master
+[submodule "Modules/tools/cpu_monitor"]
+	path = Modules/tools/cpu_monitor
+	url = https://github.com/alspitz/cpu_monitor.git
+	branch = master
