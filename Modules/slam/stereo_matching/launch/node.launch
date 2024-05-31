@@ -1,0 +1,15 @@
+<launch>
+  <group ns="elas_stereo_node">
+    <node pkg="stereo_matching" type="stereo_matching_node" name="stereo_matching" output="screen">
+
+      <param name="focal_length" value="458"/>
+      <param name="base_line" value="0.11"/>
+
+      <remap from="/posestamped" to="/leica/position"/>
+      <remap from="/cam0/image_raw" to="/cam0/image_raw"/>
+      <remap from="/cam0/image_raw" to="/cam1/image_raw"/>
+
+    </node>
+  </group>
+
+</launch>

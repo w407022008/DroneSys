@@ -66,16 +66,13 @@ int main(int argc, char **argv)
     std::string focal_length, base_line, leftTopic, rightTopic, poseTopic;
     nh.param<std::string>("elas_stereo_node/focal_length", focal_length, "711.9");
     nh.param<std::string>("elas_stereo_node/base_line", base_line, "0.12");
-    //nh.param<std::string>("elas_stereo_node/left_topic", leftTopic, "/cam0/image_raw");
-    //nh.param<std::string>("elas_stereo_node/right_topic", rightTopic, "/cam1/image_raw");
-    nh.param<std::string>("elas_stereo_node/left_topic", leftTopic, "/mynteye/left/image_mono");
-    nh.param<std::string>("elas_stereo_node/right_topic", rightTopic, "/mynteye/right/image_mono");
-    //nh.param<std::string>("elas_stereo_node/pose_topic", poseTopic, "/maplab_rovio/T_M_I");
+    nh.param<std::string>("elas_stereo_node/left_topic", leftTopic, "/cam0/image_raw");
+    nh.param<std::string>("elas_stereo_node/right_topic", rightTopic, "/cam1/image_raw");
     nh.param<std::string>("elas_stereo_node/pose_topic", poseTopic, "/posestamped");
     ImageProcessor imageProcesser(stringToNum<float>(focal_length),stringToNum<float>(base_line));
     //【发布】发布深度图和点云的话题
-    k_depth_pub = nh.advertise<sensor_msgs::Image>("prometheus/elas_depth", 1);
-    pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("prometheus/pcl_output", 1); 
+    k_depth_pub = nh.advertise<sensor_msgs::Image>("/elas_depth", 1);
+    pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("/pcl_output", 1); 
     //【订阅】订阅双目图像和相机位姿
     message_filters::Subscriber<sensor_msgs::Image> left_sub(nh, leftTopic, 1);
     message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, rightTopic, 1);

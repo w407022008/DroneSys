@@ -35,21 +35,21 @@ find_package( PCL REQUIRED COMPONENT common io )
 add_definitions( ${PCL_DEFINITIONS} )
 link_directories(${PCL_LIBRARY_DIRS})
 
-# add_executable(${PROJECT_NAME}_node 
-#    src/elas_stereo_node.cpp
-#    src/lib/descriptor.cpp
-#    src/lib/elas.cpp
-#    src/lib/filter.cpp
-#    src/lib/matrix.cpp
-#    src/lib/stereomatch.cpp
-#    src/lib/pointcloud.cpp
-#    src/lib/triangle.cpp
-# )
-# target_link_libraries(${PROJECT_NAME}_node
-#    ${catkin_LIBRARIES}
-#    ${OpenCV_LIBS}
-#    ${PCL_LIBRARIES}
-#    ${OCTOMAP_LIBRARIES} 
-# )
+add_executable(${PROJECT_NAME}_node 
+   src/elas_stereo_node.cpp
+   src/lib/descriptor.cpp
+   src/lib/elas.cpp
+   src/lib/filter.cpp
+   src/lib/matrix.cpp
+   src/lib/stereomatch.cpp
+   src/lib/pointcloud.cpp
+   src/lib/triangle.cpp
+)
+target_link_libraries(${PROJECT_NAME}_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBS}
+   ${PCL_LIBRARIES}
+   ${OCTOMAP_LIBRARIES} 
+)
 
 

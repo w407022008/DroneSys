@@ -26,7 +26,7 @@ quadrotor_common::ControlCommand PositionController::run(
   quadrotor_common::TrajectoryPoint reference_state(
       reference_trajectory.points.front());
 
-  // Compute reference inputs
+  // Compute angular_rate&accel reference inputs based on Differential Flatness
   Eigen::Vector3d drag_accelerations = Eigen::Vector3d::Zero();
   quadrotor_common::ControlCommand reference_inputs;
   if (config.perform_aerodynamics_compensation) {
@@ -44,6 +44,7 @@ quadrotor_common::ControlCommand PositionController::run(
   }
 
   // Compute desired control commands
+  // Compute desired attitude & collective thrust
   const Eigen::Vector3d pid_error_accelerations =
       computePIDErrorAcc(state_estimate, reference_state, config);
   const Eigen::Vector3d desired_acceleration = pid_error_accelerations +
@@ -66,6 +67,7 @@ quadrotor_common::ControlCommand PositionController::run(
   const Eigen::Vector3d feedback_bodyrates = computeFeedBackControlBodyrates(
       desired_attitude, state_estimate.orientation, config);
 
+  // Compute desired bodyrate
   if (config.use_rate_mode) {
     command.control_mode = quadrotor_common::ControlMode::BODY_RATES;
     command.bodyrates = reference_inputs.bodyrates + feedback_bodyrates;

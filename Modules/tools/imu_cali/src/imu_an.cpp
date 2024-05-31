@@ -50,6 +50,7 @@ imu_callback( const sensor_msgs::ImuConstPtr& imu_msg )
     if ( start )
     {
         start_t = time;
+        std::cout << "recieve start" << std::endl;
         start   = false;
     }
     else

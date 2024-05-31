@@ -1,5 +1,5 @@
 <launch>
-  <arg name="mav_name" default="firefly" />
+  <arg name="mav_name" default="hummingbird" />
   <arg name="namespace" default="$(arg mav_name)"/>
   <group ns="$(arg namespace)">
     <node name="mav_nonlinear_mpc" pkg="mav_nonlinear_mpc" type="nonlinear_mpc_node" respawn="true" clear_params="true" output="screen">
