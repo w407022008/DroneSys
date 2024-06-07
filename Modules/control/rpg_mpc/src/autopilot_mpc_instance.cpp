@@ -25,12 +25,12 @@
 #include <rpg_mpc/mpc_controller.h>
 #include <rpg_mpc/mpc_params.h>
 
-#include "rpg_mpc/autopilot.h"
+#include "autopilot/autopilot.h"
 
-template class autopilot::AutoPilot<rpg_mpc::MpcController<float>,
-                         rpg_mpc::MpcParams<float>>;
-template class autopilot::AutoPilot<rpg_mpc::MpcController<double>,
-                         rpg_mpc::MpcParams<double>>;
+// template class autopilot::AutoPilot<rpg_mpc::MpcController<float>,
+//                          rpg_mpc::MpcParams<float>>;
+// template class autopilot::AutoPilot<rpg_mpc::MpcController<double>,
+//                          rpg_mpc::MpcParams<double>>;
 
 int main(int argc, char **argv)
 {

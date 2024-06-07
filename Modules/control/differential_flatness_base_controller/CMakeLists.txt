@@ -8,10 +8,15 @@ add_compile_options(-O3)
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
-cs_add_executable(autopilot
-    src/autopilot_node.cpp
+if(catkin_LIBRARIES MATCHES "autopilot")
+
+  message("Building with MPC Autopilot")
+  cs_add_executable(autopilot_dfbc_instance
+    src/autopilot_dfbc_instance.cpp
     src/position_controller.cpp
-)
+  )
+
+endif(catkin_LIBRARIES MATCHES "autopilot")
 
 cs_install()
 cs_export()

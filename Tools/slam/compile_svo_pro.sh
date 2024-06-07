@@ -2,6 +2,7 @@
 echo "build SVO: cpu_num="
 read cpu_num
 catkin_make --source Modules/utils/catkin_simple --build build/utils/catkin_simple
+source devel/setup.bash
 catkin_make --source Modules/utils/ceres_catkin --build build/utils/ceres_catkin
 catkin_make --source Modules/utils/cmake_external_project_catkin --build build/utils/cmake_external_project_catkin
 catkin_make --source Modules/utils/dbow2_catkin --build build/utils/dbow2_catkin

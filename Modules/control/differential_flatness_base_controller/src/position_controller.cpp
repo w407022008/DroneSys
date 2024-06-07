@@ -81,7 +81,7 @@ quadrotor_common::ControlCommand PositionController::run(
     command.bodyrates.z() += feedback_bodyrates.z();
   }
 
-  command.angular_accelerations = reference_inputs.angular_accelerations;
+  command.angular_accelerations = reference_inputs.angular_accelerations;// neglect feedbacck
 
   return command;
 }
