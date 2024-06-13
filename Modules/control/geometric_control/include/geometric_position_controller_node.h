@@ -18,8 +18,8 @@
  * limitations under the License.
  */
 
-#ifndef ROTORS_CONTROL_LEE_POSITION_CONTROLLER_NODE_H
-#define ROTORS_CONTROL_LEE_POSITION_CONTROLLER_NODE_H
+#ifndef GEOMETRIC_POSITION_CONTROLLER_NODE_H
+#define GEOMETRIC_POSITION_CONTROLLER_NODE_H
 
 #include <boost/bind.hpp>
 #include <Eigen/Eigen>
@@ -66,7 +66,7 @@ class GeometricPositionControllerNode {
 
   ros::Publisher motor_velocity_reference_pub_;
 
-  mav_msgs::EigenTrajectoryPointDeque commands_;
+  std::deque<quadrotor_common::TrajectoryPoint> commands_;
   std::deque<ros::Duration> command_waiting_times_;
   ros::Timer command_timer_, odometry_timer_;
 
@@ -84,9 +84,10 @@ class GeometricPositionControllerNode {
       const trajectory_msgs::MultiDOFJointTrajectoryConstPtr& msg);
   void TimedCommandCallback(const ros::TimerEvent& e);
 
+  std_msgs::Header time_pub_header_now;
   void OdometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg);
   void TimedPublish(const ros::TimerEvent& e);
 };
 }
 
-#endif // ROTORS_CONTROL_LEE_POSITION_CONTROLLER_NODE_H
+#endif // GEOMETRIC_POSITION_CONTROLLER_NODE_H

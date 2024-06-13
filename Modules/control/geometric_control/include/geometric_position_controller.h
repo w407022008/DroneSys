@@ -23,6 +23,8 @@
 
 #include <mav_msgs/conversions.h>
 #include <mav_msgs/eigen_mav_msgs.h>
+#include <quadrotor_common/trajectory_point.h>
+#include <quadrotor_common/control_command.h>
 
 #include "common.h"
 #include "vehicle_parameters.h"
@@ -30,7 +32,7 @@
 namespace geometric_position_controller {
 
 // Default values for the geometric position controller and the Asctec Firefly.
-static const float kDefaultControlFrequency = 200.0;
+static const float kDefaultControlFrequency = 0.0;
 static const Eigen::Vector3d kDefaultPositionGain = Eigen::Vector3d(6, 6, 6);
 static const Eigen::Vector3d kDefaultVelocityGain = Eigen::Vector3d(4.7, 4.7, 4.7);
 static const Eigen::Vector3d kDefaultAttitudeGain = Eigen::Vector3d(3, 3, 0.035);
@@ -62,11 +64,14 @@ class GeometricPositionController {
   GeometricPositionController();
   ~GeometricPositionController();
   void InitializeParameters();
+  void CalculateQuaternionThrust(Eigen::Quaterniond* quaternion, double* thrust) const;
+  void CalculateBodyrateThrust(Eigen::Vector3d* bodyrates, double* thrust) const;
+  void CalculateRateAccThrust(Eigen::Vector3d* angular_acceleration, double* thrust) const;
   void CalculateRotorVelocities(Eigen::VectorXd* rotor_velocities) const;
 
   void SetOdometry(const EigenOdometry& odometry);
   void SetTrajectoryPoint(
-    const mav_msgs::EigenTrajectoryPoint& command_trajectory);
+    const quadrotor_common::TrajectoryPoint& command_trajectory_point);
 
   void SetRollPitchYawrateThrust(
       const mav_msgs::EigenRollPitchYawrateThrust& roll_pitch_yawrate_thrust);
@@ -76,9 +81,9 @@ class GeometricPositionController {
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
  private:
-  enum class Modes {
-    PVA_YAWRATE,
-    RP_YAWRATE
+  enum class CommandModes {
+    TrajectoryPoint,
+    EigenRollPitchYawrateThrust
   } controller_mode_;
 
   bool initialized_params_;
@@ -88,14 +93,19 @@ class GeometricPositionController {
   Eigen::Vector3d normalized_angular_rate_gain_;
   Eigen::MatrixX4d angular_acc_to_rotor_velocities_;
 
-  mav_msgs::EigenTrajectoryPoint command_trajectory_;
+  quadrotor_common::TrajectoryPoint command_trajectory_point_;
   mav_msgs::EigenRollPitchYawrateThrust roll_pitch_yawrate_thrust_;
   EigenOdometry odometry_;
 
-  void ComputeDesiredAngularAcc(const Eigen::Vector3d& acceleration,
-                                Eigen::Vector3d* angular_acceleration) const;
-  void ComputeDesiredAngularAcc(Eigen::Vector3d* angular_acceleration) const;
+  quadrotor_common::ControlCommand ComputeCommand();
   void ComputeDesiredAcceleration(Eigen::Vector3d* acceleration) const;
+  void ComputeDesiredRotationMatrix(const Eigen::Vector3d& acceleration,
+                                Eigen::Matrix3d* R_des) const;
+  void ComputeDesiredBodyrates(const Eigen::Matrix3d& desired_R,
+                                Eigen::Vector3d* bodyrates) const;
+  void ComputeDesiredAngularAcc(const Eigen::Vector3d& attitude_error_vector,
+                                const Eigen::Matrix3d& R_des,
+                                Eigen::Vector3d* angular_acceleration) const;
 };
 }
 

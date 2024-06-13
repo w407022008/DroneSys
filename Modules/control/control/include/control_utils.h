@@ -174,7 +174,7 @@ void prinft_attitude_reference(const drone_msgs::AttitudeReference& _AttitudeRef
     cout.setf(ios::showpos);
 
     cout << "Attitude_sp [R P Y]  : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    cout << "Throttle_sp [ 0-1 ]  : " << _AttitudeReference.desired_thrust <<endl;
+    cout << "Throttle_sp [ 0-1 ]  : " << _AttitudeReference.desired_throttle <<endl;
 }
 
 void prinft_ref_pose(const geometry_msgs::PoseStamped& ref_pose)
@@ -329,11 +329,11 @@ drone_msgs::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, 
     // cout << "     : "<< R_sp(2, 0) <<" " << R_sp(2, 1) <<" "<< R_sp(2, 2) << endl;
 
 
-    _AttitudeReference.throttle_sp[0] = thr_sp[0];
-    _AttitudeReference.throttle_sp[1] = thr_sp[1];
-    _AttitudeReference.throttle_sp[2] = thr_sp[2];
+    _AttitudeReference.thrust_sp[0] = thr_sp[0];
+    _AttitudeReference.thrust_sp[1] = thr_sp[1];
+    _AttitudeReference.thrust_sp[2] = thr_sp[2];
 
-    _AttitudeReference.desired_thrust = thr_sp_length; 
+    _AttitudeReference.desired_throttle = thr_sp_length; 
 
     _AttitudeReference.desired_att_q.w = q_sp.w();
     _AttitudeReference.desired_att_q.x = q_sp.x();

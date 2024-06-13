@@ -18,3 +18,6 @@ float64 heading_rate
 
 # Second derivative of the heading angle [rad/s^2]
 float64 heading_acceleration
+
+# Collective thrust [m/s^2]
+float64 thrust

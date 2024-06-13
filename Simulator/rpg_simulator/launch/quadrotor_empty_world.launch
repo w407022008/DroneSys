@@ -19,7 +19,7 @@
   <arg name="debug" default="false"/>
   
   <arg name="use_ground_truth" value="true"/>
-  <arg name="use_geometric_control" value="true"/>
+  <arg name="use_geometric_control" value="false"/>
   <arg name="use_mpc" default="false"/>
   <arg name="use_joy" value="false"/>
 

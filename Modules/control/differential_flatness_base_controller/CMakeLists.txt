@@ -18,5 +18,10 @@ if(catkin_LIBRARIES MATCHES "autopilot")
 
 endif(catkin_LIBRARIES MATCHES "autopilot")
 
+cs_add_executable(dfbc_position_controller_node
+  src/dfbc_position_controller_node.cpp
+  src/position_controller.cpp
+)
+
 cs_install()
 cs_export()

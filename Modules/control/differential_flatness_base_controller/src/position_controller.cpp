@@ -26,44 +26,58 @@ quadrotor_common::ControlCommand PositionController::run(
   quadrotor_common::TrajectoryPoint reference_state(
       reference_trajectory.points.front());
 
-  // Compute angular_rate&accel reference inputs based on Differential Flatness
+  bool has_pos_ref = false;
   Eigen::Vector3d drag_accelerations = Eigen::Vector3d::Zero();
+  Eigen::Vector3d pid_error_accelerations = Eigen::Vector3d::Zero();
   quadrotor_common::ControlCommand reference_inputs;
-  if (config.perform_aerodynamics_compensation) {
-    // Compute reference inputs that compensate for aerodynamic drag
-    computeAeroCompensatedReferenceInputs(reference_state, state_estimate,
-                                          config, &reference_inputs,
-                                          &drag_accelerations);
-  } else {
-    // In this case we are not considering aerodynamic accelerations
-    drag_accelerations = Eigen::Vector3d::Zero();
+  if(reference_state.position.norm() > 0.001 || reference_state.velocity.norm() > 0.001){
+    // Compute angular_rate_ref and angular_accel_ref based on Differential Flatness
+    if (config.perform_aerodynamics_compensation) {
+      // Compute reference inputs that compensate for aerodynamic drag
+      computeAeroCompensatedReferenceInputs(reference_state, state_estimate,
+                                            config, &reference_inputs,
+                                            &drag_accelerations);
+    } else {
+      // In this case we are not considering aerodynamic accelerations
+      drag_accelerations = Eigen::Vector3d::Zero();
 
-    // Compute reference inputs as feed forward terms
-    reference_inputs = computeNominalReferenceInputs(
-        reference_state, state_estimate.orientation);
-  }
-
-  // Compute desired control commands
-  // Compute desired attitude & collective thrust
-  const Eigen::Vector3d pid_error_accelerations =
+      // Compute reference inputs as feed forward terms
+      reference_inputs = computeNominalReferenceInputs(
+          reference_state, state_estimate.orientation);
+    }
+    pid_error_accelerations =
       computePIDErrorAcc(state_estimate, reference_state, config);
-  const Eigen::Vector3d desired_acceleration = pid_error_accelerations +
-                                               reference_state.acceleration -
-                                               kGravity_ - drag_accelerations;
-
-  command.collective_thrust = computeDesiredCollectiveMassNormalizedThrust(
-      state_estimate.orientation, desired_acceleration, config);
-  if (config.perform_aerodynamics_compensation) {
-    // This compensates for an acceleration component in thrust direction due
-    // to the square of the body-horizontal velocity.
-    command.collective_thrust -=
-        config.k_thrust_horz * (pow(state_estimate.velocity.x(), 2.0) +
-                                pow(state_estimate.velocity.y(), 2.0));
+    has_pos_ref = true;
   }
 
-  const Eigen::Quaterniond desired_attitude =
-      computeDesiredAttitude(desired_acceleration, reference_state.heading,
-                             state_estimate.orientation);
+  Eigen::Quaterniond desired_attitude;
+  // Compute desired acceleration
+  if(has_pos_ref || reference_state.acceleration.norm() > 0.001){
+    const Eigen::Vector3d desired_acceleration = pid_error_accelerations +
+                                                  reference_state.acceleration -
+                                                  kGravity_ - drag_accelerations;
+    // Compute desired collective thrust
+    // Projection on the current frame
+    command.collective_thrust = computeDesiredCollectiveMassNormalizedThrust(
+        state_estimate.orientation, desired_acceleration, config);
+    if (config.perform_aerodynamics_compensation) {
+      // This compensates for an acceleration component in thrust direction due
+      // to the square of the body-horizontal velocity.
+      command.collective_thrust -=
+          config.k_thrust_horz * (pow(state_estimate.velocity.x(), 2.0) +
+                                  pow(state_estimate.velocity.y(), 2.0));
+    }
+    // Compute desired attitude
+    desired_attitude =
+        computeDesiredAttitude(desired_acceleration, reference_state.heading,
+                              state_estimate.orientation);
+  }else{
+    // only attitude control
+    desired_attitude = reference_state.orientation;
+    command.collective_thrust = reference_state.thrust;
+  }
+
+  // Do not consider the situation of only bodyrates command
   const Eigen::Vector3d feedback_bodyrates = computeFeedBackControlBodyrates(
       desired_attitude, state_estimate.orientation, config);
 

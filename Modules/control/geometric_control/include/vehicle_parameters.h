@@ -72,8 +72,8 @@ struct RotorConfiguration {
 class VehicleParameters {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  VehicleParameters()
-      : mass_(kDefaultMass),
+  VehicleParameters() : 
+        mass_(kDefaultMass),
         gravity_(kDefaultGravity),
         inertia_(Eigen::Vector3d(kDefaultInertiaXx, kDefaultInertiaYy,
                                  kDefaultInertiaZz).asDiagonal()) {}

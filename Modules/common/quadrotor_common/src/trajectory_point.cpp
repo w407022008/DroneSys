@@ -40,6 +40,8 @@ TrajectoryPoint::TrajectoryPoint(
   heading = trajectory_point_msg.heading;
   heading_rate = trajectory_point_msg.heading_rate;
   heading_acceleration = trajectory_point_msg.heading_acceleration;
+
+  thrust = trajectory_point_msg.thrust;
 }
 
 TrajectoryPoint::~TrajectoryPoint()
@@ -68,6 +70,8 @@ quadrotor_msgs::TrajectoryPoint TrajectoryPoint::toRosMessage() const
   ros_msg.heading = heading;
   ros_msg.heading_rate = heading_rate;
   ros_msg.heading_acceleration = heading_acceleration;
+
+  ros_msg.thrust = thrust;
 
   return ros_msg;
 }

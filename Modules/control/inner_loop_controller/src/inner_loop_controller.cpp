@@ -23,7 +23,7 @@ RPGRotorsInterface::RPGRotorsInterface(const ros::NodeHandle& nh,
   desired_motor_speed_pub_ =
       nh_.advertise<mav_msgs::Actuators>("command/motor_speed", 1);
   
-  // from autopilot
+  // from outer loop controller
   rpg_control_command_sub_ =
       nh_.subscribe("control_command", 1,
                     &RPGRotorsInterface::rpgControlCommandCallback, this);

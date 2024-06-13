@@ -119,7 +119,7 @@ public:
 
 
     void send_attitude_setpoint(const drone_msgs::AttitudeReference& _AttitudeReference);
-    void send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float thrust_sp);
+    void send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float throttle_sp);
     void send_attitude_setpoint_yawrate(const drone_msgs::AttitudeReference& _AttitudeReference, float yaw_rate_sp);
     void send_actuator_setpoint(const Eigen::Vector4d& actuator_sp);
 
@@ -365,7 +365,7 @@ void command_to_mavros::send_attitude_setpoint(const drone_msgs::AttitudeReferen
     att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
     att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
 
-    att_setpoint.thrust = _AttitudeReference.desired_thrust; // throttle rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = _AttitudeReference.desired_throttle; // throttle [0,1] rather att_setpoint.thrust_body[]
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
@@ -386,7 +386,7 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::Attitud
     att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
     att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
 
-    att_setpoint.thrust = _AttitudeReference.desired_thrust; // throttle rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = _AttitudeReference.desired_throttle; // throttle [0,1] rather att_setpoint.thrust_body[]
 
     att_setpoint.body_rate.x = 0.0;
     att_setpoint.body_rate.y = 0.0;
@@ -396,7 +396,7 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::Attitud
 }
 
 // body_rate + throttle
-void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float thrust_sp)
+void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float throttle_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -409,9 +409,9 @@ void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attit
     att_setpoint.body_rate.y = attitude_rate_sp[1];
     att_setpoint.body_rate.z = attitude_rate_sp[2];
 
-    att_setpoint.thrust = thrust_sp;
+    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
 
-    setpoint_raw_attitude_pub.publish(att_setpoint); // throttle rather att_setpoint.thrust_body[]
+    setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
 // actuator control setpoint [PWM]

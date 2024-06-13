@@ -39,6 +39,9 @@ struct TrajectoryPoint
   double heading;
   double heading_rate;
   double heading_acceleration;
+
+  // Thrust
+  double thrust;
 };
 
 } // namespace quadrotor_common

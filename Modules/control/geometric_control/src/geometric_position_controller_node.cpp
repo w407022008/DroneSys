@@ -58,7 +58,9 @@ GeometricPositionControllerNode::GeometricPositionControllerNode(){
 
   odometry_sub_ = nh.subscribe("odometry", 1,
                                &GeometricPositionControllerNode::OdometryCallback, this);
-  odometry_timer_ = nh.createTimer(ros::Duration(1.0/geometric_position_controller_.controller_parameters_.control_frequency_), &GeometricPositionControllerNode::TimedPublish, this);
+  float ctl_freq_ = geometric_position_controller_.controller_parameters_.control_frequency_;
+  if(ctl_freq_>0.0)
+    odometry_timer_ = nh.createTimer(ros::Duration(1.0/ctl_freq_), &GeometricPositionControllerNode::TimedPublish, this);
                                   
   motor_velocity_reference_pub_ = nh.advertise<mav_msgs::Actuators>(
       "command/motor_speed", 1);
@@ -115,6 +117,18 @@ void GeometricPositionControllerNode::InitializeParams() {
 }
 
 void GeometricPositionControllerNode::TimedPublish(const ros::TimerEvent& e) {
+  Eigen::VectorXd ref_rotor_velocities;
+  geometric_position_controller_.CalculateRotorVelocities(&ref_rotor_velocities);
+
+  // Todo(ffurrer): Do this in the conversions header.
+  mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
+
+  actuator_msg->angular_velocities.clear();
+  for (int i = 0; i < ref_rotor_velocities.size(); i++)
+    actuator_msg->angular_velocities.push_back(ref_rotor_velocities[i]);
+  actuator_msg->header.stamp = time_pub_header_now.stamp;
+
+  motor_velocity_reference_pub_.publish(actuator_msg);
 }
 
 void GeometricPositionControllerNode::RollPitchYawrateThrustCallback(
@@ -127,25 +141,24 @@ void GeometricPositionControllerNode::RollPitchYawrateThrustCallback(
 void GeometricPositionControllerNode::TrajecotryPointCallback(
     const quadrotor_msgs::TrajectoryPointConstPtr& msg) {
 
-  mav_msgs::EigenTrajectoryPoint eigen_reference;
   quadrotor_common::TrajectoryPoint desired_state(*msg);
-  eigen_reference.position_W = desired_state.position;
-  eigen_reference.velocity_W = desired_state.velocity;
-  eigen_reference.acceleration_W = desired_state.acceleration;
-  eigen_reference.setFromYaw(desired_state.heading);
-  eigen_reference.setFromYawRate(desired_state.heading_rate);
-  // mav_msgs::eigenTrajectoryPointFromPoseMsg(*pose_msg, &eigen_reference);
 
-  geometric_position_controller_.SetTrajectoryPoint(eigen_reference);
+  geometric_position_controller_.SetTrajectoryPoint(desired_state);
 }
 
 void GeometricPositionControllerNode::CommandPoseCallback(
     const geometry_msgs::PoseStampedConstPtr& pose_msg) {
 
-  mav_msgs::EigenTrajectoryPoint eigen_reference;
-  mav_msgs::eigenTrajectoryPointFromPoseMsg(*pose_msg, &eigen_reference);
+  quadrotor_common::TrajectoryPoint desired_state;
+  desired_state.position = mav_msgs::vector3FromPointMsg(pose_msg->pose.position);
+  desired_state.orientation = mav_msgs::quaternionFromMsg(pose_msg->pose.orientation);
+  desired_state.velocity.setZero();
+  desired_state.bodyrates.setZero();
+  desired_state.acceleration.setZero();
+  desired_state.heading = mav_msgs::yawFromQuaternion(desired_state.orientation);
+  desired_state.heading_rate = (desired_state.orientation * desired_state.bodyrates).z();
 
-  geometric_position_controller_.SetTrajectoryPoint(eigen_reference);
+  geometric_position_controller_.SetTrajectoryPoint(desired_state);
 }
 
 void GeometricPositionControllerNode::TrajectoryCallback(
@@ -162,29 +175,16 @@ void GeometricPositionControllerNode::TrajectoryCallback(
     return;
   }
 
-  mav_msgs::EigenTrajectoryPoint eigen_reference;
   quadrotor_common::TrajectoryPoint desired_state(msg->points.front());
-  eigen_reference.position_W = desired_state.position;
-  eigen_reference.velocity_W = desired_state.velocity;
-  eigen_reference.acceleration_W = desired_state.acceleration;
-  eigen_reference.setFromYaw(desired_state.heading);
-  eigen_reference.setFromYawRate(desired_state.heading_rate);
-  // mav_msgs::eigenTrajectoryPointFromMsg(msg->points.front(), &eigen_reference);
-  commands_.push_front(eigen_reference);
+  commands_.push_front(desired_state);
 
   for (size_t i = 1; i < n_commands; ++i) {
     const quadrotor_msgs::TrajectoryPoint& reference_before = msg->points[i-1];
     const quadrotor_msgs::TrajectoryPoint& current_reference = msg->points[i];
 
     quadrotor_common::TrajectoryPoint desired_state(current_reference);
-    eigen_reference.position_W = desired_state.position;
-    eigen_reference.velocity_W = desired_state.velocity;
-    eigen_reference.acceleration_W = desired_state.acceleration;
-    eigen_reference.setFromYaw(desired_state.heading);
-    eigen_reference.setFromYawRate(desired_state.heading_rate);
-    // mav_msgs::eigenTrajectoryPointFromMsg(current_reference, &eigen_reference);
 
-    commands_.push_back(eigen_reference);
+    commands_.push_back(desired_state);
     command_waiting_times_.push_back(current_reference.time_from_start - reference_before.time_from_start);
   }
 
@@ -215,15 +215,27 @@ void GeometricPositionControllerNode::MultiDofJointTrajectoryCallback(
 
   mav_msgs::EigenTrajectoryPoint eigen_reference;
   mav_msgs::eigenTrajectoryPointFromMsg(msg->points.front(), &eigen_reference);
-  commands_.push_front(eigen_reference);
+  quadrotor_common::TrajectoryPoint desired_state;
+  desired_state.position = eigen_reference.position_W;
+  desired_state.velocity = eigen_reference.velocity_W;
+  desired_state.acceleration = eigen_reference.acceleration_W;
+  desired_state.heading = eigen_reference.getYaw();
+  desired_state.heading_rate = eigen_reference.getYawRate();
+  commands_.push_front(desired_state);
 
   for (size_t i = 1; i < n_commands; ++i) {
     const trajectory_msgs::MultiDOFJointTrajectoryPoint& reference_before = msg->points[i-1];
     const trajectory_msgs::MultiDOFJointTrajectoryPoint& current_reference = msg->points[i];
 
     mav_msgs::eigenTrajectoryPointFromMsg(current_reference, &eigen_reference);
+    quadrotor_common::TrajectoryPoint desired_state;
+    desired_state.position = eigen_reference.position_W;
+    desired_state.velocity = eigen_reference.velocity_W;
+    desired_state.acceleration = eigen_reference.acceleration_W;
+    desired_state.heading = eigen_reference.getYaw();
+    desired_state.heading_rate = eigen_reference.getYawRate();
 
-    commands_.push_back(eigen_reference);
+    commands_.push_back(desired_state);
     command_waiting_times_.push_back(current_reference.time_from_start - reference_before.time_from_start);
   }
 
@@ -245,8 +257,8 @@ void GeometricPositionControllerNode::TimedCommandCallback(const ros::TimerEvent
     return;
   }
 
-  const mav_msgs::EigenTrajectoryPoint eigen_reference = commands_.front();
-  geometric_position_controller_.SetTrajectoryPoint(eigen_reference);
+  const quadrotor_common::TrajectoryPoint desired_state = commands_.front();
+  geometric_position_controller_.SetTrajectoryPoint(desired_state);
   commands_.pop_front();
   command_timer_.stop();
   if(!command_waiting_times_.empty()){
@@ -260,22 +272,10 @@ void GeometricPositionControllerNode::OdometryCallback(const nav_msgs::OdometryC
 
   ROS_INFO_ONCE("GeometricPositionController got first odometry message.");
 
-  EigenOdometry odometry;
-  eigenOdometryFromMsg(odometry_msg, &odometry);
-  geometric_position_controller_.SetOdometry(odometry);
-
-  Eigen::VectorXd ref_rotor_velocities;
-  geometric_position_controller_.CalculateRotorVelocities(&ref_rotor_velocities);
-
-  // Todo(ffurrer): Do this in the conversions header.
-  mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
-
-  actuator_msg->angular_velocities.clear();
-  for (int i = 0; i < ref_rotor_velocities.size(); i++)
-    actuator_msg->angular_velocities.push_back(ref_rotor_velocities[i]);
-  actuator_msg->header.stamp = odometry_msg->header.stamp;
-
-  motor_velocity_reference_pub_.publish(actuator_msg);
+  time_pub_header_now = odometry_msg->header;
+  EigenOdometry odometry_cur_;
+  eigenOdometryFromMsg(odometry_msg, &odometry_cur_);
+  geometric_position_controller_.SetOdometry(odometry_cur_);
 }
 
 }
