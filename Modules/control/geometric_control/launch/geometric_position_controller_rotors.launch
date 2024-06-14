@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="quad_name" default="hummingbird"/>
+
+  <arg name="mav_name" default="$(arg quad_name)"/>
+  <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo"/>
+  <arg name="world_name" default="$(find rotors_gazebo)/worlds/basic.world"/>
+
+  <arg name="x_init" default="0"/>
+  <arg name="y_init" default="0"/>
+
+  <arg name="enable_logging" default="false" />
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="enable_command_feedthrough" default="false"/>
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="paused" value="true"/>
+  <arg name="gui" value="true"/>
+  <arg name="verbose" default="false"/>
+  <arg name="debug" default="false"/>
+  
+  <arg name="use_ground_truth" value="true"/>
+  <arg name="use_joy" value="false"/>
+  
+  <arg name="custom_models" default=""/>
+
+  <!-- Gazebo stuff to spawn the world !-->
+  <env name="GAZEBO_MODEL_PATH" 
+      value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(arg custom_models)"/>
+  <env name="GAZEBO_RESOURCE_PATH" 
+      value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <!-- RotorS stuff to spawn the quadrotor !-->
+  <group ns="$(arg mav_name)">
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(arg model)" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="$(arg log_file)"/>
+      <arg name="x" value="$(arg x_init)" />
+      <arg name="y" value="$(arg y_init)" />
+    </include>
+  </group>
+
+  <!-- RPG stuff to control the quadrotor !-->
+  <group ns="$(arg quad_name)" >
+
+    <!-- Geometric Controller -->
+    <node if="$(arg use_ground_truth)" pkg="geometric_control" type="geometric_position_controller_node" 
+        name="geometric_controller" output="screen" >
+      <rosparam file="$(find geometric_control)/parameters/$(arg quad_name).yaml" />
+      <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
+      
+      <remap from="odometry" to="ground_truth/odometry" />
+      <remap from="command/pose" to="/drone_msg/planning/goal" />
+    </node>
+
+    <!-- Geometric Controller -->
+    <node unless="$(arg use_ground_truth)" pkg="geometric_control" type="geometric_position_controller_node" 
+        name="geometric_controller" output="screen" >
+      <rosparam file="$(find geometric_control)/parameters/$(arg quad_name).yaml" />
+      <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
+      
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+      <remap from="command/pose" to="/drone_msg/planning/goal" />
+    </node>
+
+    <node pkg="control" type="pub_goal" name="terminal_goal_publisher" output="screen" launch-prefix="gnome-terminal --tab --"/>
+
+    <group if="$(arg use_joy)">
+      <node pkg="joy" type="joy_node" name="joy_node">
+        <param name="autorepeat_rate" value="10"/>
+      </node>
+
+      <node pkg="manual_flight_assistant" type="manual_flight_assistant" 
+          name="manual_flight_assistant" output="screen">
+        <rosparam file="$(find manual_flight_assistant)/parameters/manual_flight_assistant.yaml"/>
+      </node>
+    </group>
+
+  </group> 
+  
+</launch>

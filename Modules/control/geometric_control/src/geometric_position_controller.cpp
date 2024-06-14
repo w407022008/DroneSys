@@ -66,18 +66,20 @@ void GeometricPositionController::SetRollPitchYawrateThrust(
 void GeometricPositionController::SetTrajectoryPoint(
     const quadrotor_common::TrajectoryPoint& command_trajectory_point) {
   command_trajectory_point_ = command_trajectory_point;
+
   controller_active_ = true;
   controller_mode_ = CommandModes::TrajectoryPoint;
 }
 
-quadrotor_common::ControlCommand GeometricPositionController::ComputeCommand(){
+quadrotor_common::ControlCommand GeometricPositionController::CalculateCommand(){
   assert(initialized_params_);
   quadrotor_common::ControlCommand command;
   command.armed = true;
-
+  
   // Return 0 thrust, until the first command is received.
   if (!controller_active_) {
     command.collective_thrust = 0.0;
+    return command;
   }
 
   Eigen::Vector3d acceleration_des;

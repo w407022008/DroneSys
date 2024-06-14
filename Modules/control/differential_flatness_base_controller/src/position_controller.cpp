@@ -20,6 +20,8 @@ quadrotor_common::ControlCommand PositionController::run(
     const quadrotor_common::QuadStateEstimate& state_estimate,
     const quadrotor_common::Trajectory& reference_trajectory,
     const PositionControllerParams& config) {
+  if (reference_trajectory.points.size() == 0) return quadrotor_common::ControlCommand();
+  
   quadrotor_common::ControlCommand command;
   command.armed = true;
 

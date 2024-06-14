@@ -23,6 +23,8 @@
 
 #include <ros/ros.h>
 #include <mav_msgs/default_topics.h>
+#include <mavros_msgs/AttitudeTarget.h>
+#include <quadrotor_common/geometry_eigen_conversions.h> 
 #include <std_srvs/Empty.h>
 
 #include "geometric_position_controller_node.h"
@@ -58,13 +60,15 @@ GeometricPositionControllerNode::GeometricPositionControllerNode(){
 
   odometry_sub_ = nh.subscribe("odometry", 1,
                                &GeometricPositionControllerNode::OdometryCallback, this);
-  float ctl_freq_ = geometric_position_controller_.controller_parameters_.control_frequency_;
-  if(ctl_freq_>0.0)
-    odometry_timer_ = nh.createTimer(ros::Duration(1.0/ctl_freq_), &GeometricPositionControllerNode::TimedPublish, this);
-                                  
-  motor_velocity_reference_pub_ = nh.advertise<mav_msgs::Actuators>(
-      "command/motor_speed", 1);
 
+
+  rotors_motor_velocity_reference_pub_ = nh.advertise<mav_msgs::Actuators>(
+      "command/motor_speed", 1);
+  mavros_setpoint_raw_attitude_pub = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
+
+  if(control_frequency_>0.0)
+    odometry_timer_ = nh.createTimer(ros::Duration(1.0/control_frequency_), &GeometricPositionControllerNode::TimedPublish, this);
+              
 }
 
 GeometricPositionControllerNode::~GeometricPositionControllerNode() { }
@@ -73,9 +77,8 @@ void GeometricPositionControllerNode::InitializeParams() {
 
   ros::NodeHandle private_nh("~");
   // Read parameters from rosparam.
-  GetRosParameter(private_nh, "control_frequency",
-                  geometric_position_controller_.controller_parameters_.control_frequency_,
-                  &geometric_position_controller_.controller_parameters_.control_frequency_);
+  GetRosParameter<float>(private_nh, "control_frequency", 200.0, &control_frequency_);
+  GetRosParameter<bool>(private_nh, "rate_control", false, &rate_control_);
   GetRosParameter(private_nh, "position_gain/x",
                   geometric_position_controller_.controller_parameters_.position_gain_.x(),
                   &geometric_position_controller_.controller_parameters_.position_gain_.x());
@@ -112,23 +115,53 @@ void GeometricPositionControllerNode::InitializeParams() {
   GetRosParameter(private_nh, "angular_rate_gain/z",
                   geometric_position_controller_.controller_parameters_.angular_rate_gain_.z(),
                   &geometric_position_controller_.controller_parameters_.angular_rate_gain_.z());
+
   GetVehicleParameters(private_nh, &geometric_position_controller_.vehicle_parameters_);
+
   geometric_position_controller_.InitializeParameters();
+
+  commands_.clear();
 }
 
 void GeometricPositionControllerNode::TimedPublish(const ros::TimerEvent& e) {
-  Eigen::VectorXd ref_rotor_velocities;
-  geometric_position_controller_.CalculateRotorVelocities(&ref_rotor_velocities);
+  // publish rotors speed by calculating inner loop control
+  if(rotors_motor_velocity_reference_pub_.getNumSubscribers() > 0 ){
+    Eigen::VectorXd ref_rotor_velocities;
+    geometric_position_controller_.CalculateRotorVelocities(&ref_rotor_velocities);
 
-  // Todo(ffurrer): Do this in the conversions header.
-  mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
+    // Todo(ffurrer): Do this in the conversions header.
+    mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
 
-  actuator_msg->angular_velocities.clear();
-  for (int i = 0; i < ref_rotor_velocities.size(); i++)
-    actuator_msg->angular_velocities.push_back(ref_rotor_velocities[i]);
-  actuator_msg->header.stamp = time_pub_header_now.stamp;
+    actuator_msg->angular_velocities.clear();
+    for (int i = 0; i < ref_rotor_velocities.size(); i++)
+      actuator_msg->angular_velocities.push_back(ref_rotor_velocities[i]);
+    actuator_msg->header.stamp = time_pub_header_now.stamp;
 
-  motor_velocity_reference_pub_.publish(actuator_msg);
+    rotors_motor_velocity_reference_pub_.publish(actuator_msg);
+  }
+
+  // publish mavros attitude setpoint
+  if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
+    quadrotor_common::ControlCommand control_cmd = geometric_position_controller_.CalculateCommand();
+    mavros_msgs::AttitudeTarget att_setpoint;
+
+    // Mappings: If any of these bits are set, the corresponding input should be ignored:
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    if(rate_control_){
+      att_setpoint.type_mask = 0b10010000; // only bodyrates setpoint
+    }else{
+      att_setpoint.type_mask = 0b00010000; // att_rate setpoint
+      att_setpoint.orientation = quadrotor_common::eigenToGeometry(control_cmd.orientation);
+    }
+    // att_setpoint.type_mask = 0b00011111; // only attitude setpoint
+    att_setpoint.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
+
+    att_setpoint.thrust = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+
+    mavros_setpoint_raw_attitude_pub.publish(att_setpoint);
+  }
 }
 
 void GeometricPositionControllerNode::RollPitchYawrateThrustCallback(

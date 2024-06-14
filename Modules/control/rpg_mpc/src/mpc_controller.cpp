@@ -91,6 +91,8 @@ quadrotor_common::ControlCommand MpcController<T>::run(
     const quadrotor_common::QuadStateEstimate& state_estimate,
     const quadrotor_common::Trajectory& reference_trajectory,
     const MpcParams<T>& params) {
+  if (reference_trajectory.points.size() == 0) return quadrotor_common::ControlCommand();
+  
   ros::Time call_time = ros::Time::now();
   const clock_t start = clock();
   if (params.changed_) {

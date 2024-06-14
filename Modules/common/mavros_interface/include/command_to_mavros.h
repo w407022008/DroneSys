@@ -356,9 +356,11 @@ void command_to_mavros::send_attitude_setpoint(const drone_msgs::AttitudeReferen
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
-    //bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. bit 4-bit 5: reserved, bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
-    att_setpoint.type_mask = 0b00111111;
+    att_setpoint.type_mask = 0b00011111;
 
     att_setpoint.orientation.x = _AttitudeReference.desired_att_q.x;
     att_setpoint.orientation.y = _AttitudeReference.desired_att_q.y;
@@ -377,9 +379,11 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::Attitud
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
-    //bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. bit 4-bit 5: reserved, bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
-    att_setpoint.type_mask = 0b00111011;
+    att_setpoint.type_mask = 0b00011011;
 
     att_setpoint.orientation.x = _AttitudeReference.desired_att_q.x;
     att_setpoint.orientation.y = _AttitudeReference.desired_att_q.y;
@@ -401,7 +405,9 @@ void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attit
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
-    //bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. bit 4-bit 5: reserved, bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
     att_setpoint.type_mask = 0b10111000;
 

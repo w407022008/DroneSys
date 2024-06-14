@@ -55,6 +55,8 @@ class GeometricPositionControllerNode {
   GeometricPositionController geometric_position_controller_;
 
   std::string namespace_;
+  float control_frequency_;
+  bool rate_control_;
 
   // subscribers
   ros::Subscriber cmd_trajectory_sub_;
@@ -64,7 +66,8 @@ class GeometricPositionControllerNode {
   ros::Subscriber cmd_roll_pitch_yawrate_thrust_sub_;
   ros::Subscriber odometry_sub_;
 
-  ros::Publisher motor_velocity_reference_pub_;
+  ros::Publisher rotors_motor_velocity_reference_pub_;
+  ros::Publisher mavros_setpoint_raw_attitude_pub;
 
   std::deque<quadrotor_common::TrajectoryPoint> commands_;
   std::deque<ros::Duration> command_waiting_times_;

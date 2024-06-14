@@ -59,6 +59,8 @@ class MPCControllerNode {
 
   std::atomic_bool destructor_invoked_;
   float control_frequency_;
+  bool poly_interpolation_;
+  bool rate_control_;
 
   // subscribers
   ros::Subscriber cmd_trajectory_sub_;
@@ -68,6 +70,7 @@ class MPCControllerNode {
   ros::Subscriber odometry_sub_;
 
   ros::Publisher control_command_pub_;
+  ros::Publisher mavros_setpoint_raw_attitude_pub;
 
   quadrotor_common::Trajectory trajectory_;
   quadrotor_common::TrajectoryPoint odometry_state_;

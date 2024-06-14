@@ -99,9 +99,12 @@ setpoint_attitude:
     rate_limit: 50.0
 
 setpoint_raw:
-  thrust_scaling: 1.0       # used in setpoint_raw attitude callback.
+  thrust_scaling: 0.0 #0.0509683995922528       # used in setpoint_raw attitude callback.
   # Note: PX4 expects normalized thrust values between 0 and 1, which means that
   # the scaling needs to be unitary and the inputs should be 0..1 as well.
+  # Throttle (normalized thrust in PX4) = thrust_scaling * collective_thrust[m/s^2]
+  # thrust_scaling = throttle_hover / Gravity. Gravity may be 9.81, but throttle_hover
+  # should be estimated, set as 0.0 mc_hover_thrust_estimator in PX4 should be used.
 
 # setpoint_position
 setpoint_position:

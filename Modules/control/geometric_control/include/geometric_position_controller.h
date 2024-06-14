@@ -64,6 +64,7 @@ class GeometricPositionController {
   GeometricPositionController();
   ~GeometricPositionController();
   void InitializeParameters();
+  quadrotor_common::ControlCommand CalculateCommand();
   void CalculateQuaternionThrust(Eigen::Quaterniond* quaternion, double* thrust) const;
   void CalculateBodyrateThrust(Eigen::Vector3d* bodyrates, double* thrust) const;
   void CalculateRateAccThrust(Eigen::Vector3d* angular_acceleration, double* thrust) const;
@@ -97,7 +98,6 @@ class GeometricPositionController {
   mav_msgs::EigenRollPitchYawrateThrust roll_pitch_yawrate_thrust_;
   EigenOdometry odometry_;
 
-  quadrotor_common::ControlCommand ComputeCommand();
   void ComputeDesiredAcceleration(Eigen::Vector3d* acceleration) const;
   void ComputeDesiredRotationMatrix(const Eigen::Vector3d& acceleration,
                                 Eigen::Matrix3d* R_des) const;

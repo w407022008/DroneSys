@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <mav_msgs/default_topics.h>
+#include <mavros_msgs/AttitudeTarget.h>
 #include <quadrotor_common/math_common.h>
 #include <quadrotor_common/parameter_helper.h>
 #include <quadrotor_common/geometry_eigen_conversions.h>
@@ -45,7 +46,7 @@ MPCControllerNode::MPCControllerNode(
       this, ros::TransportHints().tcpNoDelay());
 
   control_command_pub_ = nh_.advertise<quadrotor_msgs::ControlCommand>("control_command", 1);
-
+  mavros_setpoint_raw_attitude_pub = nh_.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
   if(control_frequency_>0.0){
     odometry_timer_ = nh_.createTimer(ros::Duration(1.0/control_frequency_), &MPCControllerNode::TimedPublishCommand, this);
   }
@@ -64,6 +65,12 @@ MPCControllerNode::~MPCControllerNode() {
 bool MPCControllerNode::InitializeParams() {
 
   if (!quadrotor_common::getParam("control_frequency", control_frequency_, 200.0f, pnh_)){
+    return false;
+  }
+  if (!quadrotor_common::getParam("poly_interpolation", poly_interpolation_, true, pnh_)){
+    return false;
+  }
+  if (!quadrotor_common::getParam("rate_control", rate_control_, true, pnh_)){
     return false;
   }
 
@@ -130,21 +137,24 @@ void MPCControllerNode::CommandPoseCallback(
   desired_state.heading = odometry_state_.heading;
   desired_state.heading_rate = (desired_state.orientation * desired_state.bodyrates).z();
   
-  quadrotor_common::Trajectory go_to_pose_traj =
-            trajectory_generation_helper::polynomials::
-                computeTimeOptimalTrajectory(
-                    odometry_state_, desired_state,
-                    5, //kGoToPosePolynomialOrderOfContinuity_
-                    1.5, //go_to_pose_max_velocity_
-                    12, //go_to_pose_max_normalized_thrust_
-                    0.5, //go_to_pose_max_roll_pitch_rate_
-                    50.0);//kGoToPoseTrajectorySamplingFrequency_
+  if(poly_interpolation_){
+    quadrotor_common::Trajectory go_to_pose_traj =
+              trajectory_generation_helper::polynomials::
+                  computeTimeOptimalTrajectory(
+                      odometry_state_, desired_state,
+                      5, //kGoToPosePolynomialOrderOfContinuity_
+                      1.5, //go_to_pose_max_velocity_
+                      12, //go_to_pose_max_normalized_thrust_
+                      0.5, //go_to_pose_max_roll_pitch_rate_
+                      50.0);//kGoToPoseTrajectorySamplingFrequency_
 
-  // trajectory_generation_helper::heading::addConstantHeadingRate(
-  //     odometry_state_.heading, desired_state.heading, &go_to_pose_traj);
+    // trajectory_generation_helper::heading::addConstantHeadingRate(
+    //     odometry_state_.heading, desired_state.heading, &go_to_pose_traj);
 
-  reference_trajectory_ = go_to_pose_traj;
-
+    reference_trajectory_ = go_to_pose_traj;
+  }else{
+    reference_trajectory_ = quadrotor_common::Trajectory(desired_state);
+  }
   time_start_trajectory_execution_ = ros::Time::now();    
 }
 
@@ -163,20 +173,7 @@ void MPCControllerNode::TrajectoryCallback(
     return;
   }
 
-  quadrotor_common::Trajectory go_to_pose_traj =
-            trajectory_generation_helper::polynomials::
-                computeTimeOptimalTrajectory(
-                    odometry_state_, trajectory_msg->points.back(),
-                    5, //kGoToPosePolynomialOrderOfContinuity_
-                    1.5, //go_to_pose_max_velocity_
-                    12, //go_to_pose_max_normalized_thrust_
-                    0.5, //go_to_pose_max_roll_pitch_rate_
-                    50.0);//kGoToPoseTrajectorySamplingFrequency_
-
-  // trajectory_generation_helper::heading::addConstantHeadingRate(
-  //     odometry_state_.heading, desired_state.heading, &go_to_pose_traj);
-
-  reference_trajectory_ = go_to_pose_traj;
+  reference_trajectory_ = *trajectory_msg;
 }
 
 void MPCControllerNode::OdometryCallback(
@@ -238,21 +235,45 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     }
     // Add a point if the time corresponds to a sample on the lookahead.
     trajectory_ = quadrotor_common::Trajectory(right);
-// std::cout<<right.time_from_start.toSec()<<" "<< dt.toSec()<<" ";
+    
   }
-// std::cout
-//         <<reference_trajectory_.points.size()<<" "
-//         <<trajectory_.points.front().position.transpose()<<std::endl;
+// std::cout<<trajectory_.points.front().position.transpose()<<" ";
   quadrotor_common::ControlCommand control_cmd = mpc_controller_.run(
       odometry_, trajectory_, mpc_controller_params);
-// std::cout<<control_cmd.armed<<" "<<control_cmd.collective_thrust<<std::endl;
-  double control_command_delay_ = 0.001; // TODO set as a param
-  control_cmd.timestamp = wall_time_now;
-  control_cmd.expected_execution_time = wall_time_now + ros::Duration(control_command_delay_);
-  
-  quadrotor_msgs::ControlCommand control_cmd_msg;
-  control_cmd_msg = control_cmd.toRosMessage();
-  control_command_pub_.publish(control_cmd_msg);
+// std::cout<<odometry_.position.transpose()<<std::endl;
+  // publish control command to inner loop control
+  if(control_command_pub_.getNumSubscribers() > 0 ){
+    double control_command_delay_ = 0.001; // TODO set as a param
+    control_cmd.timestamp = wall_time_now;
+    control_cmd.expected_execution_time = wall_time_now + ros::Duration(control_command_delay_);
+    
+    quadrotor_msgs::ControlCommand control_cmd_msg;
+    control_cmd_msg = control_cmd.toRosMessage();
+    control_command_pub_.publish(control_cmd_msg);
+  }
+
+  // publish mavros attitude setpoint
+  if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
+    mavros_msgs::AttitudeTarget att_setpoint;
+
+    //Mappings: If any of these bits are set, the corresponding input should be ignored:
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    if(rate_control_){
+      att_setpoint.type_mask = 0b10010000; // only bodyrates setpoint
+    }else{
+      att_setpoint.type_mask = 0b00010000; // att_rate setpoint
+      att_setpoint.orientation = quadrotor_common::eigenToGeometry(control_cmd.orientation);
+    }
+    // att_setpoint.type_mask = 0b00011111; // only attitude setpoint
+    att_setpoint.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
+
+    att_setpoint.thrust = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+
+    mavros_setpoint_raw_attitude_pub.publish(att_setpoint);
+  }
+
 }
 
 }

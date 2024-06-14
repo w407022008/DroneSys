@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <drone_msgs/ControlCommand.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
@@ -30,7 +31,9 @@ float time_trajectory = 0.0;
 float trajectory_total_time = 50.0;
 float cur_pos[3];
 bool armed;
+bool active_;
 int Remote_Mode = -1;
+int controller_switch = 0;
 std::string mesg;
 char key_now;
 char key_last = U_KEY_NONE;
@@ -38,7 +41,7 @@ bool _pause_ = false;
 
 
 ros::Subscriber state_sub;
-ros::Publisher move_pub, message_pub, ref_trajectory_pub;
+ros::Publisher move_pub, command_pose_pub, message_pub, ref_trajectory_pub;
 
 void state_cb(const drone_msgs::DroneStateConstPtr& msg)
 {
@@ -47,6 +50,26 @@ void state_cb(const drone_msgs::DroneStateConstPtr& msg)
     cur_pos[0] = msg->position[0];
     cur_pos[1] = msg->position[1];
     cur_pos[2] = msg->position[2];
+}
+
+void arm_disarm()
+{
+    if(armed){
+        pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
+    
+        Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
+        Command_to_pub.source = NODE_NAME;
+    }else{
+        pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
+    
+        Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
+        Command_to_pub.source = NODE_NAME;
+        Command_to_pub.Reference_State.yaw_ref = 999; // set to armed
+    }
+    Command_to_pub.header.stamp = ros::Time::now();
+    Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
+    
+    move_pub.publish(Command_to_pub);
 }
 
 void setpointIn();
@@ -69,6 +92,7 @@ int main(int argc, char **argv)
 
     // [PUB] control command
     move_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 10);
+    command_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/drone_msg/command_pose", 10);
 
     // [PUB] Rviz trajectory
     ref_trajectory_pub = nh.advertise<nav_msgs::Path>("/drone_msg/reference_trajectory", 10);
@@ -97,6 +121,7 @@ int main(int argc, char **argv)
     // Remote mode
     while(ros::ok())
     {
+        active_ = false;
         // system ("clear");
         if(Remote_Mode == 0)
         {
@@ -108,6 +133,8 @@ int main(int argc, char **argv)
         {
             system ("clear");
             cout << ">>>>>>>>>>>>>>>> Terminal Control <<<<<<<<<<<<<<<<"<< endl;
+            cout << "Please choose a controller: 0 for PX4 cascade PID controller, 1 for custom controller"<<endl;
+            cin >> controller_switch;
             cout << "Please choose the Remote Mode: 0 for keyboard input one setpoint, 1 for keyboard input control"<<endl;
             cin >> Remote_Mode;
 
@@ -172,6 +199,8 @@ void setpointIn()
             Command_to_pub.Reference_State.time_from_start = 0.0;
             generate_com(Move_mode, state_desired);
 
+            active_ = true;
+
             system ("clear");
             cout << "Type R for arming or disarm" <<endl;
             cout << "Type T for takeoff" <<endl;
@@ -181,20 +210,9 @@ void setpointIn()
 
         // If type in R: switch to OFFBOARD mode and Arming or Disarm
         case U_KEY_R:
-            if(armed){
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
-            
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
-                Command_to_pub.source = NODE_NAME;
-            }else{
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
-            
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
-                Command_to_pub.source = NODE_NAME;
-                Command_to_pub.Reference_State.yaw_ref = 999; // set to armed
-            }
+            arm_disarm();
 
-            break;
+            return;
 
         // If type in T: Takeoff
         case U_KEY_T:
@@ -243,7 +261,27 @@ void setpointIn()
     }
     Command_to_pub.header.stamp = ros::Time::now();
     Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-    move_pub.publish(Command_to_pub);
+
+    if(controller_switch){
+        if(active_){
+            geometry_msgs::PoseStamped pose_cmd;
+            pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
+            pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
+            pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
+            Eigen::Quaterniond q_yaw = Eigen::Quaterniond(
+                                    Eigen::AngleAxisd(
+                                        Command_to_pub.Reference_State.yaw_ref, 
+                                        Eigen::Vector3d::UnitZ()));
+            pose_cmd.pose.orientation.w = q_yaw.w();
+            pose_cmd.pose.orientation.x = q_yaw.x();
+            pose_cmd.pose.orientation.y = q_yaw.y();
+            pose_cmd.pose.orientation.z = q_yaw.z();
+
+            command_pose_pub.publish(pose_cmd);
+        }
+    }else{
+        move_pub.publish(Command_to_pub);
+    }
 }
 
 void keyboardControl()
@@ -618,20 +656,9 @@ void keyboardControl()
 
         // If type in R: switch to OFFBOARD mode and Arming or Disarm
         case U_KEY_R:
-            if(armed){
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Disarm Mode.");
-            
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Disarm;
-                Command_to_pub.source = NODE_NAME;
-            }else{
-                pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Arming and Switch to OFFBOARD.");
-            
-                Command_to_pub.Mode = drone_msgs::ControlCommand::Idle;
-                Command_to_pub.source = NODE_NAME;
-                Command_to_pub.Reference_State.yaw_ref = 999; // set to armed
-            }
+            arm_disarm();
 
-            break;
+            return;
 
         // If type in T: Takeoff
         case U_KEY_T:
@@ -708,7 +735,25 @@ void keyboardControl()
         key_last = key_now;
     Command_to_pub.header.stamp = ros::Time::now();
     Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
-    move_pub.publish(Command_to_pub);
+    
+    if(controller_switch){
+        geometry_msgs::PoseStamped pose_cmd;
+        pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
+        pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
+        pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
+        Eigen::Quaterniond q_yaw = Eigen::Quaterniond(
+                                Eigen::AngleAxisd(
+                                    Command_to_pub.Reference_State.yaw_ref, 
+                                    Eigen::Vector3d::UnitZ()));
+        pose_cmd.pose.orientation.w = q_yaw.w();
+        pose_cmd.pose.orientation.x = q_yaw.x();
+        pose_cmd.pose.orientation.y = q_yaw.y();
+        pose_cmd.pose.orientation.z = q_yaw.z();
+
+        command_pose_pub.publish(pose_cmd);
+    }else{
+        move_pub.publish(Command_to_pub);
+    }
 }
 
 

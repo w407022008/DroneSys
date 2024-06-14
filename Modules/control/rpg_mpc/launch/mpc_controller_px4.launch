@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="quad_name" default="mav"/>
+  
+  <arg name="use_joy" value="false"/>
+
+  <!-- STIL stuff to spawn the world !-->
+	<arg name="x" default="1"/>
+	<arg name="y" default="0"/>
+	<arg name="z" default="0"/>
+	<arg name="gazebo_gui" default="true"/>
+	<arg name="world" default="$(find simulation_gazebo)/worlds/empty.world"/>
+	<arg name="mode" default=""/>
+	<include file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+		<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
+		<arg name="world" value="$(arg world)"/>
+		<arg name="mode" value="$(arg mode)"/>
+		<arg name="x" value="$(arg x)"/>
+		<arg name="y" value="$(arg y)"/>
+		<arg name="z" value="$(arg z)"/>
+	</include>
+
+  <!-- RPG stuff to control the quadrotor !-->
+  <group ns="$(arg quad_name)" >
+
+    <!-- Perception-Aware MPC Controller-->
+    <node pkg="rpg_mpc" type="mpc_controller_node" name="mpc_controller_node" output="screen">
+      <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_$(arg quad_name).yaml" />
+
+      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/pose" to="/drone_msg/planning/goal" />
+    </node>
+
+    <node pkg="control" type="pub_goal" name="terminal_goal_publisher" output="screen" launch-prefix="gnome-terminal --tab --"/>
+
+    <group if="$(arg use_joy)">
+      <node pkg="joy" type="joy_node" name="joy_node">
+        <param name="autorepeat_rate" value="10"/>
+      </node>
+
+      <node pkg="manual_flight_assistant" type="manual_flight_assistant" 
+          name="manual_flight_assistant" output="screen">
+        <rosparam file="$(find manual_flight_assistant)/parameters/manual_flight_assistant.yaml"/>
+      </node>
+    </group>
+
+  </group> 
+  
+</launch>

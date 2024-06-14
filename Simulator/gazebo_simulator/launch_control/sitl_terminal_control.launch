@@ -1,10 +1,10 @@
 <launch>
-	<arg name="visualization" default="true"/>
+	<arg name="visualization" default="false"/>
 	<!-- config of 'sitl.launch' -->
 	<arg name="x" default="1"/>
 	<arg name="y" default="0"/>
 	<arg name="z" default="0"/>
-	<arg name="gazebo_gui" default="false"/>
+	<arg name="gazebo_gui" default="true"/>
 	<arg name="world" default="$(find simulation_gazebo)/worlds/empty.world"/>
 	<arg name="mode" default=""/>
 	<!-- Launch Gazebo Simulation -->
@@ -16,11 +16,44 @@
 		<arg name="y" value="$(arg y)"/>
 		<arg name="z" value="$(arg z)"/>
 	</include>
+	
+	<!-- 0: PX4 cascade PID controller -->
+	<!-- 1: Geometric controller -->
+	<!-- 2: Differential Flatness based controller -->
+	<!-- 3: MPC controller -->
+	<arg name="custom_controller" default="1"/>
 
 	<!-- run the terminal_control.cpp -->
 	<node pkg="control" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --">	
 		<rosparam command="load" file="$(find simulation_gazebo)/config/control_config/terminal_control.yaml" />
 	</node>	
+
+    <!-- Geometric Controller -->
+    <node if="$(eval arg('custom_controller') == 1)" pkg="geometric_control" type="geometric_position_controller_node" 
+        name="geometric_controller" output="screen" >
+      <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
+      
+      <remap from="odometry" to="/drone_msg/drone_odom" />
+      <remap from="command/pose" to="/drone_msg/command_pose" />
+    </node>
+
+    <!-- Differential Flatness Based Controller-->
+    <node if="$(eval arg('custom_controller') == 2)" pkg="differential_flatness_base_controller" type="dfbc_position_controller_node" name="dfbc_position_controller_node" output="screen">
+      <rosparam file="$(find differential_flatness_base_controller)/parameters/position_controller.yaml" />
+      
+      <param name="position_controller/use_rate_mode" value="True" />
+      
+      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/pose" to="/drone_msg/command_pose" />
+    </node>
+
+    <!-- Perception-Aware MPC Controller-->
+    <node if="$(eval arg('custom_controller') == 3)" pkg="rpg_mpc" type="mpc_controller_node" name="mpc_controller_node" output="screen">
+      <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_$(arg quad_name).yaml" />
+
+      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/pose" to="/drone_msg/command_pose" />
+    </node>
 
 	<!-- run the rviz -->
 	<group if="$(arg visualization)">

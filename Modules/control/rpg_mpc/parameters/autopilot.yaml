@@ -1,0 +1,42 @@
+## watchdogThread
+state_estimate_timeout: 0.1 # [s] state received & estimated timeout
+control_command_delay: 0.05 # [s] control command computing & publishing delay
+emergency_land_duration: 4   # [s] landing timeout to OFF
+emergency_land_thrust: 9.0 # [m/s^2] thrust setpoint with zero att
+
+## goToPoseThread
+go_to_pose_max_velocity: 1.5 # [m/s]
+go_to_pose_max_normalized_thrust: 12.0 # [m/s^2]
+go_to_pose_max_roll_pitch_rate: 0.5 # [rad/s]
+
+## stateEstimateCallback
+velocity_estimate_in_world_frame: false # WORLD or OPTITRACK but VISION or LOCAL
+
+## control command feed through
+enable_command_feedthrough: true
+control_command_input_timeout: 0.1 # [s] command feedthrough timeout
+
+## start & land
+start_land_velocity: 0.5 # [m/s] vertical speed during takeoff and landing
+start_land_acceleration: 1 # [m/s^2] vertical acc during takeoff and landing
+start_idle_duration: 2.0 # [s] idle duration before takeoff
+idle_thrust: 2.0 # [m/s]
+optitrack_start_height: 1.0 # [m] takeoff height
+optitrack_start_land_timeout: 5 # [s] takeoff or landing exacting timeout, START to HOVER
+optitrack_land_drop_height: 0.3 # [m] landing height available to ramp down prop
+propeller_ramp_down_timeout: 1.5 # [s] duration to must OFF
+
+## breakVelocity
+breaking_velocity_threshold: 0.2 # [m/s] velocity should not over it, else HOVER or LAND
+breaking_timeout: 0.5 # [s] timeout to HOVER or LAND
+
+## velocityControl
+velocity_command_input_timeout: 0.1 # [s] timeout to hover with zero speed
+tau_velocity_command: 0.8 # []
+
+## followReference
+reference_state_input_timeout: 0.1 # [s] timeout to HOVER
+
+## executeTrajectory
+predictive_control_lookahead: 2.0 # [s] reference traj points lookahead used to control computing
+
