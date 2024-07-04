@@ -42,3 +42,4 @@ ORBvoc.txt
 
 *.bag
 temp/
+device.yaml
