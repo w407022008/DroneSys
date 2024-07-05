@@ -18,6 +18,7 @@ sudo apt install python3-rosdep python3-rosinstall-generator python3-vcstools py
 sudo rosdep init
 rosdep update
 
+mkdir ~/noetic && cd noetic
 mkdir ./src
 sudo apt install libfltk1.3-dev
 
@@ -29,11 +30,12 @@ vcs import --input noetic-dronesys.rosinstall ./src
 rosdep install --from-paths ./src --ignore-packages-from-source --rosdistro noetic -y
 
 ## modification to adapt to jammy
-bash ./Ubuntu22_dependency_modification.bash
+"bash ./Ubuntu22_dependency_modification.bash"
 
 ## install noetic
 #sudo apt install cmake python3-empy libboost-all-dev libconsole-bridge-dev python3-future libtinyxml-dev libtinyxml2-dev libgtest-dev liblz4-dev
 
+## temporarily skip mavlink & vrpn
 mkdir tmp
 mv src/mavlink tmp/mavlink
 mv src/mavros tmp/mavros
@@ -42,10 +44,17 @@ mv src/vrpn_client_ros tmp/vrpn_client_ros
 
 ./src/catkin/bin/catkin_make_isolated --install -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python3
 
-## install mavros
+## install mavlink
+#sudo pip install future
 mv tmp/mavlink src/mavlink
-mv tmp/mavros src/mavros
-./src/catkin/bin/catkin_make_isolated --install -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python3
+#mv tmp/mavros src/mavros
+./src/catkin/bin/catkin_make_isolated --source src/diagnostics/diagnostic_updater --install -DCMAKE_BUILD_TYPE=Release
+./src/catkin/bin/catkin_make_isolated --source src/unique_identifier/uuid_msgs --install -DCMAKE_BUILD_TYPE=Release
+./src/catkin/bin/catkin_make_isolated --source src/geographic_info/geographic_msgs --install -DCMAKE_BUILD_TYPE=Release
+./src/catkin/bin/catkin_make_isolated --source src/geometry/eigen_conversions --install -DCMAKE_BUILD_TYPE=Release
+./src/catkin/bin/catkin_make_isolated --source src/urdf --install -DCMAKE_BUILD_TYPE=Release
+./src/catkin/bin/catkin_make_isolated --source src/mavlink --install -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python3
+#./src/catkin/bin/catkin_make_isolated --source src/mavros --install -DCMAKE_BUILD_TYPE=Release ## use custom build
 
 ## install vrpn
 source ~/noetic/install_isolated/setup.bash
