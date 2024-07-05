@@ -7,6 +7,7 @@ nano.save
 .catkin_workspace
 
 **~
+**.bag
 
 build/
 devel/
@@ -15,6 +16,8 @@ install/
 Modules/planning/histo-planner/dataLog
 Modules/tools/camera_models/camera_calib_example/DATA
 Modules/tools/imu_cali/data
+Modules/slam/orb_slam3/library/ORB_SLAM3/Vocabulary/ORBvoc.bin
+Modules/slam/orb_slam3/library/ORB_SLAM3/Vocabulary/ORBvoc.txt.tar.gz
 
 # pytorch/python/numpy formats
 # *.pth
@@ -38,7 +41,7 @@ Modules/tools/imu_cali/data
 /datasets
 /models
 
-ORBvoc.txt
+
 
 *.bag
 temp/
