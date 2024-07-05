@@ -6,9 +6,6 @@ ADD_COMPILE_OPTIONS(-std=c++11 )
 ADD_COMPILE_OPTIONS(-std=c++14 )
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-find_package(Eigen3 REQUIRED)
-find_package(PCL 1.7 REQUIRED)
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
 #  std_msgs
@@ -36,6 +33,9 @@ catkin_package(
  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
+
+find_package(Eigen3 REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 
 include_directories(
   include

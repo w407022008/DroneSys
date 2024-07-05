@@ -5,9 +5,6 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-find_package(Eigen3 REQUIRED)
-find_package(PCL 1.7 REQUIRED COMPONENT common io)
-
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	rospy
@@ -36,6 +33,9 @@ catkin_package(
        #  DEPENDS system_lib
 	)
 
+find_package(Eigen3 REQUIRED)
+find_package(PCL 1.7 REQUIRED COMPONENT common io)
+	
 # SET(USER_KEY, "Hello World")
 MESSAGE( STATUS "this lcal trajectory planner path:  ******** = ${PROJECT_SOURCE_DIR}.")
 ### FOR PROFILING (need to set after catkin_package)
