@@ -1,0 +1,78 @@
+<launch>
+
+  <arg name="robot" default="realsense"/>
+  <arg name="fixed_frame_id" default="world"/>
+  <arg name="calibration_file"
+    default="$(find msckf_vio)/config/camchain-imucam-d435i.yaml"/>
+
+  <group ns="$(arg robot)">
+    <!-- Image Processor Nodelet  -->
+    <node pkg="nodelet" type="nodelet" name="image_processor"
+      args="standalone msckf_vio/ImageProcessorNodelet"
+      output="screen">
+
+      <rosparam command="load" file="$(arg calibration_file)"/>
+      <param name="grid_row" value="4"/>
+      <param name="grid_col" value="5"/>
+      <param name="grid_min_feature_num" value="3"/>
+      <param name="grid_max_feature_num" value="4"/>
+      <param name="pyramid_levels" value="3"/>
+      <param name="patch_size" value="15"/>
+      <param name="fast_threshold" value="10"/>
+      <param name="max_iteration" value="30"/>
+      <param name="track_precision" value="0.01"/>
+      <param name="ransac_threshold" value="3"/>
+      <param name="stereo_threshold" value="5"/>
+
+      <remap from="~imu" to="/camera/imu"/>
+      <remap from="~cam0_image" to="/camera/infra1/image_rect_raw"/>
+      <remap from="~cam1_image" to="/camera/infra2/image_rect_raw"/>
+    </node>
+
+    <!-- Msckf Vio Nodelet  -->
+    <node pkg="nodelet" type="nodelet" name="vio"
+      args='standalone msckf_vio/MsckfVioNodelet'
+      output="screen">
+
+      <!-- Calibration parameters -->
+      <rosparam command="load" file="$(arg calibration_file)"/>
+
+      <param name="publish_tf" value="true"/>
+      <param name="frame_rate" value="20"/>
+      <param name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
+      <param name="child_frame_id" value="odom"/>
+      <param name="max_cam_state_size" value="20"/> <!-- worse computing smaller value-->
+      <param name="position_std_threshold" value="8.0"/>
+
+      <param name="rotation_threshold" value="0.2618"/>
+      <param name="translation_threshold" value="0.4"/>
+      <param name="tracking_rate_threshold" value="0.5"/>
+
+      <!-- Feature optimization config -->
+      <param name="feature/config/translation_threshold" value="-1.0"/>
+
+      <!-- These values should be standard deviation -->
+      <param name="noise/gyro" value="0.05"/>
+      <param name="noise/acc" value="0.5"/>
+      <param name="noise/gyro_bias" value="0.001"/>
+      <param name="noise/acc_bias" value="0.01"/>
+      <param name="noise/feature" value="0.035"/>
+
+      <param name="initial_state/velocity/x" value="0.0"/>
+      <param name="initial_state/velocity/y" value="0.0"/>
+      <param name="initial_state/velocity/z" value="0.0"/>
+
+      <!-- These values should be covariance -->
+      <param name="initial_covariance/velocity" value="0.25"/>
+      <param name="initial_covariance/gyro_bias" value="0.01"/>
+      <param name="initial_covariance/acc_bias" value="0.01"/>
+      <param name="initial_covariance/extrinsic_rotation_cov" value="3.0462e-4"/>
+      <param name="initial_covariance/extrinsic_translation_cov" value="2.5e-5"/>
+
+      <remap from="~imu" to="/camera/imu"/>
+      <remap from="~features" to="image_processor/features"/>
+
+    </node>
+  </group>
+
+</launch>

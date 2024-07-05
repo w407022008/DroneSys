@@ -6,6 +6,7 @@ position_controller:
   
   kpz: 15.0
   kdz: 6.0
+  ## attitude control
   krp: 12.0
   kyaw: 5.0
   

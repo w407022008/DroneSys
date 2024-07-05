@@ -495,21 +495,34 @@ Eigen::Vector3d PositionController::computeFeedBackControlBodyrates(
     const Eigen::Quaterniond& desired_attitude,
     const Eigen::Quaterniond& attitude_estimate,
     const PositionControllerParams& config) const {
-  // Compute the error quaternion
+  // Compute the error quaternion: q_r - q
   const Eigen::Quaterniond q_e = attitude_estimate.inverse() * desired_attitude;
 
   // Compute desired body rates from control error
   Eigen::Vector3d bodyrates;
 
-  if (q_e.w() >= 0) {
-    bodyrates.x() = 2.0 * config.krp * q_e.x();
-    bodyrates.y() = 2.0 * config.krp * q_e.y();
-    bodyrates.z() = 2.0 * config.kyaw * q_e.z();
-  } else {
-    bodyrates.x() = -2.0 * config.krp * q_e.x();
-    bodyrates.y() = -2.0 * config.krp * q_e.y();
-    bodyrates.z() = -2.0 * config.kyaw * q_e.z();
-  }
+  double qw,qx,qy,qz,sgn;
+  qw = q_e.w();
+  qx = q_e.x();
+  qy = q_e.y();
+  qz = q_e.z();
+  sgn = qw/abs(qw);
+  double scl = 1/sqrt(qw*qw+qz*qz);
+  Eigen::Vector3d q_erp = Eigen::Vector3d((qw*qx-qy*qz)*scl,(qw*qy+qx*qz)*scl,0.0);
+  Eigen::Vector3d q_ey = Eigen::Vector3d(0.0,0.0,qz*scl);
+
+  bodyrates = 2 * (config.krp * q_erp + config.kyaw * q_ey);
+
+  // Same or
+  // if (q_e.w() >= 0) {
+  //   bodyrates.x() = 2.0 * config.krp * q_e.x();
+  //   bodyrates.y() = 2.0 * config.krp * q_e.y();
+  //   bodyrates.z() = 2.0 * config.kyaw * q_e.z();
+  // } else {
+  //   bodyrates.x() = -2.0 * config.krp * q_e.x();
+  //   bodyrates.y() = -2.0 * config.krp * q_e.y();
+  //   bodyrates.z() = -2.0 * config.kyaw * q_e.z();
+  // }
 
   return bodyrates;
 }

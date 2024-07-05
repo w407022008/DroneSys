@@ -163,9 +163,11 @@ distance_sensor:
     #   roll: 0
     #   pitch: 270
     #   yaw: 0
-  laser_1_sub:
-    subscriber: true
-    id: 3
+  tfmini_s_sub:
+    subscriber: false
+    frame_id: "tfmini_s"
+    field_of_view: 1.0
+    id: 15
     orientation: PITCH_270
 
 # image_pub

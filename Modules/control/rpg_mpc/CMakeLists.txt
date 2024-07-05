@@ -84,12 +84,15 @@ target_link_libraries(mpc_controller
 cs_install()
 cs_export()
 
-cs_add_executable(test_mpc_controller_node
-  test/mpc_node.cpp)
-target_link_libraries(test_mpc_controller_node
-  mpc_controller
-  mpc_wrapper
-  mpc_solver)
+if(BUILD_TEST)
+  message("Building test mpc controller node")
+  cs_add_executable(test_mpc_controller_node
+    test/mpc_node.cpp)
+  target_link_libraries(test_mpc_controller_node
+    mpc_controller
+    mpc_wrapper
+    mpc_solver)
+endif()
 
 cs_add_executable(mpc_controller_node
   src/mpc_node.cpp)
