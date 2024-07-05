@@ -1,10 +1,10 @@
 <launch>
-	<arg name="rviz" default="false"/>
+	<arg name="rviz" default="true"/>
 
   <arg name="robot" default="msckf_vio"/>
   <arg name="fixed_frame_id" default="world"/>
   <arg name="calibration_file"
-    default="$(find drone_experiment)/config/sensor_config/realsense_stereo_imu_kalibr.yaml"/>
+    default="$(find drone_experiment)/launch/slam/msckf_vio/camchain-imucam-d435i.yaml"/>
 
   <group ns="$(arg robot)">
     <!-- Image Processor Nodelet  -->
@@ -25,10 +25,9 @@
       <param name="ransac_threshold" value="3"/>
       <param name="stereo_threshold" value="5"/>
 
-      <remap from="~imu" to="/imu0"/>
-      <remap from="~cam0_image" to="/cam0/image_raw"/>
-      <remap from="~cam1_image" to="/cam1/image_raw"/>
-
+      <remap from="~imu" to="/camera/imu"/>
+      <remap from="~cam0_image" to="/camera/infra1/image_rect_raw"/>
+      <remap from="~cam1_image" to="/camera/infra2/image_rect_raw"/>
     </node>
 
     <!-- Msckf Vio Nodelet  -->
@@ -43,7 +42,7 @@
       <param name="frame_rate" value="20"/>
       <param name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
       <param name="child_frame_id" value="odom"/>
-      <param name="max_cam_state_size" value="20"/>
+      <param name="max_cam_state_size" value="20"/> <!-- worse computing smaller value-->
       <param name="position_std_threshold" value="8.0"/>
 
       <param name="rotation_threshold" value="0.2618"/>
@@ -54,8 +53,8 @@
       <param name="feature/config/translation_threshold" value="-1.0"/>
 
       <!-- These values should be standard deviation -->
-      <param name="noise/gyro" value="0.005"/>
-      <param name="noise/acc" value="0.05"/>
+      <param name="noise/gyro" value="0.05"/>
+      <param name="noise/acc" value="0.5"/>
       <param name="noise/gyro_bias" value="0.001"/>
       <param name="noise/acc_bias" value="0.01"/>
       <param name="noise/feature" value="0.035"/>
@@ -71,11 +70,11 @@
       <param name="initial_covariance/extrinsic_rotation_cov" value="3.0462e-4"/>
       <param name="initial_covariance/extrinsic_translation_cov" value="2.5e-5"/>
 
-      <remap from="~imu" to="/imu0"/>
+      <remap from="~imu" to="/camera/imu"/>
       <remap from="~features" to="image_processor/features"/>
 
     </node>
   </group>
 
-  <node if="$(arg rviz)" type="rviz" name="rviz" pkg="rviz" args="-d $(find msckf_vio)/rviz/rviz_euroc_config.rviz" />
+  <node if="$(arg rviz)" type="rviz" name="rviz" pkg="rviz" args="-d $(find drone_experiment)/launch/slam/msckf_vio/rviz_msckf_vio.rviz" />
 </launch>

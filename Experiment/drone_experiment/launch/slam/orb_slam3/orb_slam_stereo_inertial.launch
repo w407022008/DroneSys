@@ -1,22 +1,21 @@
 <launch>
-	<arg name="rviz" default="false"/>
+	<arg name="rviz" default="true"/>
     <arg name="onboard" default="true"/>
     <group if="$(arg onboard)">	
         <!-- ORB-SLAM3 -->
-        <node name="orb_slam3_stereo_inertial" pkg="orb_slam3_ros_wrapper" type="orb_slam3_ros_wrapper_stereo_inertial" output="screen">
+        <node name="orb_slam3_stereo_inertial" pkg="orb_slam3" type="orb_slam3_stereo_inertial" output="screen">
             <!-- for Realsense D435i -->
             <remap from="/camera/left/image_raw"    to="/camera/infra1/image_rect_raw"/>
             <remap from="/camera/right/image_raw"   to="/camera/infra2/image_rect_raw"/>
             <remap from="/imu"                      to="/camera/imu"/>
 
             <!-- Parameters for original ORB-SLAM3 -->
-            <param name="voc_file"      type="string"   value="$(find orb_slam3_ros_wrapper)/config/ORBvoc.bin" />
-            <param name="settings_file" type="string"   value="$(find orb_slam3_ros_wrapper)/config/D435i_stereo_inertial_non_rectified.yaml" />
+            <param name="voc_file"      type="string"   value="$(find orb_slam3)/config/ORBvoc.bin" />
+            <param name="settings_file" type="string"   value="$(find drone_experiment)/launch/slam/orb_slam3/D435i_stereo_inertial_non_rectified.yaml" />
             <param name="do_rectify"    type="bool"     value="false" />
             <param name="do_equalize"   type="bool"     value="false" /> <!-- Contrast Limited Adaptive Histogram Equalization -->
 
             <!-- Parameters for ROS -->
-            <param name="use_viewer"   type="bool"     value="false" />
             <param name="publish_tf_transform"   type="bool"     value="false" />
             <param name="map_frame_id"  type="string"   value="world" />
             <param name="pose_frame_id" type="string"   value="camera_link" />
@@ -29,25 +28,25 @@
         <node name="republish_infra2" type="republish" pkg="image_transport" args="compressed in:=/camera/infra2/image_rect_raw raw out:=/infra2" />
             
         <!-- ORB-SLAM3 -->
-        <node name="orb_slam3_stereo_inertial" pkg="orb_slam3_ros_wrapper" type="orb_slam3_ros_wrapper_stereo_inertial" output="screen">
+        <node name="orb_slam3_stereo_inertial" pkg="orb_slam3" type="orb_slam3_stereo_inertial" output="screen">
             <!-- for Realsense D435i -->
             <remap from="/camera/left/image_raw"    to="/infra1"/>
             <remap from="/camera/right/image_raw"   to="/infra2"/>
             <remap from="/imu"                      to="/camera/imu"/>
 
             <!-- Parameters for original ORB-SLAM3 -->
-            <param name="voc_file"      type="string"   value="$(find orb_slam3_ros_wrapper)/config/ORBvoc.bin" />
-            <param name="settings_file" type="string"   value="$(find orb_slam3_ros_wrapper)/config/D435i_stereo_inertial_non_rectified.yaml" />
+            <param name="voc_file"      type="string"   value="$(find orb_slam3)/config/ORBvoc.bin" />
+            <param name="settings_file" type="string"   value="$(find drone_experiment)/launch/slam/orb_slam3/D435i_stereo_inertial_non_rectified.yaml" />
             <param name="do_rectify"    type="bool"     value="false" />
             <param name="do_equalize"   type="bool"     value="false" />
 
             <!-- Parameters for ROS -->
-            <param name="use_viewer"   type="bool"     value="true" />
             <param name="publish_tf_transform"   type="bool"     value="false" />
             <param name="map_frame_id"  type="string"   value="world" />
             <param name="pose_frame_id" type="string"   value="camera_link" />
         </node>
+    </group>
 
     <!-- Visualization - RViz-->
-    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find vins)/../config/vins_rviz_config.rviz" launch-prefix="gnome-terminal --tab --"/>
+    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find drone_experiment)/launch/slam/orb_slam3/orb_slam3.rviz" />
 </launch>
