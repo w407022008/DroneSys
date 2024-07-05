@@ -70,7 +70,7 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "orb_slam3_ros_wrapper_interpolation_repub");
+    ros::init(argc, argv, "orb_slam3_interpolation_repub");
     ros::NodeHandle nh("~");
 
     nh.param<bool>("d435i_with_imu", d435i_with_imu, true);

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     node_handler.param<std::string>(node_name + "/pose_frame_id", pose_frame_id, "pose");
 
     bool use_viewer;
-    node_handler.param<bool>(node_name + "/use_viewer", use_viewer, true);
+    node_handler.param<bool>(node_name + "/use_viewer", use_viewer, false);
 
     node_handler.param<bool>(node_name + "/publish_tf_transform", whether_publish_tf_transform, false);
     
