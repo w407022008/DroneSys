@@ -13,7 +13,7 @@ catkin_make --source Experiment/drone_experiment --build build/Experiment/drone_
 #catkin_make --source Experiment/utils/vbat_thrust_calibration --build build/Experiment/utils/vbat_thrust_calibration
 ## Experiment Sensor
 #catkin_make --source Experiment/companion_computer_io --build build/Experiment/companion_computer_io
-catkin_make --source Experiment/sensors --build build/Experiment/sensors
+#catkin_make --source Experiment/sensors --build build/Experiment/sensors
 
 ## Controller
 bash Tools/control/compile_control.sh

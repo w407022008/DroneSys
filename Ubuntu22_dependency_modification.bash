@@ -27,7 +27,7 @@ sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/control/autopilot/CMakeLists.t
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/control/inner_loop_controller/CMakeLists.txt
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/control/differential_flatness_base_controller/CMakeLists.txt
 sed -i '30,35d' ./Modules/control/rpg_mpc/CMakeLists.txt
-sed -i '30i add_compile_options(-std=c++11)' ./Modules/control/rpg_mpc/CMakeLists.txt
+sed -i '30i add_compile_options(-std=c++17)' ./Modules/control/rpg_mpc/CMakeLists.txt
 
 ## perception
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/perception/OptiTrack/CMakeLists.txt
