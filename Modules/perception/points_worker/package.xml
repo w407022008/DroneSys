@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>points_filter</name>
+    <name>points_worker</name>
     <version>0.0.0</version>
-    <description>The points_filter package</description>
+    <description>The points_worker package</description>
 
     <!-- One maintainer tag required, multiple allowed, one person per tag -->
     <!-- Example:  -->

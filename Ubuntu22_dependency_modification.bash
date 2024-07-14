@@ -31,7 +31,7 @@ sed -i '30i add_compile_options(-std=c++11)' ./Modules/control/rpg_mpc/CMakeList
 
 ## perception
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/perception/OptiTrack/CMakeLists.txt
-sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/perception/points_filter/CMakeLists.txt
+sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/perception/points_worker/CMakeLists.txt
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/perception/state_predictor/CMakeLists.txt
 
 ## Slam

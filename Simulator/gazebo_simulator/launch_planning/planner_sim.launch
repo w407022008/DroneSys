@@ -107,7 +107,7 @@
 			<arg name="z" value="0.0"/>
 		</include>
 		<!-- Points_filter.cpp -->
-		<node unless="$(arg random_obs)" pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
+		<node unless="$(arg random_obs)" pkg="points_worker" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
 			<remap from="/points_filter/sensor" to="/realsense_plugin/camera/local_pointclouds" />   <!-- if data_type == 2 -->
 			<remap from="/camera/depth/image_rect_raw" to="/realsense_plugin/camera/depth/image_raw" />   <!-- if data_type == 3 -->
 			<remap from="/camera/depth/camera_info" to="/realsense_plugin/camera/depth/camera_info" />    <!-- if data_type == 3 -->
@@ -124,10 +124,6 @@
 			<param name="points_filter/concatenate" value="false" type="bool"/>
 			<param name="points_filter/ground_height" value="$(arg geo_z_min)" type="double"/>
 			<param name="points_filter/resolution" value="0.1" type="double"/>
-			<param name="points_filter/fx" value="231.06897487523196" type="double"/>
-			<param name="points_filter/fy" value="231.06897487523196" type="double"/>
-			<param name="points_filter/cx" value="160.5" type="double"/>
-			<param name="points_filter/cy" value="120.5" type="double"/>
 			<param name="points_filter/dist_min" value="0.1" type="double"/>
 			<param name="points_filter/cut_edge" value="0" type="int"/>
 			<param name="points_filter/interval" value="1" type="int"/>
@@ -391,7 +387,7 @@
 	<group if="$(arg visualization)">
 		<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/sim_rviz_config.rviz" />
 		<!-- obstacle.world 真实点云 -->
-		<node unless="$(arg random_obs)" pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+		<node unless="$(arg random_obs)" pkg="points_worker" type="points_publisher_node" name="points_publisher_node" output="screen">	
 			<param name="pcd_path" type="string" value="$(arg pcd_file)" />
 		</node>
 	</group>

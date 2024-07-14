@@ -39,10 +39,10 @@ private:
   ros::NodeHandle points_filter_nh;
 
   /* common param */
-  int map_input;
+  int map_input, ror_nbs;
   string frame_name, object_link_name;
-  bool flag_pcl_ground_removal, downsampling, spatial, concatenate, is_rgbd, is_lidar;
-  float resolution, sensor_max_range, max_ground_height;
+  bool flag_pcl_ground_removal, RadiusOutlierRemoval, downsampling, spatial, concatenate, is_rgbd, is_lidar;
+  float resolution, sensor_max_range, max_ground_height, ror_radius;
   pcl::PointCloud<pcl::PointXYZ> latest_local_pcl_, local_point_cloud; // point cloud
   
   /* camera parameters */

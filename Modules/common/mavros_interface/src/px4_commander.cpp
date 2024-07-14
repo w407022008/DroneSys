@@ -84,7 +84,7 @@ void Command_cb(const drone_msgs::ControlCommand::ConstPtr& msg)
 void station_command_cb(const drone_msgs::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
-    pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Get a command from Prometheus Station.");
+    pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Get a command from Ground Station.");
     
 }
 void drone_state_cb(const drone_msgs::DroneState::ConstPtr& msg)

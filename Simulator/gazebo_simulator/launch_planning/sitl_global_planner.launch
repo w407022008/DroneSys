@@ -383,7 +383,7 @@
 	<group if="$(arg visualization)">
 		<node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_config_astar.rviz" />
 		<!-- 真实点云 -->
-		<node pkg="simulation_gazebo" type="pc2_publisher_node" name="pc2_publisher_node" output="screen">	
+		<node pkg="points_worker" type="points_publisher_node" name="points_publisher_node" output="screen">	
 			<param name="pcd_path" type="string" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
 		</node>
 	</group>

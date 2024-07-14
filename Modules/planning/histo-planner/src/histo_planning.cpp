@@ -653,7 +653,7 @@ bool Histo_Planner::generateTrajectory(Eigen::Vector3d start_pos_, Eigen::Vector
 // save log
 void Histo_Planner::csv_writer(Eigen::Vector3d start_pos_, Eigen::Vector3d start_vel_, Eigen::Vector3d start_acc_, Eigen::Vector3d end_pos_, Eigen::Vector3d end_vel_, Eigen::Vector3d end_acc_, Eigen::MatrixXd control_pts, int index)
 {
-  string path_ = "/home/sique/src/Prometheus/Modules/planning/vfhb-planner/dataLog/forCNNTraining/example_"+std::to_string(index)+".csv";
+  string path_ = "/home/sique/src/DroneSys/Modules/planning/histo-planner/dataLog/forCNNTraining/example_"+std::to_string(index)+".csv";
   std::ofstream csv(path_);
   cout << "output data path: "+path_ << endl;
     

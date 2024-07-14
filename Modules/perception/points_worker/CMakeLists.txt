@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(points_filter)
+project(points_worker)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14")
@@ -17,13 +17,14 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(
 	INCLUDE_DIRS include
-	LIBRARIES Points_Filter
+	LIBRARIES points_worker
 	)
 
 find_package(Eigen3 REQUIRED)
+find_package(octomap REQUIRED)
 find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED COMPONENT common io )
 
-# SET(USER_KEY, "Hello World")
 MESSAGE( STATUS "this lcal trajectory planner path:  ******** = ${PROJECT_SOURCE_DIR}.")
 
 
@@ -47,4 +48,30 @@ add_executable(points_filter_main
 target_link_libraries(points_filter_main
        ${catkin_LIBRARIES}
 	   ${PCL_LIBRARIES}
+	)
+
+
+add_executable(points_octomap_node 
+    src/points2octomap.cpp
+    )
+target_link_libraries(points_octomap_node
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES}
+    ${OCTOMAP_LIBRARIES} 
+)
+
+add_executable(points_saver_node 
+	src/points_saver.cpp
+	)
+target_link_libraries(points_saver_node
+	${catkin_LIBRARIES}
+	${PCL_LIBRARIES}
+	)
+
+add_executable(points_publisher_node 
+	src/points_puber.cpp
+	)
+	target_link_libraries(points_publisher_node
+	${catkin_LIBRARIES}
+	${PCL_LIBRARIES}
 	)

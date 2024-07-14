@@ -75,31 +75,6 @@ target_link_libraries(qrcode_control
     ${catkin_LIBRARIES}
     )
 
-add_executable(map_building_node 
-    src/map_building/pointcloud_to_octomap_node.cpp
-    )
-target_link_libraries(map_building_node
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES}
-    ${OCTOMAP_LIBRARIES} 
-)
-
-add_executable(pc2_publisher_node 
-    src/map_building/pointcloud2_publisher.cpp
-    )
-target_link_libraries(pc2_publisher_node
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES}
-)
-
-add_executable(pc2_saver_node 
-    src/map_building/pointcloud2_saver_node.cpp
-    )
-target_link_libraries(pc2_saver_node
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES}
-)
-
 #add_library(irlock_gazebo_ros_plugin 
 #    src/gazebo_plugin/irlock_gazebo_ros_plugin.cpp
 #    )

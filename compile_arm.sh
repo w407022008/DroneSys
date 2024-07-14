@@ -28,7 +28,7 @@ catkin_make --source Modules/control/rpg_mpc --build build/control/rpg_mpc
 #bash Tools/control/compile_mpc_rw.sh
 
 ## IO & Perception
-catkin_make --source Modules/perception/points_filter --build build/perception/points_filter
+catkin_make --source Modules/perception/points_worker --build build/perception/points_worker
 catkin_make --source Modules/perception/OptiTrack --build build/perception/OptiTrack
 catkin_make --source Modules/perception/semi_global_matching --build build/perception/semi_global_matching
 catkin_make --source Modules/perception/elas_stereo_matching --build build/perception/elas_stereo_matching

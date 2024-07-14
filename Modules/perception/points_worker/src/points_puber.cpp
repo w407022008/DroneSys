@@ -5,11 +5,15 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/io/pcd_io.h>
 
+using namespace std;
+
 main(int argc, char **argv)
 {
-    ros::init(argc, argv, "pc2_publisher");
+    ros::init(argc, argv, "points_publisher");
     ros::NodeHandle nh("~");
-    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2>("/drone_msg/pcl_groundtruth", 1);
+    std::string pcl_topic_out;
+    nh.param<string>("pcl_topic_out", pcl_topic_out,"/drone_msg/pcl_groundtruth");
+    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic_out, 1);
     pcl::PointCloud<pcl::PointXYZ> cloud;
     sensor_msgs::PointCloud2 output;
 
@@ -19,8 +23,8 @@ main(int argc, char **argv)
         ROS_INFO("Get the pcd_path : %s", pcd_path.c_str());
     } else {
         ROS_WARN("didn't find parameter pcd_path, use the default path");
-        //std::string ros_path = ros::package::getPath("simulation_gazebo");
-        pcd_path = "/home/fly-vision/Prometheus/Simulator/gazebo_simulator/maps/obstacle.pcd";
+        std::string ros_path = ros::package::getPath("simulation_gazebo");
+        pcd_path = ros_path+"/maps/obstacle.pcd";
     }
 
     pcl::io::loadPCDFile(pcd_path, cloud);

@@ -43,9 +43,12 @@ void PointsFilter::init(ros::NodeHandle& nh)
   // Data type: 1: 2d laser <sensor_msgs::LaserScan>, 2: 3d points <sensor_msgs::PointCloud2>
   nh.param("points_filter/data_type", map_input, 2);
 
-  // remove the ground
+  // filtering
   nh.param("points_filter/ground_removal", flag_pcl_ground_removal, true);
   nh.param("points_filter/ground_height", max_ground_height, 0.3f);
+  nh.param("points_filter/radiusoutlierremoval",RadiusOutlierRemoval, true);
+  nh.param("points_filter/ror_radius", ror_radius, 1.0f);
+  nh.param("points_filter/ror_nbs", ror_nbs, 10);
   nh.param("points_filter/downsampling", downsampling, true);
   nh.param("points_filter/spatial", spatial, true);
   nh.param("points_filter/concatenate", concatenate, false);
@@ -371,6 +374,7 @@ void PointsFilter::Callback_depthimage(const sensor_msgs::ImageConstPtr &img)
     for (int u = cut_edge; u < depth_width - cut_edge; u += interval)
     {
       depth = (*row_ptr) * 0.001; // mm -> m
+      //depth = fx*0.099/((*row_ptr) / 64.0f); // for fpga disp ignore it
       row_ptr += interval;
 
       if (*row_ptr == 0 || depth == 1 || depth > sensor_max_range)
@@ -406,7 +410,16 @@ void PointsFilter::Callback_depthimage(const sensor_msgs::ImageConstPtr &img)
     ground_removal.setFilterLimitsNegative (true);
     ground_removal.filter (_pointcloud);
   }
-    
+  
+  /* Outlier removal*/
+  if(RadiusOutlierRemoval){
+    pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
+    ror.setInputCloud(_pointcloud.makeShared());
+    ror.setRadiusSearch(ror_radius);
+    ror.setMinNeighborsInRadius(ror_nbs);
+    ror.filter(_pointcloud);
+  }
+  
   if(concatenate)
     local_point_cloud += _pointcloud;
   else
