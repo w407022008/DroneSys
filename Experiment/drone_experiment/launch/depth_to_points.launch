@@ -19,7 +19,7 @@
 	<arg name="points_out" default="/camera/local_pointclouds" />
 	
 	<!-- depth to pcl : Points_filter.cpp -->
-	<node unless="$(arg depth_image_proc)" pkg="points_filter" name="points_filter_main" type="points_filter_main" output="screen">
+	<node unless="$(arg depth_image_proc)" pkg="points_worker" name="points_filter_main" type="points_filter_main" output="screen">
 		<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
 		<param name="points_filter/data_type" value="$(arg data_type)" type="int"/>
 		<param name="points_filter/frame_name" value="$(arg frame_name)" type="string"/>
@@ -39,10 +39,6 @@
 		<!-- if data_type == 3 -->
 		<remap from="/camera/depth/image_rect_raw" to="$(arg dep_img_rect)" />
 		<remap from="/camera/depth/camera_info" to="$(arg dep_camera_info)" />
-		<param name="points_filter/fx" value="231.06897487523196" type="double"/>
-		<param name="points_filter/fy" value="231.06897487523196" type="double"/>
-		<param name="points_filter/cx" value="160.5" type="double"/>
-		<param name="points_filter/cy" value="120.5" type="double"/>
 		<param name="points_filter/dist_min" value="$(arg dist_min)" type="double"/>
 		<param name="points_filter/cut_edge" value="$(arg cut_edge)" type="int"/>
 		<param name="points_filter/interval" value="$(arg interval)" type="int"/>

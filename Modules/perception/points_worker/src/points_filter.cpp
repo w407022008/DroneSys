@@ -67,6 +67,7 @@ void PointsFilter::init(ros::NodeHandle& nh)
     }
   }else if(map_input==3){
     nh.param<string>("points_filter/object_link_name", object_link_name, "/realsense_camera_link");
+    nh.param("points_filter/dep_infra_sync", dep_infra_sync, false);
     // camera param
     nh.param("points_filter/dist_min", dist_min, 0.1);
     nh.param("points_filter/cut_edge", cut_edge, 0);
@@ -79,7 +80,14 @@ void PointsFilter::init(ros::NodeHandle& nh)
   else if (map_input == 2)
     local_point_clound_sub = nh.subscribe<sensor_msgs::PointCloud2>("/points_filter/sensor", 1, &PointsFilter::Callback_3dpointcloud,this);
   else if (map_input == 3){
-    local_point_clound_sub = nh.subscribe<sensor_msgs::Image>("/camera/depth/image_rect_raw", 1, &PointsFilter::Callback_depthimage,this);
+    if(dep_infra_sync){
+      dep_sub.reset(new message_filters::Subscriber<sensor_msgs::Image>(nh, "/camera/depth/image_rect_raw", 50));
+      infra_sub.reset(new message_filters::Subscriber<sensor_msgs::Image>(nh, "/camera/infra1/image_rect_raw", 50));
+      sync.reset(new message_filters::Synchronizer<PointsFilter::sync_pol>(PointsFilter::sync_pol(100), *dep_sub, *infra_sub));
+      sync->registerCallback(boost::bind(&PointsFilter::callback, this, _1, _2));
+    }else{
+      local_point_clound_sub = nh.subscribe<sensor_msgs::Image>("/camera/depth/image_rect_raw", 1, &PointsFilter::Callback_depthimage,this);
+    }
     camera_info_sub = nh.subscribe<sensor_msgs::CameraInfo>("/camera/depth/camera_info", 1, &PointsFilter::Callback_depthinfo,this);
   }
   // [pub]
@@ -377,7 +385,7 @@ void PointsFilter::Callback_depthimage(const sensor_msgs::ImageConstPtr &img)
       //depth = fx*0.099/((*row_ptr) / 64.0f); // for fpga disp ignore it
       row_ptr += interval;
 
-      if (*row_ptr == 0 || depth == 1 || depth > sensor_max_range)
+      if (*row_ptr == 0 || *row_ptr == 1000 || depth > sensor_max_range)
       {
         //depth = sensor_max_range + 0.1;
         continue;
@@ -452,6 +460,160 @@ void PointsFilter::Callback_depthimage(const sensor_msgs::ImageConstPtr &img)
 //  local_point_cloud.height = 1;
 //  local_point_cloud.width = local_point_cloud.points.size();
   point_cloud_pub.publish(local_point_cloud);
+
+    static int exec_num = 0;
+    exec_num++;
+    if(exec_num == 100)
+    {
+      std::chrono::duration<double, std::milli> elapsed_seconds = std::chrono::system_clock::now() - start; 
+        printf("[PCL_reader]: point_cloud processing takes %f [ms].\n", elapsed_seconds.count());
+        exec_num=0;
+    }
+}
+
+void PointsFilter::callback(const sensor_msgs::ImageConstPtr &dep, const sensor_msgs::ImageConstPtr &img)
+{
+  /* get infra image */
+  cv_bridge::CvImagePtr cv_ptr;
+  cv::Mat infra_image_;
+  ros::Time infra_stamp;
+  cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
+  cv_ptr->image.copyTo(infra_image_);
+
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now(); 
+
+  /* get camera pose */
+  tf::Quaternion q;
+  tf::Vector3 Origin;
+    
+  tf::StampedTransform transform;
+  try{
+    tfListener.waitForTransform(frame_name,object_link_name,dep->header.stamp,ros::Duration(4.0));
+    tfListener.lookupTransform(frame_name, object_link_name, dep->header.stamp, transform);
+  }
+  catch (tf::TransformException ex){
+    ROS_ERROR("%s",ex.what());
+    ros::Duration(1.0).sleep();
+    return;
+  }
+
+  q = transform.getRotation();
+  Origin = tf::Vector3(transform.getOrigin().getX(),transform.getOrigin().getY(),transform.getOrigin().getZ());
+  tf::Matrix3x3 R_Body_to_ENU(q);
+
+  /* get depth image */
+  // cv_bridge::CvImagePtr cv_ptr;
+  cv_ptr = cv_bridge::toCvCopy(dep, dep->encoding);
+
+  if (dep->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+  {
+    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, 1000.0);
+  }
+  cv_ptr->image.copyTo(depth_image_);
+
+  /* get points */
+  pcl::PointCloud<pcl::PointXYZI> _pointcloud;
+  _pointcloud.clear();
+  
+  pcl::PointXYZI newPoint;
+  
+  tf::Vector3 point_body_body_frame, point_body_ENU_frame;
+
+  uint16_t *row_ptr;
+  uint8_t *infra_row;
+  double depth;
+  
+  for (int v = cut_edge; v < depth_height - cut_edge; v += interval)
+  {
+    row_ptr = depth_image_.ptr<uint16_t>(v) + cut_edge;
+    infra_row = infra_image_.ptr<uint8_t>(v) + cut_edge;
+
+    for (int u = cut_edge; u < depth_width - cut_edge; u += interval)
+    {
+      depth = (*row_ptr) * 0.001; // mm -> m
+      float intensity = *infra_row;
+      if(intensity>250) continue;
+      //depth = fx*0.099/((*row_ptr) / 64.0f); // for fpga disp ignore it
+      row_ptr += interval;
+      infra_row += interval;
+
+      if (*row_ptr == 0 || *row_ptr == 1000 || depth > sensor_max_range)
+      {
+        //depth = sensor_max_range + 0.1;
+        continue;
+      }
+      else if (depth < dist_min)
+      {
+        continue;
+      }
+
+      // project to ENU frame
+      point_body_body_frame[0] = (u - cx) * depth / fx;
+      point_body_body_frame[1] = (v - cy) * depth / fy;
+      point_body_body_frame[2] = depth;
+
+      point_body_ENU_frame = R_Body_to_ENU * point_body_body_frame;
+      newPoint.x = Origin.getX() + point_body_ENU_frame[0];
+      newPoint.y = Origin.getY() + point_body_ENU_frame[1];
+      newPoint.z = Origin.getZ() + point_body_ENU_frame[2];
+
+      newPoint.intensity = intensity;
+
+      _pointcloud.push_back(newPoint);
+    }
+  }
+  
+  /* Ground removal */
+  if(flag_pcl_ground_removal){
+    pcl::PassThrough<pcl::PointXYZI> ground_removal;
+    ground_removal.setInputCloud (_pointcloud.makeShared());
+    ground_removal.setFilterFieldName ("z");
+    ground_removal.setFilterLimits (-10.0, max_ground_height);
+    ground_removal.setFilterLimitsNegative (true);
+    ground_removal.filter (_pointcloud);
+  }
+  
+  /* Outlier removal*/
+  if(RadiusOutlierRemoval){
+    pcl::RadiusOutlierRemoval<pcl::PointXYZI> ror;
+    ror.setInputCloud(_pointcloud.makeShared());
+    ror.setRadiusSearch(ror_radius);
+    ror.setMinNeighborsInRadius(ror_nbs);
+    ror.filter(_pointcloud);
+  }
+  static pcl::PointCloud<pcl::PointXYZI> local_point_cloud_intensity;
+  if(concatenate)
+    local_point_cloud_intensity += _pointcloud;
+  else
+    local_point_cloud_intensity = _pointcloud;
+
+  /* Downsampling for all */
+  if(downsampling){
+    pcl::VoxelGrid<pcl::PointXYZI> sor;
+    sor.setInputCloud(local_point_cloud_intensity.makeShared());
+    sor.setLeafSize(resolution, resolution, resolution);
+    sor.filter(local_point_cloud_intensity);
+  }
+    
+  /* Nearby local point cloud */
+  if(spatial){
+    pcl::PassThrough<pcl::PointXYZI> sensor_range;
+    sensor_range.setInputCloud (local_point_cloud_intensity.makeShared());
+    sensor_range.setFilterFieldName ("x");
+    sensor_range.setFilterLimits (Origin.getX()-sensor_max_range, Origin.getX()+sensor_max_range);
+    sensor_range.filter (local_point_cloud_intensity);
+    sensor_range.setInputCloud (local_point_cloud_intensity.makeShared());
+    sensor_range.setFilterFieldName ("y");
+    sensor_range.setFilterLimits (Origin.getY()-sensor_max_range, Origin.getY()+sensor_max_range);
+    sensor_range.filter (local_point_cloud_intensity);
+  }
+  
+  local_point_cloud_intensity.header.stamp = dep->header.stamp.toSec()*1e6;
+  local_point_cloud_intensity.header.seq = dep->header.seq;
+  local_point_cloud_intensity.header.frame_id = "world";
+//  local_point_cloud_intensity.height = 1;
+//  local_point_cloud_intensity.width = local_point_cloud_intensity.points.size();
+  point_cloud_pub.publish(local_point_cloud_intensity);
 
     static int exec_num = 0;
     exec_num++;

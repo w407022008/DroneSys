@@ -18,6 +18,7 @@
 	<arg name="dist_min" default="0.5" />
 	<arg name="dep_camera_info" default="/depth/camera_info/repub"/>
 	<arg name="dep_img_rect" default="/depth/depth_16bit/repub" />
+	<arg name="inf_img_rect" default="/cam0/image_rect/repub" />
 	<arg name="dep_pcl_out" default="/local_obs_pcl" />
 	
 	<!-- depth to pcl : Points_filter.cpp -->
@@ -46,6 +47,7 @@
 		<remap from="/points_filter/sensor" to="$(arg points_out)" />
 		
 		<!-- if data_type == 3 -->
+		<remap from="/camera/infra1/image_rect_raw" to="$(arg inf_img_rect)" />
 		<remap from="/camera/depth/image_rect_raw" to="$(arg dep_img_rect)" />
 		<remap from="/camera/depth/camera_info" to="$(arg dep_camera_info)" />
 		<remap from="/local_obs_pcl" to="$(arg dep_pcl_out)" />

@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 		pcl_conversions
 		tf
 		cv_bridge
+		message_filters
 	)
 
 catkin_package(
