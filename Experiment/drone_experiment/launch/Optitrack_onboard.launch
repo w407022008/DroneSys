@@ -3,7 +3,6 @@
 	<arg name="with_mavros" default="true"/>
 	<arg name="with_transceiver" default="true"/>
 	<arg name="rate_hz" default="50.0"/>
-	<rosparam command="load" file="$(find drone_experiment)/../device.yaml" />
 
     <!-- MAVROS -->
 	<node if="$(arg with_mavros)" pkg="mavros" type="mavros_node" name="mavros" output="screen">
@@ -25,5 +24,6 @@
 		<param name="rate_hz" value="$(arg rate_hz)"/>
 	</node>
 	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
 </launch>
 

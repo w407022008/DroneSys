@@ -1,6 +1,4 @@
 <launch>
-	<rosparam command="load" file="$(find drone_experiment)/../device.yaml" />
-
 	<arg name="input_source" default="1"/> <!-- -1 Enable Mavros+sender, 0 Only sender, 1 for Vicon, 4 VINS-Fusion, 5 SLAM  -->
 	<arg name="camera_type" default="4"/> <!--  0 for MonoVision， 1 for RGBD, 2 for StereoVision, 3 fro Mono-IMU, 4 for Stereo-IMU  -->
 	
@@ -73,5 +71,6 @@
 	<!-- run the px4_commander.cpp -->
 	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen"/>
 	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
 </launch>
 

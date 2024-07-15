@@ -1,6 +1,4 @@
 <launch>
-	<rosparam command="load" file="$(find drone_experiment)/../device.yaml" />
-
 	<arg name="depth_enable" default="true"/>
 	<arg name="infra1_enable" default="true"/>
 	<arg name="infra2_enable" default="false"/>
@@ -66,5 +64,6 @@
         <rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_config.yaml" />
     </node> 
 	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
 </launch>
 
