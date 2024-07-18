@@ -312,21 +312,22 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     tf::Transform transform;
     tf::Quaternion q;
     // body frame
-    Vector3d correct_t;
-    Quaterniond correct_q;
-    correct_t = estimator.Ps[WINDOW_SIZE];
-    correct_q = estimator.Rs[WINDOW_SIZE];
+    if(TF_PUB){
+        Vector3d correct_t;
+        Quaterniond correct_q;
+        correct_t = estimator.Ps[WINDOW_SIZE];
+        correct_q = estimator.Rs[WINDOW_SIZE];
 
-    transform.setOrigin(tf::Vector3(correct_t(0),
-                                    correct_t(1),
-                                    correct_t(2)));
-    q.setW(correct_q.w());
-    q.setX(correct_q.x());
-    q.setY(correct_q.y());
-    q.setZ(correct_q.z());
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, header.stamp, "world", "body"));
-
+        transform.setOrigin(tf::Vector3(correct_t(0),
+                                        correct_t(1),
+                                        correct_t(2)));
+        q.setW(correct_q.w());
+        q.setX(correct_q.x());
+        q.setY(correct_q.y());
+        q.setZ(correct_q.z());
+        transform.setRotation(q);
+        br.sendTransform(tf::StampedTransform(transform, header.stamp, "world", "vio_imu"));
+    }
     // camera frame
     transform.setOrigin(tf::Vector3(estimator.tic[0].x(),
                                     estimator.tic[0].y(),
@@ -336,7 +337,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     q.setY(Quaterniond(estimator.ric[0]).y());
     q.setZ(Quaterniond(estimator.ric[0]).z());
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, header.stamp, "body", "camera"));
+    br.sendTransform(tf::StampedTransform(transform, header.stamp, "vio_imu", "vio_camera"));
 
     
     nav_msgs::Odometry odometry;

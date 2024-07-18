@@ -40,11 +40,14 @@ map<int, Eigen::Vector3d> pts_gt;
 std::string IMAGE0_TOPIC, IMAGE1_TOPIC;
 std::string FISHEYE_MASK;
 std::vector<std::string> CAM_NAMES;
+int INPUT_RATE;
+int CUT_RATE;
 int MAX_CNT;
 int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
 int FLOW_BACK;
+int TF_PUB;
 
 
 template <typename T>
@@ -81,11 +84,14 @@ void readParameters(std::string config_file)
 
     fsSettings["image0_topic"] >> IMAGE0_TOPIC;
     fsSettings["image1_topic"] >> IMAGE1_TOPIC;
+    INPUT_RATE = fsSettings["input_rate"];
+    CUT_RATE = fsSettings["cut_rate"];
     MAX_CNT = fsSettings["max_cnt"];
     MIN_DIST = fsSettings["min_dist"];
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
     FLOW_BACK = fsSettings["flow_back"];
+    TF_PUB = fsSettings["tf_pub"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 

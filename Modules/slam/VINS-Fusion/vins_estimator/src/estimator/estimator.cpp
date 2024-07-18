@@ -177,7 +177,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     
     if(MULTIPLE_THREAD)  
     {     
-        if(inputImageCnt % 2 == 0)
+        if(inputImageCnt % CUT_RATE == 0)
         {
             mBuf.lock();
             featureBuf.push(make_pair(t, featureFrame));
@@ -189,9 +189,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         mBuf.lock();
         featureBuf.push(make_pair(t, featureFrame));
         mBuf.unlock();
-        TicToc processTime;
         processMeasurements();
-        printf("process time: %f\n", processTime.toc());
     }
     
 }
@@ -276,6 +274,9 @@ void Estimator::processMeasurements()
         vector<pair<double, Eigen::Vector3d>> accVector, gyrVector;
         if(!featureBuf.empty())
         {
+            TicToc processTime;
+            if(featureBuf.size()>1) printf("processing not on latest, featureBuf.size() = %d, ", (int)featureBuf.size());
+
             feature = featureBuf.front();
             curTime = feature.first + td;
             while(1)
@@ -317,6 +318,8 @@ void Estimator::processMeasurements()
             mProcess.lock();
             processImage(feature.second, feature.first);
             prevTime = curTime;
+
+            // printf("process time: %f\n", processTime.toc());
 
             printStatistics(*this, 0);
 

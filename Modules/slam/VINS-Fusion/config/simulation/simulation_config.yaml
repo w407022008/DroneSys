@@ -42,7 +42,8 @@ body_T_cam1: !!opencv-matrix
 
 
 #Multiple thread support
-multiple_thread: 0
+multiple_thread: 0      # thread to process separately from feature extract
+input_rate: 20          # camera msg accepted rate
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time

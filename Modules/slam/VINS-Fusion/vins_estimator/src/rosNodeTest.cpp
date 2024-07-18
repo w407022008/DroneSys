@@ -131,6 +131,62 @@ void sync_process()
     }
 }
 
+void sync_callback(const ros::TimerEvent& e)
+{
+    if(STEREO)
+    {
+        cv::Mat image0, image1;
+        std_msgs::Header header;
+        double time = 0;
+        m_buf.lock();
+        while (!img0_buf.empty() && !img1_buf.empty())
+        {
+            double time0 = img0_buf.front()->header.stamp.toSec();
+            double time1 = img1_buf.front()->header.stamp.toSec();
+            // 0.003s sync tolerance
+            if(time0 < time1 - 0.003)
+            {
+                img0_buf.pop();
+                printf("throw img0\n");
+            }
+            else if(time0 > time1 + 0.003)
+            {
+                img1_buf.pop();
+                printf("throw img1\n");
+            }
+            else
+            {
+                time = img0_buf.front()->header.stamp.toSec();
+                header = img0_buf.front()->header;
+                image0 = getImageFromMsg(img0_buf.front());
+                img0_buf.pop();
+                image1 = getImageFromMsg(img1_buf.front());
+                img1_buf.pop();
+                //printf("find img0 and img1\n");
+            }
+        }
+        m_buf.unlock();
+        if(!image0.empty())
+            estimator.inputImage(time, image0, image1);
+    }
+    else
+    {
+        cv::Mat image;
+        std_msgs::Header header;
+        double time = 0;
+        m_buf.lock();
+        while(!img0_buf.empty())
+        {
+            time = img0_buf.front()->header.stamp.toSec();
+            header = img0_buf.front()->header;
+            image = getImageFromMsg(img0_buf.front());
+            img0_buf.pop();
+        }
+        m_buf.unlock();
+        if(!image.empty())
+            estimator.inputImage(time, image);
+    }
+}
 
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
@@ -265,7 +321,8 @@ int main(int argc, char **argv)
     ros::Subscriber sub_imu_switch = n.subscribe("/vins_imu_switch", 100, imu_switch_callback);
     ros::Subscriber sub_cam_switch = n.subscribe("/vins_cam_switch", 100, cam_switch_callback);
 
-    std::thread sync_thread{sync_process};
+    // std::thread sync_thread{sync_process};
+    ros::Timer image_sync_timer_ = n.createTimer(ros::Duration(1.0/INPUT_RATE), sync_callback);
     ros::spin();
 
     return 0;

@@ -24,9 +24,9 @@ body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 9.9998204614867314e-01, 2.7626432749921631e-03, -5.3174413441102282e-03, 1.7086329289396567e-02,
-       -2.7770802710582925e-03, 9.9999247302413363e-01, -2.7095608953047949e-03, 2.4857585669049789e-02,
-       5.3099157696719643e-03, 2.7242792097005582e-03, 9.9998219139008004e-01, 7.2594557365760537e-02, 
+   data: [ 9.9915078785525546e-01, -3.3645392494669100e-02, -2.3784253028041137e-02, 1.4804753990883948e-02,
+       -3.2690418530357028e-02, -9.9868624829977115e-01, 3.9460283745029578e-02, 4.6756462734344723e-02,
+       -2.5080663159739405e-02, -3.8649256406919658e-02, -9.9893803377119461e-01, 1.0346569515432877e-02,
        0., 0., 0., 1. ]
 
 body_T_cam1: !!opencv-matrix
@@ -34,12 +34,14 @@ body_T_cam1: !!opencv-matrix
    cols: 4
    dt: d
    data: [9.9998344885283819e-01, 4.0581272123018635e-03, -4.0784340024061705e-03, 8.6436697056769818e-02,
-       -4.0609472763258499e-03, 9.9999152079006104e-01, -6.8341436908052875e-04, 8.0100610070546197e-03,
-       4.0756260380595986e-03, 6.9996536324247959e-04, 9.9999144962388964e-01, 6.3326311034842611e-02, 
+       -4.0609472763258499e-03, -9.9999152079006104e-01, -6.8341436908052875e-04, 8.0100610070546197e-03,
+       4.0756260380595986e-03, 6.9996536324247959e-04, -9.9999144962388964e-01, 6.3326311034842611e-02, 
        0., 0., 0., 1.]
 
 #Multiple thread support
-multiple_thread: 1
+multiple_thread: 1      # thread to process separately from feature extract
+input_rate: 20          # camera msg accepted rate
+cut_rate: 1             # processing once after feature extracting and optical flow tracking
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
@@ -48,6 +50,7 @@ min_dist: 30            # min distance (pixel) between two features
 F_threshold: 1.0        # ransac threshold (pixel)
 show_track: 0           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
+tf_pub: 0               # publish tf transform of vio_imu from world
 
 #optimization parameters
 max_solver_time: 0.01  # max solver itration time (s), to guarantee real time

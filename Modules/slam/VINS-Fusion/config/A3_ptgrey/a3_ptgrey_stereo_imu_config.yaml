@@ -42,7 +42,9 @@ body_T_cam1: !!opencv-matrix
        -9.5676172901448808e-04, 4.1243006399912775e-02, 0., 0., 0., 1. ]
 
 #Multiple thread support
-multiple_thread: 1
+multiple_thread: 1      # thread to process separately from feature extract
+input_rate: 20          # camera msg accepted rate
+cut_rate: 2             # processing once after feature extracting and optical flow tracking
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
@@ -51,6 +53,7 @@ freq: 10                # frequence (Hz) of publish tracking result. At least 10
 F_threshold: 1.0        # ransac threshold (pixel)
 show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
+tf_pub: 1               # publish tf transform of vio_imu from world
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time

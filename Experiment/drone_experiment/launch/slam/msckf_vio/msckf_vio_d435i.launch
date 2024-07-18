@@ -1,5 +1,5 @@
 <launch>
-	<arg name="rviz" default="true"/>
+  <arg name="rviz" default="true"/>
 
   <arg name="robot" default="msckf_vio"/>
   <arg name="fixed_frame_id" default="world"/>

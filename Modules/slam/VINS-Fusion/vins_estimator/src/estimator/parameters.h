@@ -58,11 +58,14 @@ extern map<int, Eigen::Vector3d> pts_gt;
 extern std::string IMAGE0_TOPIC, IMAGE1_TOPIC;
 extern std::string FISHEYE_MASK;
 extern std::vector<std::string> CAM_NAMES;
+extern int INPUT_RATE;
+extern int CUT_RATE;
 extern int MAX_CNT;
 extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
 extern int FLOW_BACK;
+extern int TF_PUB;
 
 void readParameters(std::string config_file);
 
