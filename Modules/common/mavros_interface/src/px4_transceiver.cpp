@@ -282,37 +282,42 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
         nav_msgs::Odometry pose_msg;
 
         Eigen::Quaterniond q_;
+        Eigen::Vector3f pos;
+        Eigen::Vector3f vel;
         if(d435i_with_imu)
         {
-            // ENU(vins) msg --> NED(efk) pose_msg
-            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - reset_origin_[0];
-            pose_msg.pose.pose.position.x = msg->pose.pose.position.y - reset_origin_[1];
-            pose_msg.pose.pose.position.z = -(msg->pose.pose.position.z - reset_origin_[2]);
+            //vio_imu_rfu_frame to vio_enu_rfu_frame
+            pos.x() = msg->pose.pose.position.x - reset_origin_[0];
+            pos.y() = msg->pose.pose.position.y - reset_origin_[1];
+            pos.z() = msg->pose.pose.position.z - reset_origin_[2];
 
-            pose_msg.twist.twist.linear.y = msg->twist.twist.linear.x;
-            pose_msg.twist.twist.linear.x = msg->twist.twist.linear.y;
-            pose_msg.twist.twist.linear.z = -msg->twist.twist.linear.z;
+            vel.x() = msg->twist.twist.linear.x;
+            vel.y() = msg->twist.twist.linear.y;
+            vel.z() = msg->twist.twist.linear.z;
 
-            // because init meas is (0.707, -0.707, 0.0, 0.0)
+            //vio_imu_rub_frame to vio_imu_rfu_frame
             double cnst = sqrt(2)/2;
             double q_0 = cnst*msg->pose.pose.orientation.w;
             double q_1 = cnst*msg->pose.pose.orientation.x;
             double q_2 = cnst*msg->pose.pose.orientation.y;
             double q_3 = cnst*msg->pose.pose.orientation.z;
-            q_ = Eigen::Quaterniond(q_0-q_1, q_1+q_0, q_2+q_3, q_3-q_2);
+            // because init meas is (0.707, -0.707, 0.0, 0.0) -> (1,0,0,0)
+            // q_ = Eigen::Quaterniond(q_0-q_1, q_1+q_0, q_2+q_3, q_3-q_2);
+            // because init meas is (0.707, 0.707, 0.0, 0.0) -> (1,0,0,0)
+            q_ = Eigen::Quaterniond(q_0+q_1, q_1-q_0, q_2-q_3, q_3+q_2);
         }
         else
         {
-            // ENU(vins)msg --> NED(efk)pose_msg
-            pose_msg.pose.pose.position.y = msg->pose.pose.position.x - reset_origin_[0];
-            pose_msg.pose.pose.position.x = msg->pose.pose.position.z - reset_origin_[1];
-            pose_msg.pose.pose.position.z = -(-msg->pose.pose.position.y - reset_origin_[2]);
+            // vio_camera_rub_frame to vio_enu_rfu_frame
+            pos.x() = msg->pose.pose.position.x - reset_origin_[0];
+            pos.y() = -msg->pose.pose.position.z - reset_origin_[1];
+            pos.z() = msg->pose.pose.position.y - reset_origin_[2];
             
-            pose_msg.twist.twist.linear.y = msg->twist.twist.linear.x;
-            pose_msg.twist.twist.linear.x = msg->twist.twist.linear.z;
-            pose_msg.twist.twist.linear.z = -msg->twist.twist.linear.y;
+            vel.x() = msg->twist.twist.linear.x;
+            vel.y() = -msg->twist.twist.linear.z;
+            vel.z() = msg->twist.twist.linear.y;
 
-            q_ = Eigen::Quaterniond(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.z, -msg->pose.pose.orientation.y);
+            q_ = Eigen::Quaterniond(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, -msg->pose.pose.orientation.z, msg->pose.pose.orientation.y);
         }
         if(fabs(yaw_offset)>0.001){
         	Eigen::Vector3d euler_;
@@ -321,16 +326,6 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
             q_ = quaternion_from_rpy(euler_);
         }
         
-        // ENU(vins) --> NED(efk)
-        pose_msg.pose.pose.orientation.w = q_.w();
-        pose_msg.pose.pose.orientation.x = q_.y();
-        pose_msg.pose.pose.orientation.y = q_.x();
-        pose_msg.pose.pose.orientation.z = -q_.z();
-
-        pose_msg.header.stamp = msg->header.stamp;
-        
-        Eigen::Vector3f pos{pose_msg.pose.pose.position.y,pose_msg.pose.pose.position.x,-pose_msg.pose.pose.position.z};
-        Eigen::Vector3f vel{pose_msg.twist.twist.linear.x,pose_msg.twist.twist.linear.y,pose_msg.twist.twist.linear.z};
         static Eigen::Vector3f last_pos, last_vel;
         static int cnt = 0;
         if(armed_cur){
@@ -354,8 +349,24 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
         // }
         // else
         // {
-            pose_msg.header.frame_id = "odom_ned";
-            pose_msg.child_frame_id = "base_link_frd"; // should modify mavlink_receiver.cpp as Local frame by default
+            // ENU(vins) --> NED(efk)
+            pose_msg.header.stamp = msg->header.stamp;   // should modify mavlink_receiver.cpp as Local frame by default for velocity
+            pose_msg.header.frame_id = "odom_ned";       // defined in ned frame, otherwise defined transform btw odom_ned and odom_enu
+            pose_msg.child_frame_id = "base_link_frd";   // orientation: frd in ned, velocity: in ned
+            
+            pose_msg.pose.pose.orientation.w = q_.w();
+            pose_msg.pose.pose.orientation.x = q_.y();
+            pose_msg.pose.pose.orientation.y = q_.x();
+            pose_msg.pose.pose.orientation.z = -q_.z();
+
+            pose_msg.pose.pose.position.x = pos.y();
+            pose_msg.pose.pose.position.y = pos.x();
+            pose_msg.pose.pose.position.z = -pos.z();
+            
+            pose_msg.twist.twist.linear.x = vel.y();
+            pose_msg.twist.twist.linear.y = vel.x();
+            pose_msg.twist.twist.linear.z = -vel.z();
+
             vision_odom_pub.publish(pose_msg);
         // }
 
@@ -377,6 +388,7 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     if (msg->header.frame_id == "world")
     {
         geometry_msgs::PoseStamped pose_msg;
+        //vio_imu_rfu_frame to vio_enu_rfu_frame
         pose_msg.pose.position.x = msg->pose.position.x - reset_origin_[0];
         pose_msg.pose.position.y = msg->pose.position.y - reset_origin_[1];
         pose_msg.pose.position.z = msg->pose.position.z - reset_origin_[2];
@@ -384,6 +396,7 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
         Eigen::Quaterniond q_;
         if(d435i_with_imu)
         {
+            //vio_imu_rub_frame to vio_imu_rfu_frame
             // because init meas is (0.707, 0.0, 0.707, 0.0)
             double cnst = sqrt(2)/2;
             double q_0 = cnst*msg->pose.orientation.w;
@@ -396,7 +409,7 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
         {
             q_ = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
         }
-        q_ = Eigen::Quaterniond(q_.w(), q_.x(), q_.y(), q_.z());
+        
         if(fabs(yaw_offset)>0.001){
         	Eigen::Vector3d euler_;
             euler_ = quaternion_to_euler(q_);
@@ -487,7 +500,7 @@ int main(int argc, char **argv)
     // Rigid body name defined in Mocap system
     nh.param<string>("object_name", object_name, "UAV");
     // VO or VIO
-    nh.param<bool>("d435i_with_imu", d435i_with_imu, false);
+    nh.param<bool>("d435i_with_imu", d435i_with_imu, true);
     // pub rate
     nh.param<float>("rate_hz", rate_hz, 20);
     // fixed yaw offset from measurement
@@ -507,7 +520,7 @@ int main(int argc, char **argv)
     cout<<"[perception]:rate_hz: "<<rate_hz<<endl;
     cout<<"[perception]:offset_yaw: "<<yaw_offset<<endl;
     if(input_source==0) cout<<"[perception]:optitrack_frame: "<<optitrack_frame<<endl;
-    cout<<"[perception]:object_name: "<<object_name<<endl;
+    if(input_source==0) cout<<"[perception]:object_name: "<<object_name<<endl;
     if(input_source>=4)cout<<"[perception]:d435i_with_imu: "<<d435i_with_imu<<endl;
     cout<<"[perception]:reset_origin: "<<reset_origin<<endl;
     cout<<"[perception]:interpolation: "<<interpolation<<endl;

@@ -226,7 +226,7 @@ private:
 
 		mavlink::common::msg::ODOMETRY msg {};
 		msg.frame_id = utils::enum_value(MAV_FRAME::LOCAL_FRD);
-		msg.child_frame_id = utils::enum_value(MAV_FRAME::BODY_FRD);
+		msg.child_frame_id = utils::enum_value(MAV_FRAME::LOCAL_FRD);
 		msg.estimator_type = utils::enum_value(MAV_ESTIMATOR_TYPE::VISION);
 
 		/**

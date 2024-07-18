@@ -13,7 +13,7 @@ vrpn_client_node:
   server: "192.168.1.102" # Optitrack server address
 
 px4_transceiver:
-  d435i_with_imu: "true" # if use imu, the slam output frame match with imu
+  d435i_with_imu: true # if use imu, the slam output frame match with imu
   optitrack_frame: 0 # Optitrack frame convention 0: Z-up; 1: Y-up
   object_name: "UAV" # rigid-body-name in Optitrack
 

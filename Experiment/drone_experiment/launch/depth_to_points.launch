@@ -27,6 +27,9 @@
 		<!-- Sensory distance, considering only obstacles within sensory distance -->
 		<param name="points_filter/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>
 		<param name="points_filter/ground_removal" value="false" type="bool"/>
+		<param name="points_filter/radiusoutlierremoval" value="true" type="bool"/>
+		<param name="points_filter/ror_radius" value="$(arg resolution)" type="double"/>
+		<param name="points_filter/ror_nbs" value="20" type="int"/>
 		<param name="points_filter/downsampling" value="false" type="bool"/>
 		<param name="points_filter/spatial" value="false" type="bool"/>
 		<param name="points_filter/concatenate" value="false" type="bool"/>
