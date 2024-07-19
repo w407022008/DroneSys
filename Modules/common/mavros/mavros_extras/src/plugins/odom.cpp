@@ -225,8 +225,8 @@ private:
 		Matrix6d r_vel = Matrix6d::Zero();	//!< Zero initialized velocity 6-D Covariance matrix. WRT child_frame_id
 
 		mavlink::common::msg::ODOMETRY msg {};
-		msg.frame_id = utils::enum_value(MAV_FRAME::LOCAL_FRD);
-		msg.child_frame_id = utils::enum_value(MAV_FRAME::LOCAL_FRD);
+		msg.frame_id = utils::enum_value(MAV_FRAME::LOCAL_NED);
+		msg.child_frame_id = utils::enum_value(MAV_FRAME::LOCAL_NED);
 		msg.estimator_type = utils::enum_value(MAV_ESTIMATOR_TYPE::VISION);
 
 		/**
