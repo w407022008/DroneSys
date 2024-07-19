@@ -27,6 +27,7 @@ int optitrack_frame;
 string object_name;
 // Vision
 bool d435i_with_imu;
+bool vel_pub;
 
 // interpolation
 bool interpolation;
@@ -279,7 +280,8 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
     if (msg->header.frame_id == "world")
     {
         // geometry_msgs::PoseStamped pose_msg;
-        nav_msgs::Odometry pose_msg;
+        nav_msgs::Odometry nav_msg;
+        geometry_msgs::PoseStamped pose_msg;
 
         Eigen::Quaterniond q_;
         Eigen::Vector3f pos;
@@ -342,32 +344,49 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
         last_vel = vel;
 
         // if(interpolation){
-        //     poses.push_back(pose_msg);
+        //     poses.push_back(nav_msg);
         //     while(poses.size()>interpolation_sample_num)
         //         poses.pop_front();
         //     updated = true;
         // }
         // else
         // {
-            // ENU(vins) --> NED(efk)
-            pose_msg.header.stamp = msg->header.stamp;   // should modify mavlink_receiver.cpp as Local frame by default for velocity
-            pose_msg.header.frame_id = "odom_ned";       // defined in ned frame, otherwise defined transform btw odom_ned and odom_enu
-            pose_msg.child_frame_id = "base_link_frd";   // orientation: frd in ned, velocity: in ned
-            
-            pose_msg.pose.pose.orientation.w = q_.w();
-            pose_msg.pose.pose.orientation.x = q_.y();
-            pose_msg.pose.pose.orientation.y = q_.x();
-            pose_msg.pose.pose.orientation.z = -q_.z();
+            if(vel_pub){
+                // ENU(vins) --> NED(efk)
+                nav_msg.header.stamp = msg->header.stamp;   // should modify mavlink_receiver.cpp as Local frame by default for velocity
+                nav_msg.header.frame_id = "odom_ned";       // defined in ned frame, otherwise defined transform btw odom_ned and odom_enu
+                nav_msg.child_frame_id = "base_link_frd";   // orientation: frd in ned, velocity: in ned
+                
+                nav_msg.pose.pose.orientation.w = q_.w();
+                nav_msg.pose.pose.orientation.x = q_.y();
+                nav_msg.pose.pose.orientation.y = q_.x();
+                nav_msg.pose.pose.orientation.z = -q_.z();
 
-            pose_msg.pose.pose.position.x = pos.y();
-            pose_msg.pose.pose.position.y = pos.x();
-            pose_msg.pose.pose.position.z = -pos.z();
-            
-            pose_msg.twist.twist.linear.x = vel.y();
-            pose_msg.twist.twist.linear.y = vel.x();
-            pose_msg.twist.twist.linear.z = -vel.z();
+                nav_msg.pose.pose.position.x = pos.y();
+                nav_msg.pose.pose.position.y = pos.x();
+                nav_msg.pose.pose.position.z = -pos.z();
+                
+                nav_msg.twist.twist.linear.x = vel.y();
+                nav_msg.twist.twist.linear.y = vel.x();
+                nav_msg.twist.twist.linear.z = -vel.z();
 
-            vision_odom_pub.publish(pose_msg);
+                vision_odom_pub.publish(nav_msg);
+            }else{
+                // publish vision_pose to mavros
+                pose_msg.header.stamp = msg->header.stamp;
+                pose_msg.header.frame_id = "/world";
+
+                pose_msg.pose.position.x = pos.x();
+                pose_msg.pose.position.y = pos.y();
+                pose_msg.pose.position.z = pos.z();
+
+                pose_msg.pose.orientation.w = q_.w();
+                pose_msg.pose.orientation.x = q_.x();
+                pose_msg.pose.orientation.y = q_.y();
+                pose_msg.pose.orientation.z = q_.z();
+
+                vision_pose_pub.publish(pose_msg);
+            }
         // }
 
         // ros::Time time_now = ros::Time::now();
@@ -501,6 +520,7 @@ int main(int argc, char **argv)
     nh.param<string>("object_name", object_name, "UAV");
     // VO or VIO
     nh.param<bool>("d435i_with_imu", d435i_with_imu, true);
+    nh.param<bool>("vel_pub", vel_pub, true);
     // pub rate
     nh.param<float>("rate_hz", rate_hz, 20);
     // fixed yaw offset from measurement
