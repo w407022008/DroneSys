@@ -18,14 +18,21 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <gravity>1</gravity>
+      <gravity>0</gravity>
       <!-- 显示参数 -->
       <visual name="visual">
+        <pose>0 0 0 1.57 0 1.57</pose>
         <geometry>
           <mesh>
             <uri>model://D435i/meshes/D435i.dae</uri>
           </mesh>
         </geometry>
+        <material>
+          <script>
+            <name>Gazebo/Black</name>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+          </script>
+        </material>
       </visual>
       <!-- 传感器参数 -->
       <sensor name="color" type="camera">

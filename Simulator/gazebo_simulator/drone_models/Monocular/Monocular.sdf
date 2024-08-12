@@ -1,8 +1,9 @@
 <?xml version='1.0'?>
 <sdf version='1.6'>
     <model name='Monocular'>
-    <pose>0.0 0.0 -0.05 0 0 0</pose>
+      <pose>0.0 0.0 -0.05 0 0 0</pose>
       <link name='link'>
+        <!-- 物理参数 -->
         <inertial>
           <mass>0.001</mass>
           <inertia>
@@ -14,13 +15,11 @@
           <izz>2.407e-6</izz>
           </inertia>
         </inertial>
-        <visual name='visual'>
-          <geometry>
-            <box>
-              <size>0.01 0.01 0.01</size>
-            </box>
-          </geometry>
-        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+        <gravity>0</gravity>
+        <!-- 传感器参数设置 -->
         <sensor name='camera' type='camera'>
           <camera name='__default__'>
             <!-- FOV,120度 -->
@@ -73,8 +72,6 @@
               <distortionT2>0.0</distortionT2>
           </plugin>
         </sensor>
-        <self_collide>0</self_collide>
-        <kinematic>0</kinematic>
       </link>
   </model>
 </sdf>

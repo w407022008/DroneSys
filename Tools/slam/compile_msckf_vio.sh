@@ -1,4 +1,4 @@
-sudo apt-get install libsuitesparse-dev
+sudo apt-get install libsuitesparse-dev ros-noetic-random-numbers ros-noetic-tf-conversions
 #!/bin/sh
 echo "build msckf_vio: cpu_num="
 read cpu_num
