@@ -303,6 +303,8 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
             double q_1 = cnst*msg->pose.pose.orientation.x;
             double q_2 = cnst*msg->pose.pose.orientation.y;
             double q_3 = cnst*msg->pose.pose.orientation.z;
+            // because init meas is (0.707, 0.0, 0.707, 0.0) -> (1,0,0,0)
+            // q_ = Eigen::Quaterniond(q_0+q_2, q_1+q_3, q_2-q_0, q_3-q_1);
             // because init meas is (0.707, -0.707, 0.0, 0.0) -> (1,0,0,0)
             // q_ = Eigen::Quaterniond(q_0-q_1, q_1+q_0, q_2+q_3, q_3-q_2);
             // because init meas is (0.707, 0.707, 0.0, 0.0) -> (1,0,0,0)
