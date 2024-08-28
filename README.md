@@ -15,35 +15,20 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 ## 1. Setup and Config
 ### Prerequisites
 
-1. Our software is developed and tested in Ubuntu 16.04(ROS Kinetic), 18.04(ROS Melodic) and 20.04(ROS Noetic). Follow the documents to install [Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu), [Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) or [Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu) according to your Ubuntu version. 
+1. Our software is developed and tested in Ubuntu 16.04(ROS Kinetic), 18.04(ROS Melodic) and 20.04(ROS Noetic). Follow the documents to install [Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu), [Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) or [Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu) according to your Ubuntu version. (If you want also to install Noetic onto Ubuntu 22.04(Jammy), you could also refer to [Jammy-Noetic](https://github.com/w407022008/Noetic_on_Ubuntu22).)
 ```
-	ros-${ROS_VERSION_NAME}-ros-base
-	ros-${ROS_VERSION_NAME}-gazebo-ros
-	ros-${ROS_VERSION_NAME}-gazebo-plugins
-	ros-${ROS_VERSION_NAME}-camera-info-manager
-	ros-${ROS_VERSION_NAME}-velodyne-gazebo-plugins
-	ros-${ROS_VERSION_NAME}-xacro
-	ros-${ROS_VERSION_NAME}-tf2-ros
-	ros-${ROS_VERSION_NAME}-tf2-eigen
-	ros-${ROS_VERSION_NAME}-mavros-msgs
-	ros-${ROS_VERSION_NAME}-mavros
-	ros-${ROS_VERSION_NAME}-mavros-extras
-	ros-${ROS_VERSION_NAME}-tf
-	ros-${ROS_VERSION_NAME}-cv-bridge
-	libarmadillo-dev
-	ros-${ROS_VERSION_NAME}-rviz
-	ros-${ROS_VERSION_NAME}-octomap-rviz-plugins
-	ros-${ROS_VERSION_NAME}-pcl-ros
-	ros-${ROS_VERSION_NAME}-hector-trajectory-server
-	ros-${ROS_VERSION_NAME}-octomap
-	ros-${ROS_VERSION_NAME}-octomap-msgs
-	ros-${ROS_VERSION_NAME}-image-transport
-	ros-${ROS_VERSION_NAME}-image-transport-plugins
-	ros-${ROS_VERSION_NAME}-ddynamic-reconfigure
-	ros-${ROS_VERSION_NAME}-vrpn-client-ros
-	ros-${ROS_VERSION_NAME}-velodyne-gazebo-plugins
-	ros-${ROS_VERSION_NAME}-roslint
-	libdw-dev
+  sudo apt install ros-noetic-ros-base ros-noetic-gazebo-ros ros-noetic-mavlink geographiclib-tools libgeographic-dev libgeographic19 ros-noetic-geographic-msgs ros-noetic-eigen-conversions ros-noetic-gazebo-plugins ros-noetic-camera-info-manager ros-noetic-velodyne-gazebo-plugins ros-noetic-octomap-rviz-plugins ros-noetic-xacro ros-noetic-tf2-ros ros-noetic-tf2-eigen ros-noetic-tf ros-noetic-cv-bridge libarmadillo-dev ros-noetic-rviz ros-noetic-pcl-ros ros-noetic-hector-trajectory-server ros-noetic-octomap ros-noetic-octomap-msgs ros-noetic-image-transport ros-noetic-image-transport-plugins ros-noetic-ddynamic-reconfigure ros-noetic-vrpn-client-ros ros-noetic-roslint cmake libdw-dev libusb-dev libspnav-dev libbluetooth-dev libgtk2.0-dev flex bison byacc python2.7-dev python ros-noetic-random-numbers ros-noetic-tf-conversions libsuitesparse-dev ros-noetic-rviz-imu-plugin libv4l-dev v4l-utils
+```
+
+```
+	sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+	sudo rosdep init
+	rosdep update
+```
+
+```
+	echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+	source ~/.bashrc
 ```
 
 2. We use [**NLopt**](https://nlopt.readthedocs.io/en/latest/NLopt_Installation) as the optimization solver in Histo-planner to solve the non-linear optimization problem, which can be installed by the following commands.
@@ -51,26 +36,39 @@ Please kindly give us a star :star:, if you find this work useful or interesting
   git clone https://github.com/stevengj/nlopt.git
   cd nlopt && mkdir build && cd build  
   cmake ..  
-  make  
-  sudo make install 
+  make & sudo make install 
 ```
 
-1. The DroneSys has been tested to communicate with PX4 via the mavlink protocol. In order to test the complete DroneSys, we need to install the PX4 system. 
+3. [**Ceres**](http://ceres-solver.org/) is depended by VINS to solve the non-linear optimization problem, which can be installed by the following commands.
 ```
-    git clone https://github.com/SyRoCo-ISIR/Firmware_PX4_v1.14.2.git --depth 1 PX4_v1.14.2 --recursive
+  sudo apt-get install cmake libgoogle-glog-dev libgflags-dev libatlas-base-dev libeigen3-dev 
+	wget https://github.com/ceres-solver/ceres-solver/archive/refs/tags/2.1.0.zip
+	unzip 2.1.0.zip && rm 2.1.0.zip
+	cd ceres-solver-2.1.0
+	mkdir build && cd build
+	cmake ..
+	make
+	sudo make install
+```
+
+4. The DroneSys has been tested to communicate with [PX4](https://github.com/PX4) via the mavlink protocol. In order to test the complete DroneSys, we need to install the PX4 system. 
+```
+    git clone https://github.com/w407022008/Firmware_PX4_v1.14.2.git --depth 1 PX4_v1.14.2 --recursive
     cd PX4_v1.14.2
     git tag v1.14.2
     sudo bash Tools/setup/ubuntu.sh
     # Restart the computer on completion. And then
     cd PX4_v1.14.2 && sudo make px4_sitl_default gazebo
 ```
+Any error, please refer to [PX4 official installation](https://docs.px4.io/v1.14/en/dev_setup/dev_env_linux_ubuntu.html#ros-gazebo-classic).
 
-1. Installing RealSense SDK:
+5. Installing RealSense SDK:
+Here we offer two modified SDK which allocates images with or without emitters for depth and visual localization, and fixes the default transfer rate of 30hz instead of 15hz when using a USB 2.0 interface. i.e. [librealsense_v2.50.0](https://github.com/w407022008/librealsense-2.50.0), [librealsense_v2.55.1](https://github.com/w407022008/librealsense-2.50.0)
 ```
   sudo apt-get install libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev at
-  ## LibRealSense v2.50.0 for example, which matchs with realsense-ros v2.3.2:
-  wget https://github.com/IntelRealSense/librealsense/archive/refs/tags/v2.50.0.zip
-  unzip v2.50.0.zip && rm v2.50.0.zip
+  ## A modified LibRealSense v2.50.0 for example, which matchs with realsense-ros v2.3.2:
+  git clone https://github.com/w407022008/librealsense-2.50.0.git librealsense-2.50.0
+  
   cd librealsense-2.50.0
   ./scripts/setup_udev_rules.sh
   mkdir build && cd build
@@ -80,35 +78,22 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 
   cmake ../ -DFORCE_RSUSB_BACKEND=true -DCMAKE_BUILD_TYPE=release -DBUILD_EXAMPLES=true -DBUILD_GRAPHICAL_EXAMPLES=true
   sudo make uninstall && make clean && make && sudo make install
+
   # test it, if you want
   realsense_viwer
 ```
 
-1. Installing [ORB-SLAM3](Modules/slam/orb_slam3/README.md):
-
-2. Installing Ceres for VINS:
-```
-  sudo apt-get install libgoogle-glog-dev libgflags-dev libatlas-base-dev libeigen3-dev 
-  wget https://github.com/ceres-solver/ceres-solver/archive/refs/tags/2.1.0.zip
-  unzip ceres-solver-2.1.0.zip && rm ceres-solver-2.1.0.zip
-  cd ceres-solver-2.1.0
-  mkdir build && cd build
-  cmake ..
-  make
-  sudo make install
-```
+6. Installing [ORB-SLAM3](Modules/slam/orb_slam3/README.md) and its dependencies: ORB-SLAM3 without Pangolin is already supported in DroneSys, so the installation is not needed.
 
 
 ### Build the DroneSys on ROS
 
-After the prerequisites are satisfied, you can clone this repository to any expected path. 
+After the prerequisites are satisfied (including: ROS, NLOpt, Ceres, PX4, RealSense SDK), you can now clone this repository to any expected path. 
 
 ```
-  git clone https://github.com/SyRoCo-ISIR/DroneSys.git
-  cd DroneSys
-  wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
-  sudo bash install_geographiclib_datasets.sh
-  ./compile_all.sh # compile all packages to the current path
+  git clone https://github.com/w407022008/DroneSys.git
+  curl https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh | sudo bash
+  ./compile_try.sh # compile all packages to the current path
 ```
 Add the following into ```~/.bashrc```:
 ```

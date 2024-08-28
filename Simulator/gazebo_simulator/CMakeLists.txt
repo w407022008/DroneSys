@@ -107,6 +107,10 @@ catkin_install_python(PROGRAMS
     #scripts/get_ground_truth.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(DIRECTORY models DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
+install(DIRECTORY drone_models DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-install(DIRECTORY  models/turtlebot3_description/meshes models/turtlebot3_description/rviz models/turtlebot3_description/urdf DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY launch_basic DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch_basic)
+install(DIRECTORY launch_control DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch_control)
+install(DIRECTORY launch_planning DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch_planning)
+install(DIRECTORY launch_slam DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch_slam)
