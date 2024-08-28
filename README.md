@@ -15,7 +15,7 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 ## 1. Setup and Config
 ### Prerequisites
 
-1. Our software is developed and tested in Ubuntu 16.04(ROS Kinetic), 18.04(ROS Melodic) and 20.04(ROS Noetic). Follow the documents to install [Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu), [Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) or [Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu) according to your Ubuntu version. (If you want also to install Noetic onto Ubuntu 22.04(Jammy), you could also refer to [Jammy-Noetic](https://github.com/w407022008/Noetic_on_Ubuntu22).)
+1. Our software is developed and tested in Ubuntu 16.04(ROS Kinetic), 18.04(ROS Melodic) and 20.04(ROS Noetic). Follow the documents to install [Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu), [Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) or [Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu) according to your Ubuntu version. (ATTENTION! If you want also to install Noetic onto Ubuntu 22.04(Jammy), you could also refer to [Jammy-Noetic](https://github.com/w407022008/Noetic_on_Ubuntu22).)
 ```
   sudo apt install ros-noetic-ros-base ros-noetic-gazebo-ros ros-noetic-mavlink geographiclib-tools libgeographic-dev libgeographic19 ros-noetic-geographic-msgs ros-noetic-eigen-conversions ros-noetic-gazebo-plugins ros-noetic-camera-info-manager ros-noetic-velodyne-gazebo-plugins ros-noetic-octomap-rviz-plugins ros-noetic-xacro ros-noetic-tf2-ros ros-noetic-tf2-eigen ros-noetic-tf ros-noetic-cv-bridge libarmadillo-dev ros-noetic-rviz ros-noetic-pcl-ros ros-noetic-hector-trajectory-server ros-noetic-octomap ros-noetic-octomap-msgs ros-noetic-image-transport ros-noetic-image-transport-plugins ros-noetic-ddynamic-reconfigure ros-noetic-vrpn-client-ros ros-noetic-roslint cmake libdw-dev libusb-dev libspnav-dev libbluetooth-dev libgtk2.0-dev flex bison byacc python2.7-dev python ros-noetic-random-numbers ros-noetic-tf-conversions libsuitesparse-dev ros-noetic-rviz-imu-plugin libv4l-dev v4l-utils
 ```
@@ -93,6 +93,10 @@ After the prerequisites are satisfied (including: ROS, NLOpt, Ceres, PX4, RealSe
 ```
   git clone https://github.com/w407022008/DroneSys.git
   curl https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh | sudo bash
+```
+Build it!
+(ATTENTION: If you install Noetic onto Ubuntu 22.04, run firstly ```bash Ubuntu22_dependency_modification.bash```.)
+```
   ./compile_try.sh # compile all packages to the current path
 ```
 Add the following into ```~/.bashrc```:
