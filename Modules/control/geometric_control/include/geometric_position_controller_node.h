@@ -55,10 +55,13 @@ class GeometricPositionControllerNode {
   GeometricPositionController geometric_position_controller_;
 
   std::string namespace_;
+  bool cmd_active_;
   float control_frequency_;
   bool rate_control_;
+  drone_msgs::ControlCommand Command_to_pub;
 
   // subscribers
+  ros::Subscriber cmd_active_sub_;
   ros::Subscriber cmd_trajectory_sub_;
   ros::Subscriber cmd_multi_dof_joint_trajectory_sub_;
   ros::Subscriber cmd_pose_sub_;
@@ -68,11 +71,13 @@ class GeometricPositionControllerNode {
 
   ros::Publisher rotors_motor_velocity_reference_pub_;
   ros::Publisher mavros_setpoint_raw_attitude_pub;
+  ros::Publisher drone_msg_pub;
 
   std::deque<quadrotor_common::TrajectoryPoint> commands_;
   std::deque<ros::Duration> command_waiting_times_;
   ros::Timer command_timer_, odometry_timer_;
 
+  void CommandActiveCallback(const std_msgs::Bool& active);
   void RollPitchYawrateThrustCallback(
       const mav_msgs::RollPitchYawrateThrustConstPtr& roll_pitch_yawrate_thrust_reference_msg);
   

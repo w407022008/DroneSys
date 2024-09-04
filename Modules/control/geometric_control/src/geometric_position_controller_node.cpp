@@ -22,8 +22,10 @@
 #include <chrono>
 
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <mav_msgs/default_topics.h>
 #include <mavros_msgs/AttitudeTarget.h>
+#include <drone_msgs/ControlCommand.h>
 #include <quadrotor_common/geometry_eigen_conversions.h> 
 #include <std_srvs/Empty.h>
 
@@ -39,18 +41,20 @@ GeometricPositionControllerNode::GeometricPositionControllerNode(){
   
   ros::NodeHandle nh;
 
+  cmd_active_sub_ = nh.subscribe(
+      "command/active", 1,
+      &GeometricPositionControllerNode::CommandActiveCallback, this);
   cmd_pose_sub_ = nh.subscribe(
       "command/pose", 1,
       &GeometricPositionControllerNode::CommandPoseCallback, this);
   cmd_trajectory_point_sub_ = nh.subscribe(
-      "autopilot/reference_state", 1,
+      "command/reference_state", 1,
       &GeometricPositionControllerNode::TrajecotryPointCallback, this);
-
   cmd_trajectory_sub_ = nh.subscribe(
-      "autopilot/trajectory", 1,
+      "command/trajectory", 1,
       &GeometricPositionControllerNode::TrajectoryCallback, this);
   cmd_multi_dof_joint_trajectory_sub_ = nh.subscribe(
-      "command/trajectory", 1,
+      "command/MDJtrajectory", 1,
       &GeometricPositionControllerNode::MultiDofJointTrajectoryCallback, this);
   command_timer_ = nh.createTimer(ros::Duration(0), &GeometricPositionControllerNode::TimedCommandCallback, this,
                                   true, false);
@@ -64,11 +68,14 @@ GeometricPositionControllerNode::GeometricPositionControllerNode(){
 
   rotors_motor_velocity_reference_pub_ = nh.advertise<mav_msgs::Actuators>(
       "command/motor_speed", 1);
-  mavros_setpoint_raw_attitude_pub = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
-
+  mavros_setpoint_raw_attitude_pub = nh.advertise<mavros_msgs::AttitudeTarget>(
+      "/mavros/setpoint_raw/attitude", 1);
+  drone_msg_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 1);
+  Command_to_pub.source = "geometry_controller";
+  Command_to_pub.Command_ID = 0;
   if(control_frequency_>0.0)
     odometry_timer_ = nh.createTimer(ros::Duration(1.0/control_frequency_), &GeometricPositionControllerNode::TimedPublish, this);
-              
+  cmd_active_ = false;
 }
 
 GeometricPositionControllerNode::~GeometricPositionControllerNode() { }
@@ -123,7 +130,13 @@ void GeometricPositionControllerNode::InitializeParams() {
   commands_.clear();
 }
 
+void GeometricPositionControllerNode::CommandActiveCallback(const std_msgs::Bool& active){
+  if(active.data) {cmd_active_ = true;}
+  else {cmd_active_ = false;}
+}
+
 void GeometricPositionControllerNode::TimedPublish(const ros::TimerEvent& e) {
+  if(!cmd_active_) return;
   // publish rotors speed by calculating inner loop control
   if(rotors_motor_velocity_reference_pub_.getNumSubscribers() > 0 ){
     Eigen::VectorXd ref_rotor_velocities;
@@ -140,8 +153,23 @@ void GeometricPositionControllerNode::TimedPublish(const ros::TimerEvent& e) {
     rotors_motor_velocity_reference_pub_.publish(actuator_msg);
   }
 
+  if(drone_msg_pub.getNumSubscribers() > 0){
+    quadrotor_common::ControlCommand control_cmd = geometric_position_controller_.CalculateCommand();
+    Command_to_pub.header.stamp = ros::Time::now();
+    Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
+    if(rate_control_){
+      Command_to_pub.Mode = drone_msgs::ControlCommand::Rate;
+    }else{
+      Command_to_pub.Mode = drone_msgs::ControlCommand::AttitudeRate;
+      Command_to_pub.Attitude_sp.desired_att_q = quadrotor_common::eigenToGeometry(control_cmd.orientation);
+    }
+    Command_to_pub.Attitude_sp.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
+
+    Command_to_pub.Attitude_sp.desired_throttle = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+    drone_msg_pub.publish(Command_to_pub);
+  }
   // publish mavros attitude setpoint
-  if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
+  else if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
     quadrotor_common::ControlCommand control_cmd = geometric_position_controller_.CalculateCommand();
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -176,6 +204,10 @@ void GeometricPositionControllerNode::TrajecotryPointCallback(
 
   quadrotor_common::TrajectoryPoint desired_state(*msg);
 
+  Command_to_pub.Reference_State.position_ref[0] = desired_state.position.x();
+  Command_to_pub.Reference_State.position_ref[1] = desired_state.position.y();
+  Command_to_pub.Reference_State.position_ref[2] = desired_state.position.z();
+
   geometric_position_controller_.SetTrajectoryPoint(desired_state);
 }
 
@@ -190,7 +222,11 @@ void GeometricPositionControllerNode::CommandPoseCallback(
   desired_state.acceleration.setZero();
   desired_state.heading = mav_msgs::yawFromQuaternion(desired_state.orientation);
   desired_state.heading_rate = (desired_state.orientation * desired_state.bodyrates).z();
-
+  
+  Command_to_pub.Reference_State.position_ref[0] = desired_state.position.x();
+  Command_to_pub.Reference_State.position_ref[1] = desired_state.position.y();
+  Command_to_pub.Reference_State.position_ref[2] = desired_state.position.z();
+  
   geometric_position_controller_.SetTrajectoryPoint(desired_state);
 }
 

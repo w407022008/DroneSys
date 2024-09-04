@@ -2,8 +2,10 @@
 #include <chrono>
 
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <mav_msgs/default_topics.h>
 #include <mavros_msgs/AttitudeTarget.h>
+#include <drone_msgs/ControlCommand.h>
 #include <quadrotor_common/math_common.h>
 #include <quadrotor_common/parameter_helper.h>
 #include <quadrotor_common/geometry_eigen_conversions.h>
@@ -18,7 +20,7 @@ MPCControllerNode::MPCControllerNode(
                       const ros::NodeHandle& pnh)
   : nh_(nh),
     pnh_(pnh),
-    destructor_invoked_(false)
+    destructor_invoked_(true)
 {
   if (!InitializeParams()) {
     ROS_ERROR("[%s] Could not load parameters.", pnh_.getNamespace().c_str());
@@ -26,14 +28,17 @@ MPCControllerNode::MPCControllerNode(
     return;
   }
 
+  cmd_active_sub_ = nh_.subscribe(
+      "command/active", 1,
+      &MPCControllerNode::CommandActiveCallback, this);
   cmd_pose_sub_ = nh_.subscribe(
       "command/pose", 1,
       &MPCControllerNode::CommandPoseCallback, this);
   cmd_trajectory_point_sub_ = nh_.subscribe(
-      "autopilot/reference_state", 1,
+      "command/reference_state", 1,
       &MPCControllerNode::TrajecotryPointCallback, this);
   cmd_trajectory_sub_ = nh_.subscribe(
-      "autopilot/trajectory", 1,
+      "command/trajectory", 1,
       &MPCControllerNode::TrajectoryCallback, this);
 
   cmd_roll_pitch_yawrate_thrust_sub_ = nh_.subscribe(
@@ -41,11 +46,14 @@ MPCControllerNode::MPCControllerNode(
       &MPCControllerNode::RollPitchYawrateThrustCallback, this);
 
   odometry_sub_ = nh_.subscribe(
-      "autopilot/state_estimate", 1,
+      "command/state_estimate", 1,
       &MPCControllerNode::OdometryCallback,
       this, ros::TransportHints().tcpNoDelay());
 
   control_command_pub_ = nh_.advertise<quadrotor_msgs::ControlCommand>("control_command", 1);
+  drone_msg_pub = nh_.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 1);
+  Command_to_pub.source = "mpc";
+  Command_to_pub.Command_ID = 0;
   mavros_setpoint_raw_attitude_pub = nh_.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
   if(control_frequency_>0.0){
     odometry_timer_ = nh_.createTimer(ros::Duration(1.0/control_frequency_), &MPCControllerNode::TimedPublishCommand, this);
@@ -82,6 +90,11 @@ bool MPCControllerNode::InitializeParams() {
 
 }
 
+void MPCControllerNode::CommandActiveCallback(const std_msgs::Bool& active){
+  if(active.data) {destructor_invoked_ = false;}
+  else {destructor_invoked_ = true;}
+}
+
 void MPCControllerNode::RollPitchYawrateThrustCallback(
     const mav_msgs::RollPitchYawrateThrustConstPtr& msg) {
   if (destructor_invoked_) {
@@ -112,10 +125,14 @@ void MPCControllerNode::TrajecotryPointCallback(
   if (destructor_invoked_) {
     return;
   }
-  reference_trajectory_.points.clear();
-  reference_trajectory_ = quadrotor_common::Trajectory(
-                          quadrotor_common::TrajectoryPoint(*trajectory_point_msg));
-  reference_trajectory_.points.front().time_from_start = ros::Duration(0.0);
+  quadrotor_common::TrajectoryPoint desired_state(*trajectory_point_msg);
+  // reference_trajectory_.points.clear();
+  reference_trajectory_ = quadrotor_common::Trajectory(desired_state);
+  // reference_trajectory_.points.front().time_from_start = ros::Duration(0.0);
+
+  Command_to_pub.Reference_State.position_ref[0] = desired_state.position.x();
+  Command_to_pub.Reference_State.position_ref[1] = desired_state.position.y();
+  Command_to_pub.Reference_State.position_ref[2] = desired_state.position.z();
 }
 
 void MPCControllerNode::CommandPoseCallback(
@@ -127,16 +144,18 @@ void MPCControllerNode::CommandPoseCallback(
   // reference_trajectory_.points.clear();
 
   quadrotor_common::TrajectoryPoint desired_state;
-  desired_state.position = quadrotor_common::geometryToEigen(
-                          pose_msg->pose.position);
-  desired_state.orientation = quadrotor_common::geometryToEigen(
-                          pose_msg->pose.orientation);
+  desired_state.position = mav_msgs::vector3FromPointMsg(pose_msg->pose.position);
+  desired_state.orientation = mav_msgs::quaternionFromMsg(pose_msg->pose.orientation);
   desired_state.velocity.setZero();
   desired_state.bodyrates.setZero();
   desired_state.acceleration.setZero();
-  desired_state.heading = odometry_state_.heading;
+  desired_state.heading = mav_msgs::yawFromQuaternion(desired_state.orientation);
   desired_state.heading_rate = (desired_state.orientation * desired_state.bodyrates).z();
   
+  Command_to_pub.Reference_State.position_ref[0] = desired_state.position.x();
+  Command_to_pub.Reference_State.position_ref[1] = desired_state.position.y();
+  Command_to_pub.Reference_State.position_ref[2] = desired_state.position.z();
+
   if(poly_interpolation_){
     quadrotor_common::Trajectory go_to_pose_traj =
               trajectory_generation_helper::polynomials::
@@ -206,10 +225,10 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     // trajectory_ = quadrotor_common::Trajectory(odometry_state_);
   }else if(n_commands == 1){
     trajectory_ = reference_trajectory_;
-    if((reference_trajectory_.points.front().position - odometry_state_.position).norm() < 0.1){
-      reference_trajectory_.points.clear();
-      // trajectory_ = quadrotor_common::Trajectory(odometry_state_);
-    }
+    // if((reference_trajectory_.points.front().position - odometry_state_.position).norm() < 0.1){
+    //   reference_trajectory_.points.clear();
+    //   trajectory_ = quadrotor_common::Trajectory(odometry_state_);
+    // }
   }else{
     // tracking a trajectory whose points with TimeStamp
     const ros::Duration dt = ros::Time::now() - time_start_trajectory_execution_;
@@ -252,8 +271,22 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     control_command_pub_.publish(control_cmd_msg);
   }
 
+  if(drone_msg_pub.getNumSubscribers() > 0){
+    Command_to_pub.header.stamp = ros::Time::now();
+    Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
+    if(rate_control_){
+      Command_to_pub.Mode = drone_msgs::ControlCommand::Rate;
+    }else{
+      Command_to_pub.Mode = drone_msgs::ControlCommand::AttitudeRate;
+      Command_to_pub.Attitude_sp.desired_att_q = quadrotor_common::eigenToGeometry(control_cmd.orientation);
+    }
+    Command_to_pub.Attitude_sp.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
+
+    Command_to_pub.Attitude_sp.desired_throttle = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+    drone_msg_pub.publish(Command_to_pub);
+  }
   // publish mavros attitude setpoint
-  if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
+  else if(mavros_setpoint_raw_attitude_pub.getNumSubscribers() > 0 ){
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:

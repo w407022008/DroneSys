@@ -108,6 +108,7 @@ public:
     void loiter();
     void land();
 
+    // translation 
     void send_pos_setpoint(const Eigen::Vector3d& pos_sp, float yaw_sp);
     void send_vel_setpoint(const Eigen::Vector3d& vel_sp, float yaw_sp);
     void send_vel_xy_pos_z_setpoint(const Eigen::Vector3d& state_sp, float yaw_sp);
@@ -117,13 +118,16 @@ public:
     void send_pos_vel_xyz_setpoint(const Eigen::Vector3d& pos_sp, const Eigen::Vector3d& vel_sp, float yaw_sp);
     void send_acc_xyz_setpoint(const Eigen::Vector3d& accel_sp, float yaw_sp);
 
-
-    void send_attitude_setpoint(const drone_msgs::AttitudeReference& _AttitudeReference);
-    void send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float throttle_sp);
-    void send_attitude_setpoint_yawrate(const drone_msgs::AttitudeReference& _AttitudeReference, float yaw_rate_sp);
+    // rotation
+    void send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float throttle);
+    void send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float throttle);
+    void send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, const float throttle_sp);
+    void send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float throttle);
+    
+    // motor speed
     void send_actuator_setpoint(const Eigen::Vector4d& actuator_sp);
 
-
+    // gimbal control
     void send_mount_control_command(const Eigen::Vector3d& gimbal_att_sp);
     
 };
@@ -350,8 +354,8 @@ void command_to_mavros::send_acc_xyz_setpoint(const Eigen::Vector3d& accel_sp, f
 
 }
 
-// quaternion attitude + throttle
-void command_to_mavros::send_attitude_setpoint(const drone_msgs::AttitudeReference& _AttitudeReference)
+// quaternion attitude + body_rate + throttle
+void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float throttle_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -360,21 +364,24 @@ void command_to_mavros::send_attitude_setpoint(const drone_msgs::AttitudeReferen
     // bit 4: use hover thrust estimation, bit 5: reserved
     // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
-    att_setpoint.type_mask = 0b00011111;
+    att_setpoint.type_mask = 0b00010000;
 
-    att_setpoint.orientation.x = _AttitudeReference.desired_att_q.x;
-    att_setpoint.orientation.y = _AttitudeReference.desired_att_q.y;
-    att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
-    att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
+    att_setpoint.body_rate.x = body_rate_sp[0];
+    att_setpoint.body_rate.y = body_rate_sp[1];
+    att_setpoint.body_rate.z = body_rate_sp[2];
 
-    att_setpoint.thrust = _AttitudeReference.desired_throttle; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.orientation.x = attitude_q_sp.x();
+    att_setpoint.orientation.y = attitude_q_sp.y();
+    att_setpoint.orientation.z = attitude_q_sp.z();
+    att_setpoint.orientation.w = attitude_q_sp.w();
+
+    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
-
-// quaternion attitude + throttle + body_yaw_rate
-void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::AttitudeReference& _AttitudeReference, float yaw_rate_sp)
+// quaternion attitude + throttle
+void command_to_mavros::send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float throttle_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -383,24 +390,46 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const drone_msgs::Attitud
     // bit 4: use hover thrust estimation, bit 5: reserved
     // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
-    att_setpoint.type_mask = 0b00011011;
+    att_setpoint.type_mask = 0b00010111;
 
-    att_setpoint.orientation.x = _AttitudeReference.desired_att_q.x;
-    att_setpoint.orientation.y = _AttitudeReference.desired_att_q.y;
-    att_setpoint.orientation.z = _AttitudeReference.desired_att_q.z;
-    att_setpoint.orientation.w = _AttitudeReference.desired_att_q.w;
+    att_setpoint.orientation.x = attitude_q_sp.x();
+    att_setpoint.orientation.y = attitude_q_sp.y();
+    att_setpoint.orientation.z = attitude_q_sp.z();
+    att_setpoint.orientation.w = attitude_q_sp.w();
 
-    att_setpoint.thrust = _AttitudeReference.desired_throttle; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
 
-    att_setpoint.body_rate.x = 0.0;
-    att_setpoint.body_rate.y = 0.0;
+    setpoint_raw_attitude_pub.publish(att_setpoint);
+}
+
+// quaternion attitude + throttle + body_yaw_rate
+void command_to_mavros::send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float throttle_sp)
+{
+    mavros_msgs::AttitudeTarget att_setpoint;
+
+    //Mappings: If any of these bits are set, the corresponding input should be ignored:
+    // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
+    // bit 4: use hover thrust estimation, bit 5: reserved
+    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+
+    att_setpoint.type_mask = 0b00010011;
+
+    att_setpoint.orientation.x = attitude_q_sp.x();
+    att_setpoint.orientation.y = attitude_q_sp.y();
+    att_setpoint.orientation.z = attitude_q_sp.z();
+    att_setpoint.orientation.w = attitude_q_sp.w();
+
+    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
+
+    // att_setpoint.body_rate.x = 0.0;
+    // att_setpoint.body_rate.y = 0.0;
     att_setpoint.body_rate.z = yaw_rate_sp;
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
 // body_rate + throttle
-void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float throttle_sp)
+void command_to_mavros::send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, float throttle_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -409,11 +438,11 @@ void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attit
     // bit 4: use hover thrust estimation, bit 5: reserved
     // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
 
-    att_setpoint.type_mask = 0b10111000;
+    att_setpoint.type_mask = 0b10010000;
 
-    att_setpoint.body_rate.x = attitude_rate_sp[0];
-    att_setpoint.body_rate.y = attitude_rate_sp[1];
-    att_setpoint.body_rate.z = attitude_rate_sp[2];
+    att_setpoint.body_rate.x = body_rate_sp[0];
+    att_setpoint.body_rate.y = body_rate_sp[1];
+    att_setpoint.body_rate.z = body_rate_sp[2];
 
     att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
 

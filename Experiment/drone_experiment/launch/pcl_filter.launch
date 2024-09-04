@@ -1,7 +1,7 @@
 <launch>
 	<arg name="depth_image_proc" default="false"/>
 
-	<arg name="object_link_name" default="/base_link"/>
+	<arg name="object_link_name" default="/vio_camera"/>
 	<arg name="frame_name" default="/world"/>
 	<arg name="sensor_max_range" default="40.0"/>
 	<arg name="max_ground_height" default="0.1" />
@@ -19,6 +19,7 @@
 	<arg name="dep_camera_info" default="/depth/camera_info/repub"/>
 	<arg name="dep_img_rect" default="/depth/depth_16bit/repub" />
 	<arg name="inf_img_rect" default="/cam0/image_rect/repub" />
+	<arg name="dep_infra_sync" default="false" />
 	<arg name="dep_pcl_out" default="/local_obs_pcl" />
 	
 	<!-- depth to pcl : Points_filter.cpp -->

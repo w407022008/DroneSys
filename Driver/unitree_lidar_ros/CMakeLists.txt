@@ -58,3 +58,32 @@ set(EXTRA_LIBS
 
 add_executable(unitree_lidar_ros_node src/unitree_lidar_ros_node.cpp)
 target_link_libraries(unitree_lidar_ros_node ${EXTRA_LIBS})
+
+
+# Install nodelet library
+install(TARGETS ${PROJECT_NAME}_node
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+    )
+
+# Install header files
+install(DIRECTORY include/
+    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+    )
+
+# Install launch files
+install(DIRECTORY launch/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+    )
+
+# Install rviz files
+install(DIRECTORY rviz/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rviz
+    )
+
+# Install xml files
+#install(FILES nodelet_plugins.xml
+#    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+#    )
+

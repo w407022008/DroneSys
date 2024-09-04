@@ -3,13 +3,13 @@
 	<arg name="visualization" default="true"/>
 	<arg name="pcd_file" value="$(find simulation_gazebo)/maps/obstacle.pcd" />
 	
-	<arg name="sensor" default="1"/> <!-- 0: hokuyo_2dLidar; 1: 3dLidar; 2: Camera -->
+	<arg name="sensor" default="2"/> <!-- 0: hokuyo_2dLidar; 1: 3dLidar; 2: Camera -->
 	<arg name="input_source" default="1"/>  <!-- 0: ground truth points; 1:Filtered raw points -->
 	
 	<arg name="type_in_goal" default="false"/>
-	<arg name="joystick" default="3"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+	<arg name="joystick" default="0"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
 
-	<arg name="sensor_max_range" default="4.0"/>
+	<arg name="sensor_max_range" default="5.0"/>
 	<arg name="forbidden_range" default="0.3"/>
 	<arg name="max_tracking_error" default="0.2"/>
 	<arg name="yaw_rate" default="2.0"/>
@@ -68,6 +68,7 @@
 			<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
 			<param name="points_filter/data_type" value="1" type="int"/>
 			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/radiusoutlierremoval" value="false" type="bool"/>
 			<param name="points_filter/downsampling" value="false" type="bool"/>
 			<param name="points_filter/spatial" value="false" type="bool"/>
 			<param name="points_filter/concatenate" value="false" type="bool"/>
@@ -181,6 +182,7 @@
 			<param name="points_filter/data_type" value="2" type="int"/>
 			<param name="points_filter/is_lidar" value="true" type="bool"/>
 			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/radiusoutlierremoval" value="false" type="bool"/>
 			<param name="points_filter/downsampling" value="false" type="bool"/>
 			<param name="points_filter/spatial" value="false" type="bool"/>
 			<param name="points_filter/concatenate" value="false" type="bool"/>
@@ -291,6 +293,7 @@
 			<param name="points_filter/data_type" value="3" type="int"/>
 			<param name="points_filter/is_rgbd" value="true" type="bool"/>		<!-- if data_type == 2 -->
 			<param name="points_filter/ground_removal" value="false" type="bool"/>
+			<param name="points_filter/radiusoutlierremoval" value="false" type="bool"/>
 			<param name="points_filter/downsampling" value="false" type="bool"/>
 			<param name="points_filter/spatial" value="false" type="bool"/>
 			<param name="points_filter/concatenate" value="false" type="bool"/>
@@ -332,6 +335,7 @@
 			<param name="histo_planner/yaw_tracking_mode" value="1" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
 			<param name="histo_planner/spinning_once_first" value="false" type="bool"/>  <!-- Spinning once turn first before starting tracking a new traj -->
 			<param name="histo_planner/yaw_rate" value="$(arg yaw_rate)" type="double"/>             <!-- Maximum steering speed (whenever auto_hold or joy control) -->
+			<param name="histo_planner/yaw_tracking_err_max" value="0.5" type="double"/>
 			<param name="histo_planner/time_forward_facing_toward" value="0.5" type="double"/> <!-- Towards the waypoint in n second later -->
 			<!-- Goal Regenerate, when it is unreachable ? -->
 				<!-- 1: Move the original goal in the direction of the falling gradient of the obstacle map! [Not recommended] -->

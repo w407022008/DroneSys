@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   quadrotor_common
   roscpp
   sensor_msgs
+  drone_msgs
   cmake_modules
 )
 

@@ -1,0 +1,104 @@
+<launch>
+	<!-- Inital position -->
+	<arg name="x" default="1.0"/>
+	<arg name="y" default="3.0"/>
+	<arg name="z" default="0.2"/>
+	<arg name="R" default="0"/>
+	<arg name="P" default="0"/>
+	<arg name="Y" default="0.0"/>
+	<!-- SITL for PX4 -->
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
+	<arg name="model" default="iris"/> 
+	<!-- Env Variables in rcs-->
+	<!-- reff to PX4/ROMFS/px4fmu_common/init.d-posix/rcS -->
+	<env name="PX4_ESTIMATOR" value="ekf2"/>
+	<!-- low computing performance low factor -->
+	<env name="PX4_SIM_SPEED_FACTOR" value="1.0" />
+	
+	<!-- Gazebo configs -->
+	<arg name="debug" default="false"/>
+	<arg name="verbose" default="false"/>
+	<arg name="paused" default="false"/>
+	<arg name="respawn_gazebo" default="false"/>
+	<!-- Gazebo sim -->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="gui" value="$(arg gazebo_gui)"/>
+		<arg name="debug" value="$(arg debug)"/>
+		<arg name="verbose" value="$(arg verbose)"/>
+		<arg name="paused" value="$(arg paused)"/>
+		<arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
+		<arg name="world_name" value="$(arg world)"/>
+	</include>
+	
+	<!-- TF transform -->
+        <node pkg="tf" type="static_transform_publisher" name="tf_world_map" args="0 0 0 0 0 0 world map 100"/>
+        <node pkg="tf" type="static_transform_publisher" name="tf_world_odom" args="0 0 0 0 0 0 world odom 100"/>
+
+
+
+    <!-- UAV0 -->
+    <group ns="mav0">
+        <!-- MAVROS and vehicle configs -->
+        <arg name="ID" value="0"/>
+        <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
+        <!-- PX4 SITL and vehicle spawn -->
+        <include file="$(find simulation_gazebo)/launch_basic/single_vehicle_spawn_sdf.launch">
+            <arg name="x" value="$(eval 0 + arg('x'))"/>
+            <arg name="y" value="$(eval 0 + arg('y'))"/>
+            <arg name="z" value="$(eval 0 + arg('z'))"/>
+            <arg name="R" value="$(eval 0 + arg('R'))"/>
+            <arg name="P" value="$(eval 0 + arg('P'))"/>
+            <arg name="Y" value="$(eval 0 + arg('Y'))"/>
+            <arg name="model" value="$(arg model)"/>
+            <arg name="mavlink_udp_port" value="14560"/>
+            <arg name="mavlink_tcp_port" value="4560"/>
+            <arg name="ID" value="$(arg ID)"/>
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+        </include>
+    </group>
+
+    <!-- UAV1 -->
+    <group ns="mav1">
+        <!-- MAVROS and vehicle configs -->
+        <arg name="ID" value="1"/>
+        <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
+        <!-- PX4 SITL and vehicle spawn -->
+        <include file="$(find simulation_gazebo)/launch_basic/single_vehicle_spawn_sdf.launch">
+            <arg name="x" value="$(eval 1 + arg('x'))"/>
+            <arg name="y" value="$(eval 0 + arg('y'))"/>
+            <arg name="z" value="$(eval 0 + arg('z'))"/>
+            <arg name="R" value="$(eval 0 + arg('R'))"/>
+            <arg name="P" value="$(eval 0 + arg('P'))"/>
+            <arg name="Y" value="$(eval 0 + arg('Y'))"/>
+            <arg name="model" value="$(arg model)"/>
+            <arg name="mavlink_udp_port" value="14561"/>
+            <arg name="mavlink_tcp_port" value="4561"/>
+            <arg name="ID" value="$(arg ID)"/>
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+        </include>
+    </group>
+
+    <!-- UAV2 -->
+    <group ns="mav2">
+        <!-- MAVROS and vehicle configs -->
+        <arg name="ID" value="2"/>
+        <arg name="fcu_url" default="udp://:14542@localhost:14582"/>
+        <!-- PX4 SITL and vehicle spawn -->
+        <include file="$(find simulation_gazebo)/launch_basic/single_vehicle_spawn_sdf.launch">
+            <arg name="x" value="$(eval 0 + arg('x'))"/>
+            <arg name="y" value="$(eval 1 + arg('y'))"/>
+            <arg name="z" value="$(eval 0 + arg('z'))"/>
+            <arg name="R" value="$(eval 0 + arg('R'))"/>
+            <arg name="P" value="$(eval 0 + arg('P'))"/>
+            <arg name="Y" value="$(eval 0 + arg('Y'))"/>
+            <arg name="model" value="$(arg model)"/>
+            <arg name="mavlink_udp_port" value="14562"/>
+            <arg name="mavlink_tcp_port" value="4562"/>
+            <arg name="ID" value="$(arg ID)"/>
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+        </include>
+    </group>
+
+</launch>
+

@@ -1,10 +1,10 @@
 <launch>
-	<arg name="visualization" default="false"/>
+	<arg name="visualization" default="true"/>
 	<!-- config of 'sitl.launch' -->
 	<arg name="x" default="1"/>
 	<arg name="y" default="0"/>
 	<arg name="z" default="0"/>
-	<arg name="gazebo_gui" default="true"/>
+	<arg name="gazebo_gui" default="false"/>
 	<arg name="world" default="$(find simulation_gazebo)/worlds/empty.world"/>
 	<arg name="mode" default=""/>
 	<!-- Launch Gazebo Simulation -->
@@ -34,7 +34,6 @@
       <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
       
       <remap from="odometry" to="/drone_msg/drone_odom" />
-      <remap from="command/pose" to="/drone_msg/command_pose" />
     </node>
 
     <!-- Differential Flatness Based Controller-->
@@ -43,16 +42,14 @@
       
       <param name="position_controller/use_rate_mode" value="True" />
       
-      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
-      <remap from="command/pose" to="/drone_msg/command_pose" />
+      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
     </node>
 
     <!-- Perception-Aware MPC Controller-->
     <node if="$(eval arg('custom_controller') == 3)" pkg="rpg_mpc" type="mpc_controller_node" name="mpc_controller_node" output="screen">
-      <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_$(arg quad_name).yaml" />
+      <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_mav.yaml" />
 
-      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
-      <remap from="command/pose" to="/drone_msg/command_pose" />
+      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
     </node>
 
 	<!-- run the rviz -->

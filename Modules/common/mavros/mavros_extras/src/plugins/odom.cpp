@@ -47,7 +47,7 @@ public:
 
 	OdometryPlugin() : PluginBase(),
 		odom_nh("~odometry"),
-		fcu_odom_parent_id_des("map"),
+		fcu_odom_parent_id_des("odom"),
 		fcu_odom_child_id_des("base_link")
 	{ }
 
@@ -56,7 +56,7 @@ public:
 		PluginBase::initialize(uas_);
 
 		// frame params:
-		odom_nh.param<std::string>("fcu/odom_parent_id_des", fcu_odom_parent_id_des, "map");
+		odom_nh.param<std::string>("fcu/odom_parent_id_des", fcu_odom_parent_id_des, "odom");
 		odom_nh.param<std::string>("fcu/odom_child_id_des", fcu_odom_child_id_des, "base_link");
 
 		// publishers
@@ -122,7 +122,7 @@ private:
 		Eigen::Affine3d tf_parent2parent_des;
 		Eigen::Affine3d tf_child2child_des;
 
-		lookup_static_transform(fcu_odom_parent_id_des, "map_ned", tf_parent2parent_des);
+		lookup_static_transform(fcu_odom_parent_id_des, "odom_ned", tf_parent2parent_des);
 		lookup_static_transform( fcu_odom_child_id_des, "base_link_frd", tf_child2child_des);
 
 		//! Build 6x6 pose covariance matrix to be transformed and sent

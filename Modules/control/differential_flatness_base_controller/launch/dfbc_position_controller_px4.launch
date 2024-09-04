@@ -27,9 +27,10 @@
     <node pkg="differential_flatness_base_controller" type="dfbc_position_controller_node" name="dfbc_position_controller_node" output="screen">
       <rosparam file="$(find differential_flatness_base_controller)/parameters/position_controller.yaml" />
       
-      <param name="position_controller/use_rate_mode" value="True" />
+      <param name="position_controller/control_frequency" value="200" />
+      <param name="position_controller/poly_interpolation" value="false" />
       
-      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
       <remap from="command/pose" to="/drone_msg/planning/goal" />
     </node>
 

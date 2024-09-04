@@ -4,7 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /无人机状态1
+        - /Drone_State1
         - /Ground_Truth1
         - /Ego_Planner1
       Splitter Ratio: 0.6000000238418579
@@ -161,7 +161,7 @@ Visualization Manager:
           Unreliable: false
           Value: true
       Enabled: true
-      Name: 无人机状态
+      Name: Drone_State
     - Class: rviz/Group
       Displays:
         - Alpha: 1
@@ -201,7 +201,7 @@ Visualization Manager:
           Marker Topic: /ego_planner/init_list
           Name: Init
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -209,7 +209,7 @@ Visualization Manager:
           Marker Topic: /ego_planner/a_star_list
           Name: A*
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -217,7 +217,7 @@ Visualization Manager:
           Marker Topic: /ego_planner/optimal_list
           Name: Opt
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 1

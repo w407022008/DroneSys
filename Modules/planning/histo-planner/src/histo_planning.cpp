@@ -1388,10 +1388,10 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
         double dyaw_n = fabs(cur_yaw-desired_yaw);
         double dyaw_s = sign(desired_yaw-cur_yaw);
         if (dyaw_n<M_PI){
-          yaw_ref_comd += (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
+          yaw_ref_comd += (pow(dyaw_n,0.3))*dyaw_s*delta_yaw;//*sign(yaw_rate-fabs(cur_yaw_rate));
         }else{
           dyaw_n = 2*M_PI-dyaw_n;
-          yaw_ref_comd -= (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
+          yaw_ref_comd -= (pow(dyaw_n,0.3))*dyaw_s*delta_yaw;//*sign(yaw_rate-fabs(cur_yaw_rate));
         }
         if(dyaw_n < yaw_err_th){
           yaw_ref_comd = desired_yaw;
@@ -1434,17 +1434,17 @@ void Histo_Planner::control_cb(const ros::TimerEvent& e)
         }
         desired_yaw = sign(pos_rel[1]) * acos(pos_rel[0] / pos_rel.norm());
         double dyaw_n = fabs(cur_yaw-desired_yaw);
-        double dyaw_s = sign(desired_yaw-cur_yaw);
-        if (dyaw_n<M_PI){
-          yaw_ref_comd += (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
-        }else{
-          dyaw_n = 2*M_PI-dyaw_n;
-          yaw_ref_comd -= (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
-        }
+        // double dyaw_s = sign(desired_yaw-cur_yaw);
+        // if (dyaw_n<M_PI){
+        //   yaw_ref_comd += (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
+        // }else{
+        //   dyaw_n = 2*M_PI-dyaw_n;
+        //   yaw_ref_comd -= (pow(dyaw_n,0.3))*dyaw_s*delta_yaw*sign(yaw_rate-fabs(cur_yaw_rate));
+        // }
         yaw_diff = 0.2*yaw_diff + 0.8*dyaw_n;
-        if(yaw_diff < 0.5*delta_yaw){
+        // if(yaw_diff < 0.5*delta_yaw){
           yaw_ref_comd = desired_yaw;
-        }
+        // }
 
         static int count=0;
         if(yaw_diff > yaw_tracking_err_max && cur_vel.norm() > min_vel_default){

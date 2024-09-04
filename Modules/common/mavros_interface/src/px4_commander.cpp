@@ -1,14 +1,17 @@
 #include <ros/ros.h>
+#include <map>
 #include <geometry_msgs/PoseStamped.h>
 #include <drone_msgs/DroneState.h>
 #include <drone_msgs/ControlCommand.h>
 #include <drone_msgs/Message.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <quadrotor_common/geometry_eigen_conversions.h>
 #include "command_to_mavros.h"
 #include "message_utils.h"
 #define NODE_NAME "px4_commander"
 
 using namespace std;
+map<string,int> command;
 float cur_time;
 float dt = 0;
 float Takeoff_height;
@@ -72,14 +75,21 @@ geometry_msgs::PoseStamped get_rviz_ref_posistion(const drone_msgs::ControlComma
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Callback Function <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void Command_cb(const drone_msgs::ControlCommand::ConstPtr& msg)
 {
-    if( msg->Command_ID  >  Command_Now.Command_ID )
-    {
+    if(command.find(msg->source)==command.end()){
+        command[msg->source] = msg->Command_ID;
         Command_Now = *msg;
-    }else
-    {
-        pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "Wrong Command ID.");
+    }else if(msg->Command_ID > command[Command_Now.source]){
+        Command_Now = *msg;
+    }else{
+        pub_message(message_pub, drone_msgs::Message::WARN, msg->source, "Wrong Command ID.");
     }
-    
+    // if( msg->Command_ID  >  Command_Now.Command_ID )
+    // {
+    //     Command_Now = *msg;
+    // }else
+    // {
+    //     pub_message(message_pub, drone_msgs::Message::WARN, msg->source, "Wrong Command ID.");
+    // }
 }
 void station_command_cb(const drone_msgs::ControlCommand::ConstPtr& msg)
 {
@@ -297,98 +307,92 @@ int main(int argc, char **argv)
             case drone_msgs::ControlCommand::Move:
                 if(Command_Now.Reference_State.Move_frame  == drone_msgs::PositionReference::ENU_FRAME)
                 {
-                    if( Command_Now.Command_ID  >  Command_Last.Command_ID)
+                    if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
                     {
-                        if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
-                        {
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
-                        {
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
-                        {
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
-                        {
-                            Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
-                        {
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.acceleration_ref[0],Command_Now.Reference_State.acceleration_ref[1],Command_Now.Reference_State.acceleration_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
+                    {
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
+                    {
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.acceleration_ref[0],Command_Now.Reference_State.acceleration_ref[1],Command_Now.Reference_State.acceleration_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
                     }
                 }
                 else
                 {
                     // convert to ENU frame
-                    if( Command_Now.Command_ID  >  Command_Last.Command_ID)
+                    if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
                     {
-                        if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_POS )
-                        {
-                            float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
-                            float d_pos_enu[2];                       //the desired xy position in enu Frame (The origin point is the drone)
-                            d_pos_enu[0] = d_pos_body[0] * cos(_DroneState.attitude[2]) - d_pos_body[1] * sin(_DroneState.attitude[2]);
-                            d_pos_enu[1] = d_pos_body[0] * sin(_DroneState.attitude[2]) + d_pos_body[1] * cos(_DroneState.attitude[2]);
+                        float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
+                        float d_pos_enu[2];                       //the desired xy position in enu Frame (The origin point is the drone)
+                        d_pos_enu[0] = d_pos_body[0] * cos(_DroneState.attitude[2]) - d_pos_body[1] * sin(_DroneState.attitude[2]);
+                        d_pos_enu[1] = d_pos_body[0] * sin(_DroneState.attitude[2]) + d_pos_body[1] * cos(_DroneState.attitude[2]);
 
-                            Command_Now.Reference_State.position_ref[0] = _DroneState.position[0] + d_pos_enu[0];
-                            Command_Now.Reference_State.position_ref[1] = _DroneState.position[1] + d_pos_enu[1];
-                            Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.position_ref[2];
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            yaw_sp = _DroneState.attitude[2] + Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
-                        {
-                            //xy velocity mode
-                            float d_vel_body[2] = {Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1]};         //the desired xy velocity in Body Frame
-                            float d_vel_enu[2];                 //the desired xy velocity in NED Frame
+                        Command_Now.Reference_State.position_ref[0] = _DroneState.position[0] + d_pos_enu[0];
+                        Command_Now.Reference_State.position_ref[1] = _DroneState.position[1] + d_pos_enu[1];
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.position_ref[2];
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = _DroneState.attitude[2] + Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_VEL )
+                    {
+                        //xy velocity mode
+                        float d_vel_body[2] = {Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1]};         //the desired xy velocity in Body Frame
+                        float d_vel_enu[2];                 //the desired xy velocity in NED Frame
 
-                            //根据无人机当前偏航角进行坐标系转换
-                            d_vel_enu[0] = d_vel_body[0] * cos(_DroneState.attitude[2]) - d_vel_body[1] * sin(_DroneState.attitude[2]);
-                            d_vel_enu[1] = d_vel_body[0] * sin(_DroneState.attitude[2]) + d_vel_body[1] * cos(_DroneState.attitude[2]);
-                            Command_Now.Reference_State.velocity_ref[0] = d_vel_enu[0];
-                            Command_Now.Reference_State.velocity_ref[1] = d_vel_enu[1];
-                            Command_Now.Reference_State.velocity_ref[2] = Command_Now.Reference_State.velocity_ref[2];
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
-                        {
-                            //xy velocity mode
-                            float d_vel_body[2] = {Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1]};         //the desired xy velocity in Body Frame
-                            float d_vel_enu[2];                   //the desired xy velocity in NED Frame
+                        //根据无人机当前偏航角进行坐标系转换
+                        d_vel_enu[0] = d_vel_body[0] * cos(_DroneState.attitude[2]) - d_vel_body[1] * sin(_DroneState.attitude[2]);
+                        d_vel_enu[1] = d_vel_body[0] * sin(_DroneState.attitude[2]) + d_vel_body[1] * cos(_DroneState.attitude[2]);
+                        Command_Now.Reference_State.velocity_ref[0] = d_vel_enu[0];
+                        Command_Now.Reference_State.velocity_ref[1] = d_vel_enu[1];
+                        Command_Now.Reference_State.velocity_ref[2] = Command_Now.Reference_State.velocity_ref[2];
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_VEL_Z_POS )
+                    {
+                        //xy velocity mode
+                        float d_vel_body[2] = {Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1]};         //the desired xy velocity in Body Frame
+                        float d_vel_enu[2];                   //the desired xy velocity in NED Frame
 
-                            //根据无人机当前偏航角进行坐标系转换
-                            d_vel_enu[0] = d_vel_body[0] * cos(_DroneState.attitude[2]) - d_vel_body[1] * sin(_DroneState.attitude[2]);
-                            d_vel_enu[1] = d_vel_body[0] * sin(_DroneState.attitude[2]) + d_vel_body[1] * cos(_DroneState.attitude[2]);
-                            Command_Now.Reference_State.position_ref[0] = 0;
-                            Command_Now.Reference_State.position_ref[1] = 0;
-                            Command_Now.Reference_State.velocity_ref[0] = d_vel_enu[0];
-                            Command_Now.Reference_State.velocity_ref[1] = d_vel_enu[1];
-                            Command_Now.Reference_State.velocity_ref[2] = 0.0;
+                        //根据无人机当前偏航角进行坐标系转换
+                        d_vel_enu[0] = d_vel_body[0] * cos(_DroneState.attitude[2]) - d_vel_body[1] * sin(_DroneState.attitude[2]);
+                        d_vel_enu[1] = d_vel_body[0] * sin(_DroneState.attitude[2]) + d_vel_body[1] * cos(_DroneState.attitude[2]);
+                        Command_Now.Reference_State.position_ref[0] = 0;
+                        Command_Now.Reference_State.position_ref[1] = 0;
+                        Command_Now.Reference_State.velocity_ref[0] = d_vel_enu[0];
+                        Command_Now.Reference_State.velocity_ref[1] = d_vel_enu[1];
+                        Command_Now.Reference_State.velocity_ref[2] = 0.0;
 
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
-                        {
-                            float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
-                            float d_pos_enu[2];                     //the desired xy position in enu Frame (The origin point is the drone)
-                            d_pos_enu[0] = d_pos_body[0] * cos(_DroneState.attitude[2]) - d_pos_body[1] * sin(_DroneState.attitude[2]);
-                            d_pos_enu[1] = d_pos_body[0] * sin(_DroneState.attitude[2]) + d_pos_body[1] * cos(_DroneState.attitude[2]);
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XY_POS_Z_VEL )
+                    {
+                        float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
+                        float d_pos_enu[2];                     //the desired xy position in enu Frame (The origin point is the drone)
+                        d_pos_enu[0] = d_pos_body[0] * cos(_DroneState.attitude[2]) - d_pos_body[1] * sin(_DroneState.attitude[2]);
+                        d_pos_enu[1] = d_pos_body[0] * sin(_DroneState.attitude[2]) + d_pos_body[1] * cos(_DroneState.attitude[2]);
 
-                            Command_Now.Reference_State.position_ref[0] = _DroneState.position[0] + d_pos_enu[0];
-                            Command_Now.Reference_State.position_ref[1] = _DroneState.position[1] + d_pos_enu[1];
-                            Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
-                            state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
-                            state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
-                            yaw_sp = Command_Now.Reference_State.yaw_ref;
-                        }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
-                        {
-                        pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "XYZ_ACC not Defined. Change to XYZ_ACC in ENU frame");
-                        }
+                        Command_Now.Reference_State.position_ref[0] = _DroneState.position[0] + d_pos_enu[0];
+                        Command_Now.Reference_State.position_ref[1] = _DroneState.position[1] + d_pos_enu[1];
+                        Command_Now.Reference_State.position_ref[2] = _DroneState.position[2] + Command_Now.Reference_State.velocity_ref[2] * dt;
+                        state_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                        state_vel_sp = Eigen::Vector3d(0.0, 0.0 ,Command_Now.Reference_State.velocity_ref[2]);
+                        yaw_sp = Command_Now.Reference_State.yaw_ref;
+                    }else if ( Command_Now.Reference_State.Move_mode  == drone_msgs::PositionReference::XYZ_ACC )
+                    {
+                    pub_message(message_pub, drone_msgs::Message::WARN, NODE_NAME, "XYZ_ACC not Defined. Change to XYZ_ACC in ENU frame");
                     }
                 }
 
@@ -455,14 +459,19 @@ int main(int argc, char **argv)
                 }
                 break;
 
-            // ================================= User_Mode1 =================================
-            case drone_msgs::ControlCommand::User_Mode1:
-                
+            // ================================= AttitudeRate =================================
+            case drone_msgs::ControlCommand::AttitudeRate:
+                _command_to_mavros.send_attitude_rate_setpoint(
+                    quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.desired_att_q),
+                    quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.body_rate),
+                    Command_Now.Attitude_sp.desired_throttle);
                 break;
 
-            // ================================= User_Mode2 =================================
-            case drone_msgs::ControlCommand::User_Mode2:
-                
+            // ================================= Rate =================================
+            case drone_msgs::ControlCommand::Rate:
+                _command_to_mavros.send_rate_setpoint(
+                    quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.body_rate),
+                    Command_Now.Attitude_sp.desired_throttle);
                 break;
         }
 
@@ -548,6 +557,13 @@ geometry_msgs::PoseStamped get_rviz_ref_posistion(const drone_msgs::ControlComma
         ref_pose.pose.position.x = _DroneState.position[0];
         ref_pose.pose.position.y = _DroneState.position[1];
         ref_pose.pose.position.z = Disarm_height;
+        ref_pose.pose.orientation = _DroneState.attitude_q;
+    }
+    else if(cmd.Mode >= drone_msgs::ControlCommand::AttitudeRate)
+    {
+        ref_pose.pose.position.x = cmd.Reference_State.position_ref[0];
+        ref_pose.pose.position.y = cmd.Reference_State.position_ref[1];
+        ref_pose.pose.position.z = cmd.Reference_State.position_ref[2];
         ref_pose.pose.orientation = _DroneState.attitude_q;
     }
     else

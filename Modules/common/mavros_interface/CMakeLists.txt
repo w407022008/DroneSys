@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_eigen
   mavros_msgs
   drone_msgs
+  quadrotor_common
 )
 
 ## System dependencies are found with CMake's conventions
@@ -103,15 +104,15 @@ install(TARGETS px4_transceiver px4_commander
 # )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
+install(DIRECTORY include
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-#install(DIRECTORY launch/
-#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-#)
+# install(DIRECTORY launch/
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+# )
 
 #############
 ## Testing ##

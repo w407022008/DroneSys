@@ -4,6 +4,9 @@ catkin_make --source Driver --build build/Driver
 ## Basic common msgs
 bash Tools/compile_base.sh
 
+## Experiment 
+catkin_make --source Experiment --build build/Experiment
+
 ## Controller
 bash Tools/compile_module_control.sh
 
@@ -14,14 +17,10 @@ catkin_make --source Modules/perception --build build/perception
 bash Tools/compile_module_slam.sh
 
 ## Planning
-catkin_make --source Modules/planning --build build/planning -j
+catkin_make --source Modules/planning --build build/planning
 
 ## Simulator
 bash Tools/compile_module_simulator.sh
-#bash Tools/simulator/compile_gazebo.sh
-#bash Tools/simulator/compile_rotors.sh
-#bash Tools/simulator/compile_rpg.sh
-#catkin_make --source Simulator/planning_simulator --build build/Simulator/planning_simulator
 
 ## Tools
 catkin_make --source Modules/tools --build build/tools

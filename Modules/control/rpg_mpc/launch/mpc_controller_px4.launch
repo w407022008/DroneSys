@@ -27,7 +27,7 @@
     <node pkg="rpg_mpc" type="mpc_controller_node" name="mpc_controller_node" output="screen">
       <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_$(arg quad_name).yaml" />
 
-      <remap from="autopilot/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
       <remap from="command/pose" to="/drone_msg/planning/goal" />
     </node>
 

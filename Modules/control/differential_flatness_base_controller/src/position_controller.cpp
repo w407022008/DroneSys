@@ -509,7 +509,10 @@ Eigen::Vector3d PositionController::computeFeedBackControlBodyrates(
   sgn = qw/abs(qw);
   double scl = 1/sqrt(qw*qw+qz*qz);
   Eigen::Vector3d q_erp = Eigen::Vector3d((qw*qx-qy*qz)*scl,(qw*qy+qx*qz)*scl,0.0);
-  Eigen::Vector3d q_ey = Eigen::Vector3d(0.0,0.0,qz*scl);
+  double yaw_error = qz*scl;
+  quadrotor_common::limit(&yaw_error, -config.yaw_error_max,
+                          config.yaw_error_max);
+  Eigen::Vector3d q_ey = Eigen::Vector3d(0.0,0.0,yaw_error);
 
   bodyrates = 2 * (config.krp * q_erp + config.kyaw * q_ey);
 

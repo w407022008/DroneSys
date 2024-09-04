@@ -28,7 +28,9 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <mav_msgs/RollPitchYawrateThrust.h>
+#include <mav_msgs/eigen_mav_msgs.h>
 #include <nav_msgs/Odometry.h>
+#include <std_msgs/Bool.h>
 #include <quadrotor_msgs/Trajectory.h>
 #include <quadrotor_msgs/TrajectoryPoint.h>
 #include <quadrotor_common/trajectory_point.h>
@@ -58,10 +60,12 @@ class DFBCPositionControllerNode {
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
 
-  std::atomic_bool destructor_invoked_;
+  bool destructor_invoked_;
   float control_frequency_;
   bool poly_interpolation_;
   bool rate_control_;
+  int kPolynomialOrderOfContinuity_;
+  double go_to_pose_max_velocity_, go_to_pose_max_normalized_thrust_, go_to_pose_max_roll_pitch_rate_,kGoToPoseTrajectorySamplingFrequency_;
 
   // subscribers
   ros::Subscriber cmd_trajectory_sub_;
@@ -69,18 +73,23 @@ class DFBCPositionControllerNode {
   ros::Subscriber cmd_trajectory_point_sub_;
   ros::Subscriber cmd_roll_pitch_yawrate_thrust_sub_;
   ros::Subscriber odometry_sub_;
+  ros::Subscriber active_sub_;
 
   ros::Publisher control_command_pub_;
   ros::Publisher mavros_setpoint_raw_attitude_pub;
+  ros::Publisher drone_msg_pub;
 
   quadrotor_common::Trajectory trajectory_;
   quadrotor_common::TrajectoryPoint odometry_state_;
   quadrotor_common::QuadStateEstimate odometry_;
   quadrotor_common::Trajectory reference_trajectory_;
 
-  ros::Timer odometry_timer_;
+  drone_msgs::ControlCommand Command_to_pub;
+  
+  ros::Timer control_timer_;
   ros::Time time_start_trajectory_execution_;
 
+  void CommandActiveCallback(const std_msgs::Bool& active);
   void RollPitchYawrateThrustCallback(
       const mav_msgs::RollPitchYawrateThrustConstPtr& roll_pitch_yawrate_thrust_reference_msg);
   

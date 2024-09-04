@@ -7,6 +7,8 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 #include <nav_msgs/Path.h>
+#include <std_msgs/Bool.h>
+#include <quadrotor_msgs/TrajectoryPoint.h>
 #include <drone_msgs/Message.h>
 #include <drone_msgs/DroneState.h>
 
@@ -31,7 +33,7 @@ float time_trajectory = 0.0;
 float trajectory_total_time = 50.0;
 float cur_pos[3];
 bool armed;
-bool active_;
+bool custom_controller_available = false;
 int Remote_Mode = -1;
 int controller_switch = 0;
 std::string mesg;
@@ -41,7 +43,7 @@ bool _pause_ = false;
 
 
 ros::Subscriber state_sub;
-ros::Publisher move_pub, command_pose_pub, message_pub, ref_trajectory_pub;
+ros::Publisher move_pub, command_pose_pub, command_trajPoint_pub, message_pub, ref_trajectory_pub, command_active_pub;
 
 void state_cb(const drone_msgs::DroneStateConstPtr& msg)
 {
@@ -92,7 +94,9 @@ int main(int argc, char **argv)
 
     // [PUB] control command
     move_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 10);
-    command_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/drone_msg/command_pose", 10);
+    command_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/command/pose", 10);
+    command_trajPoint_pub = nh.advertise<quadrotor_msgs::TrajectoryPoint>("/command/reference_state", 10);
+    command_active_pub = nh.advertise<std_msgs::Bool>("command/active",10);
 
     // [PUB] Rviz trajectory
     ref_trajectory_pub = nh.advertise<nav_msgs::Path>("/drone_msg/reference_trajectory", 10);
@@ -121,13 +125,13 @@ int main(int argc, char **argv)
     // Remote mode
     while(ros::ok())
     {
-        active_ = false;
         // system ("clear");
         if(Remote_Mode == 0)
         {
             setpointIn();
         }else if(Remote_Mode == 1)
         {
+            custom_controller_available = false;
             keyboardControl();
         }else//(Remote_Mode == -1)
         {
@@ -165,6 +169,7 @@ void setpointIn()
 {
     KeyboardEvent keyboardcontrol;
     key_now = keyboardcontrol.GetKeyOnce();
+    if(key_now == U_KEY_NONE) return;
 
     int Move_mode = 0;
     int Move_frame = 0;
@@ -199,7 +204,7 @@ void setpointIn()
             Command_to_pub.Reference_State.time_from_start = 0.0;
             generate_com(Move_mode, state_desired);
 
-            active_ = true;
+            custom_controller_available = true;
 
             system ("clear");
             cout << "Type R for arming or disarm" <<endl;
@@ -211,6 +216,7 @@ void setpointIn()
         // If type in R: switch to OFFBOARD mode and Arming or Disarm
         case U_KEY_R:
             arm_disarm();
+            custom_controller_available = false;
 
             return;
 
@@ -221,6 +227,7 @@ void setpointIn()
             Command_to_pub.Mode = drone_msgs::ControlCommand::Takeoff;
             Command_to_pub.Reference_State.yaw_ref = 0.0;
             Command_to_pub.source = NODE_NAME;
+            custom_controller_available = false;
             
             break;
 
@@ -230,6 +237,7 @@ void setpointIn()
         
             Command_to_pub.Mode = drone_msgs::ControlCommand::Land;
             Command_to_pub.source = NODE_NAME;
+            custom_controller_available = false;
             
             break;
 
@@ -239,6 +247,7 @@ void setpointIn()
             
         // If type in H: Hovering
         case U_KEY_H:
+            custom_controller_available = false;
             if(key_last != key_now){
                 pub_message(message_pub, drone_msgs::Message::NORMAL, NODE_NAME, "Switch to Hold Mode.");
 
@@ -263,25 +272,40 @@ void setpointIn()
     Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
 
     if(controller_switch){
-        if(active_){
-            geometry_msgs::PoseStamped pose_cmd;
-            pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
-            pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
-            pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
-            Eigen::Quaterniond q_yaw = Eigen::Quaterniond(
-                                    Eigen::AngleAxisd(
-                                        Command_to_pub.Reference_State.yaw_ref, 
-                                        Eigen::Vector3d::UnitZ()));
-            pose_cmd.pose.orientation.w = q_yaw.w();
-            pose_cmd.pose.orientation.x = q_yaw.x();
-            pose_cmd.pose.orientation.y = q_yaw.y();
-            pose_cmd.pose.orientation.z = q_yaw.z();
+        std_msgs::Bool command_active;
+        command_active.data = custom_controller_available;
+        command_active_pub.publish(command_active);
+    }
+    if(controller_switch && custom_controller_available){
+        // quadrotor_msgs::TrajectoryPoint pose_cmd;
+        // pose_cmd.time_from_start = ros::Duration(Command_to_pub.Reference_State.time_from_start);
+        // pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
+        // pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
+        // pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
+        // pose_cmd.velocity.linear.x = Command_to_pub.Reference_State.velocity_ref[0];
+        // pose_cmd.velocity.linear.y = Command_to_pub.Reference_State.velocity_ref[1];
+        // pose_cmd.velocity.linear.z = Command_to_pub.Reference_State.velocity_ref[2];
+        // pose_cmd.heading = Command_to_pub.Reference_State.yaw_ref;
 
-            command_pose_pub.publish(pose_cmd);
-        }
+        // command_trajPoint_pub.publish(pose_cmd);
+        geometry_msgs::PoseStamped pose_cmd;
+        pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
+        pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
+        pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
+        Eigen::Quaterniond q_yaw = Eigen::Quaterniond(
+                                Eigen::AngleAxisd(
+                                    Command_to_pub.Reference_State.yaw_ref, 
+                                    Eigen::Vector3d::UnitZ()));
+        pose_cmd.pose.orientation.w = q_yaw.w();
+        pose_cmd.pose.orientation.x = q_yaw.x();
+        pose_cmd.pose.orientation.y = q_yaw.y();
+        pose_cmd.pose.orientation.z = q_yaw.z();
+
+        command_pose_pub.publish(pose_cmd);
     }else{
         move_pub.publish(Command_to_pub);
     }
+    key_last = key_now;
 }
 
 void keyboardControl()
@@ -295,8 +319,7 @@ void keyboardControl()
         if(trajmove.find(key_last) != trajmove.end())
         {
             key_now = key_last;
-        }
-        if(joymove.find(key_last) != joymove.end())
+        }else if(joymove.find(key_last) != joymove.end())
         {
             key_now = U_KEY_PASS;
         }
@@ -468,6 +491,7 @@ void keyboardControl()
                 dis = sqrt(dis);
 
                 if(!_pause_ && time_trajectory>0.01){
+                    custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
                 }else{
                     if(_pause_){
@@ -534,6 +558,7 @@ void keyboardControl()
                 dis = sqrt(dis);
 
                 if(!_pause_ && time_trajectory>0.01){
+                    custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
                 }else{
                     if(_pause_){
@@ -587,6 +612,7 @@ void keyboardControl()
             }
             if(time_trajectory < trajectory_total_time)
             {
+                custom_controller_available = true;
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
@@ -596,6 +622,7 @@ void keyboardControl()
                     Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
                     Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
                 }else{
+                    custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
                 }
 
@@ -623,6 +650,7 @@ void keyboardControl()
             }
             if(time_trajectory < trajectory_total_time)
             {
+                custom_controller_available = true;
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
@@ -632,6 +660,7 @@ void keyboardControl()
                     Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
                     Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
                 }else{
+                    custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
                 }
 
@@ -737,23 +766,25 @@ void keyboardControl()
     Command_to_pub.Command_ID = Command_to_pub.Command_ID + 1;
     
     if(controller_switch){
-        geometry_msgs::PoseStamped pose_cmd;
+        std_msgs::Bool command_active;
+        command_active.data = custom_controller_available;
+        command_active_pub.publish(command_active);
+    }
+    if(controller_switch && custom_controller_available){
+        quadrotor_msgs::TrajectoryPoint pose_cmd;
+        pose_cmd.time_from_start = ros::Duration(Command_to_pub.Reference_State.time_from_start);
         pose_cmd.pose.position.x = Command_to_pub.Reference_State.position_ref[0];
         pose_cmd.pose.position.y = Command_to_pub.Reference_State.position_ref[1];
         pose_cmd.pose.position.z = Command_to_pub.Reference_State.position_ref[2];
-        Eigen::Quaterniond q_yaw = Eigen::Quaterniond(
-                                Eigen::AngleAxisd(
-                                    Command_to_pub.Reference_State.yaw_ref, 
-                                    Eigen::Vector3d::UnitZ()));
-        pose_cmd.pose.orientation.w = q_yaw.w();
-        pose_cmd.pose.orientation.x = q_yaw.x();
-        pose_cmd.pose.orientation.y = q_yaw.y();
-        pose_cmd.pose.orientation.z = q_yaw.z();
+        pose_cmd.velocity.linear.x = Command_to_pub.Reference_State.velocity_ref[0];
+        pose_cmd.velocity.linear.y = Command_to_pub.Reference_State.velocity_ref[1];
+        pose_cmd.velocity.linear.z = Command_to_pub.Reference_State.velocity_ref[2];
+        pose_cmd.heading = Command_to_pub.Reference_State.yaw_ref;
 
-        command_pose_pub.publish(pose_cmd);
-    }else{
+        command_trajPoint_pub.publish(pose_cmd);
+    }else
         move_pub.publish(Command_to_pub);
-    }
+    
 }
 
 

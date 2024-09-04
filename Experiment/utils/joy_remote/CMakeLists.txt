@@ -23,7 +23,7 @@ include_directories(
        include
        ${catkin_INCLUDE_DIRS}
        ${Eigen3_INCLUDE_DIRS}
-       ${PROJECT_SOURCE_DIR}/../../common/common/include/common
+       ${PROJECT_SOURCE_DIR}/../../../Modules/common/common/include/common
      )
 
 

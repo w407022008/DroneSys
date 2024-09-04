@@ -5,9 +5,10 @@ bash Tools/compile_base.sh
 catkin_make --source Driver/realsense-ros-2.3.2 --build build/Driver/realsense-ros-2.3.2
 #catkin_make --source Driver/realsense-ros-2.3.2 --build build/Driver/realsense-ros -DCATKIN_ENABLE_TESTING=False -DCMAKE_BUILD_TYPE=Release
 
-## Experiment PX4
+## Experiment
+### ============ PX4 ============
 catkin_make --source Experiment/drone_experiment --build build/Experiment/drone_experiment
-## Experiment rpg
+### ============ rpg ============
 #catkin_make --source Experiment/bridges/sbus_bridge --build build/Experiment/bridges/sbus_bridge
 #catkin_make --source Experiment/utils/manual_flight_assistant --build build/Experiment/utils/manual_flight_assistant
 #catkin_make --source Experiment/utils/vbat_thrust_calibration --build build/Experiment/utils/vbat_thrust_calibration
@@ -29,12 +30,13 @@ catkin_make --source Modules/control/rpg_mpc --build build/control/rpg_mpc
 
 ## IO & Perception
 catkin_make --source Modules/perception/points_worker --build build/perception/points_worker
-catkin_make --source Modules/perception/OptiTrack --build build/perception/OptiTrack
-catkin_make --source Modules/perception/semi_global_matching --build build/perception/semi_global_matching
-catkin_make --source Modules/perception/elas_stereo_matching --build build/perception/elas_stereo_matching
+#catkin_make --source Modules/perception/OptiTrack --build build/perception/OptiTrack
+#catkin_make --source Modules/perception/semi_global_matching --build build/perception/semi_global_matching
+#catkin_make --source Modules/perception/elas_stereo_matching --build build/perception/elas_stereo_matching
 #catkin_make --source Modules/perception/state_predictor --build build/perception/state_predictor
 
 ## SLAM
+bash Tools/slam/compile_point_lio.sh
 bash Tools/slam/compile_openvins.sh
 bash Tools/slam/compile_vins.sh
 bash Tools/slam/compile_msckf_vio.sh

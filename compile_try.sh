@@ -5,9 +5,10 @@ bash Tools/compile_base.sh
 catkin_make --source Driver/realsense-ros-2.3.2 --build build/Driver/realsense-ros-2.3.2
 catkin_make --source Driver/unitree_lidar_ros --build build/Driver/unitree_lidar_ros
 
-## Experiment PX4
+## Experiment 
+### ============ PX4 ============
 catkin_make --source Experiment/drone_experiment --build build/Experiment/drone_experiment
-## Experiment rpg
+### ============ rpg ============
 #catkin_make --source Experiment/bridges/sbus_bridge --build build/Experiment/bridges/sbus_bridge
 #catkin_make --source Experiment/utils/manual_flight_assistant --build build/Experiment/utils/manual_flight_assistant
 #catkin_make --source Experiment/utils/vbat_thrust_calibration --build build/Experiment/utils/vbat_thrust_calibration

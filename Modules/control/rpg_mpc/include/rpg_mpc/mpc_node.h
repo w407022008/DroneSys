@@ -28,6 +28,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <mav_msgs/RollPitchYawrateThrust.h>
+#include <mav_msgs/eigen_mav_msgs.h>
 #include <nav_msgs/Odometry.h>
 #include <quadrotor_msgs/Trajectory.h>
 #include <quadrotor_msgs/TrajectoryPoint.h>
@@ -57,12 +58,14 @@ class MPCControllerNode {
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
 
-  std::atomic_bool destructor_invoked_;
+  bool destructor_invoked_;
   float control_frequency_;
   bool poly_interpolation_;
   bool rate_control_;
+  drone_msgs::ControlCommand Command_to_pub;
 
   // subscribers
+  ros::Subscriber cmd_active_sub_;
   ros::Subscriber cmd_trajectory_sub_;
   ros::Subscriber cmd_pose_sub_;
   ros::Subscriber cmd_trajectory_point_sub_;
@@ -71,6 +74,7 @@ class MPCControllerNode {
 
   ros::Publisher control_command_pub_;
   ros::Publisher mavros_setpoint_raw_attitude_pub;
+  ros::Publisher drone_msg_pub;
 
   quadrotor_common::Trajectory trajectory_;
   quadrotor_common::TrajectoryPoint odometry_state_;
@@ -80,6 +84,7 @@ class MPCControllerNode {
   ros::Timer odometry_timer_;
   ros::Time time_start_trajectory_execution_;
 
+  void CommandActiveCallback(const std_msgs::Bool& active);
   void RollPitchYawrateThrustCallback(
       const mav_msgs::RollPitchYawrateThrustConstPtr& roll_pitch_yawrate_thrust_reference_msg);
   
