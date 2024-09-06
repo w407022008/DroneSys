@@ -122,7 +122,7 @@ private:
 		Eigen::Affine3d tf_parent2parent_des;
 		Eigen::Affine3d tf_child2child_des;
 
-		lookup_static_transform(fcu_odom_parent_id_des, "odom_ned", tf_parent2parent_des);
+		lookup_static_transform(fcu_odom_parent_id_des, "map", tf_parent2parent_des);
 		lookup_static_transform( fcu_odom_child_id_des, "base_link_frd", tf_child2child_des);
 
 		//! Build 6x6 pose covariance matrix to be transformed and sent
