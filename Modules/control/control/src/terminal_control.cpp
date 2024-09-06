@@ -32,6 +32,7 @@ std::vector<geometry_msgs::PoseStamped> posehistory_vector_;
 float time_trajectory = 0.0;
 float trajectory_total_time = 50.0;
 float cur_pos[3];
+float init_pos_xy[2];
 bool armed;
 bool custom_controller_available = false;
 int Remote_Mode = -1;
@@ -49,6 +50,10 @@ void state_cb(const drone_msgs::DroneStateConstPtr& msg)
 {
     // _DroneState = *msg; // in ENU frame
     armed = msg->armed;
+    if(!armed){
+        init_pos_xy[0] = msg->position[0];
+        init_pos_xy[1] = msg->position[1];
+    }
     cur_pos[0] = msg->position[0];
     cur_pos[1] = msg->position[1];
     cur_pos[2] = msg->position[2];
@@ -82,27 +87,31 @@ void Draw_in_rviz(const drone_msgs::PositionReference& pos_ref, bool draw_trajec
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "terminal_control");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh("~");
 
     cout.setf(ios::fixed);
     cout<<setprecision(2);
     cout.setf(ios::left);
     cout.setf(ios::showpoint);
+    
+    string uav_name;
+    nh.param<string>("uav_name", uav_name, "");
+    if(uav_name!="") cout<<"[terminal_control]: uav_name: "<<uav_name<<endl;
 
     // [SUB] Drone state
-    state_sub = nh.subscribe<drone_msgs::DroneState>("/drone_msg/drone_state", 10, state_cb);
+    state_sub = nh.subscribe<drone_msgs::DroneState>(uav_name+"/drone_msg/drone_state", 10, state_cb);
 
     // [PUB] control command
-    move_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 10);
-    command_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/command/pose", 10);
-    command_trajPoint_pub = nh.advertise<quadrotor_msgs::TrajectoryPoint>("/command/reference_state", 10);
-    command_active_pub = nh.advertise<std_msgs::Bool>("command/active",10);
+    move_pub = nh.advertise<drone_msgs::ControlCommand>(uav_name+"/drone_msg/control_command", 10);
+    command_pose_pub = nh.advertise<geometry_msgs::PoseStamped>(uav_name+"/command/pose", 10);
+    command_trajPoint_pub = nh.advertise<quadrotor_msgs::TrajectoryPoint>(uav_name+"/command/reference_state", 10);
+    command_active_pub = nh.advertise<std_msgs::Bool>(uav_name+"/command/active",10);
 
     // [PUB] Rviz trajectory
-    ref_trajectory_pub = nh.advertise<nav_msgs::Path>("/drone_msg/reference_trajectory", 10);
+    ref_trajectory_pub = nh.advertise<nav_msgs::Path>(uav_name+"/drone_msg/reference_trajectory", 10);
 
     // [PUB] ground station messages
-    message_pub = nh.advertise<drone_msgs::Message>("/drone_msg/message", 10);
+    message_pub = nh.advertise<drone_msgs::Message>(uav_name+"/drone_msg/message", 10);
 
     // Initialization: Idle mode default
     Command_to_pub.Mode                                = drone_msgs::ControlCommand::Idle;
@@ -480,7 +489,7 @@ void keyboardControl()
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
-                Command_to_pub.Reference_State = Traj_gen.Circle_trajectory_generation(time_trajectory);
+                Command_to_pub.Reference_State = Traj_gen.Circle_trajectory_generation(time_trajectory, init_pos_xy);
 
                 float dis=0.0, dif[3];
                 for(int i=0;i<3;i++)
@@ -547,7 +556,7 @@ void keyboardControl()
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
-                Command_to_pub.Reference_State = Traj_gen.Eight_trajectory_generation(time_trajectory);
+                Command_to_pub.Reference_State = Traj_gen.Eight_trajectory_generation(time_trajectory, init_pos_xy);
 
                 float dis=0.0, dif[3];
                 for(int i=0;i<3;i++)
@@ -616,7 +625,7 @@ void keyboardControl()
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
-                Command_to_pub.Reference_State = Traj_gen.Step_trajectory_generation(time_trajectory);
+                Command_to_pub.Reference_State = Traj_gen.Step_trajectory_generation(time_trajectory, init_pos_xy);
                 if(_pause_){
                     Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
                     Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
@@ -654,7 +663,7 @@ void keyboardControl()
                 Command_to_pub.Mode = drone_msgs::ControlCommand::Move;
                 Command_to_pub.source = NODE_NAME;
 
-                Command_to_pub.Reference_State = Traj_gen.Line_trajectory_generation(time_trajectory);
+                Command_to_pub.Reference_State = Traj_gen.Line_trajectory_generation(time_trajectory, init_pos_xy);
                 if(_pause_){
                     Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
                     Command_to_pub.Reference_State.velocity_ref[1] = 0.0;

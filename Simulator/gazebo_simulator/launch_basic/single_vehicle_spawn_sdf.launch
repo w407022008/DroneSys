@@ -70,4 +70,11 @@
         <param name="uav_name" value="/$(arg vehicle)" />
         <rosparam command="load" file="$(find simulation_gazebo)/config/control_config/terminal_control.yaml" />
     </node>
+    <!-- Geometric Controller -->
+    <node pkg="geometric_control" type="geometric_position_controller_node" name="geometric_controller" output="screen" >
+      <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
+      
+      <remap from="odometry" to="drone_msg/drone_odom" />
+    </node>
+
 </launch>

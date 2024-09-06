@@ -51,10 +51,10 @@ MPCControllerNode::MPCControllerNode(
       this, ros::TransportHints().tcpNoDelay());
 
   control_command_pub_ = nh_.advertise<quadrotor_msgs::ControlCommand>("control_command", 1);
-  drone_msg_pub = nh_.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 1);
+  drone_msg_pub = nh_.advertise<drone_msgs::ControlCommand>("drone_msg/control_command", 1);
   Command_to_pub.source = "mpc";
   Command_to_pub.Command_ID = 0;
-  mavros_setpoint_raw_attitude_pub = nh_.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
+  mavros_setpoint_raw_attitude_pub = nh_.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
   if(control_frequency_>0.0){
     odometry_timer_ = nh_.createTimer(ros::Duration(1.0/control_frequency_), &MPCControllerNode::TimedPublishCommand, this);
   }

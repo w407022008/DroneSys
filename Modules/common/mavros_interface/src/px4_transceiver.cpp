@@ -18,6 +18,7 @@ int input_source;
 float rate_hz;
 float yaw_offset;
 ros::Time cur_pos_time;
+string frame_id, child_frame_id, uav_name;
 // reset origin before taking off
 bool reset_origin;
 bool armed_last = false, armed_cur=false;
@@ -26,7 +27,7 @@ Eigen::Vector3f reset_origin_, cur_pos;
 int optitrack_frame;
 string object_name;
 // Vision
-bool d435i_with_imu;
+bool camera_with_imu;
 bool vel_pub;
 
 // interpolation
@@ -56,8 +57,8 @@ ros::Publisher odom_pub;
 ros::Publisher trajectory_pub;
 
 //[SUB]
+ros::Subscriber tf_sub;
 ros::Subscriber optitrack_sub;
-ros::Subscriber lidar_sub;
 ros::Subscriber gazebo_sub;
 ros::Subscriber t265_sub;
 ros::Subscriber vins_fusion_sub;
@@ -67,9 +68,9 @@ ros::Subscriber joy_sub;
 void vision_pos_interpolation();
 void publish(drone_msgs::DroneState State_from_fcu);
 
-void lidar_cb(const tf2_msgs::TFMessage::ConstPtr &msg)
+void tf_cb(const tf2_msgs::TFMessage::ConstPtr &msg)
 {
-    if (msg->transforms[0].header.frame_id == "map" && msg->transforms[0].child_frame_id == "base_link" && input_source == 1)  
+    if (msg->transforms[0].header.frame_id == frame_id && msg->transforms[0].child_frame_id == child_frame_id && input_source == 1)  
     {
         geometry_msgs::PoseStamped pose_msg;
 
@@ -279,14 +280,13 @@ void vins_fusion_cb(const nav_msgs::Odometry::ConstPtr &msg)
 {
     if (msg->header.frame_id == "world")
     {
-        // geometry_msgs::PoseStamped pose_msg;
         nav_msgs::Odometry nav_msg;
         geometry_msgs::PoseStamped pose_msg;
 
         Eigen::Quaterniond q_;
         Eigen::Vector3f pos;
         Eigen::Vector3f vel;
-        if(d435i_with_imu)
+        if(camera_with_imu)
         {
             //vio_imu_rfu_frame to vio_enu_rfu_frame
             pos.x() = msg->pose.pose.position.x - reset_origin_[0];
@@ -415,7 +415,7 @@ void orb_slam3_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
         pose_msg.pose.position.z = msg->pose.position.z - reset_origin_[2];
         
         Eigen::Quaterniond q_;
-        if(d435i_with_imu)
+        if(camera_with_imu)
         {
             //vio_imu_rub_frame to vio_imu_rfu_frame
             // because init meas is (0.707, 0.0, 0.707, 0.0)
@@ -514,39 +514,54 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_transceiver");
     ros::NodeHandle nh("~");
 
+    nh.param<string>("uav_name", uav_name, "");
+    if(uav_name!="") cout<<"[perception]: uav_name: "<<uav_name<<endl;
     // 0: vicon， 1: Catographer SLAM, 2: gazebo ground truth, 3: T265, 4: VINSFusion, 5: ORBSLAM3
     nh.param<int>("input_source", input_source, 0);
-    // Optitrack frame convention 0: Z-up -- 1: Y-up (See the configuration in the motive software)
-    nh.param<int>("optitrack_frame", optitrack_frame, 1); 
-    // Rigid body name defined in Mocap system
-    nh.param<string>("object_name", object_name, "UAV");
-    // VO or VIO
-    nh.param<bool>("d435i_with_imu", d435i_with_imu, true);
+    cout<<"[perception]:input_source: "<<input_source<<endl;
     nh.param<bool>("vel_pub", vel_pub, true);
+    cout<<"[perception]:publish odometry vel: "<<(vel_pub?"true":"false")<<endl;
     // pub rate
     nh.param<float>("rate_hz", rate_hz, 20);
+    cout<<"[perception]:rate_hz: "<<rate_hz<<endl;
     // fixed yaw offset from measurement
     nh.param<float>("offset_yaw", yaw_offset, 0);
+    cout<<"[perception]:offset_yaw: "<<yaw_offset<<endl;
     // Joystick half dead band
     nh.param<float>("dead_band", dead_band, 0.1);
+    cout<<"[perception]:joystick half dead band: "<<dead_band<<endl;
     // reset origin before taking off
     nh.param<bool>("reset_origin", reset_origin, false);
+    cout<<"[perception]:reset_origin: "<<reset_origin<<endl;
+
+    if(input_source==0){
+        // Optitrack frame convention 0: Z-up -- 1: Y-up (See the configuration in the motive software)
+        nh.param<int>("optitrack_frame", optitrack_frame, 1); 
+        // Rigid body name defined in Mocap system
+        nh.param<string>("object_name", object_name, "UAV");
+        cout<<"[perception]:optitrack_frame: "<<optitrack_frame<<endl;
+        cout<<"[perception]:object_name: "<<object_name<<endl;
+    }
+    if(input_source==1){
+        nh.param<std::string>("frame_id", frame_id, "map");
+        nh.param<std::string>("child_frame_id", child_frame_id, "base_link");
+        cout<<"[perception]:tf_callback frame_id: "<<frame_id<<endl;
+        cout<<"[perception]:tf_callback child_frame_id: "<<child_frame_id<<endl;
+    }
+
+    if(input_source>=4){
+        // VO or VIO
+        nh.param<bool>("camera_with_imu", camera_with_imu, true);
+        cout<<"[perception]:camera_with_imu: "<<(camera_with_imu?"true":"false")<<endl;
+    }
+    
     // interpolation
     nh.param<bool>("interpolation", interpolation, false);
-    nh.param<float>("interpolation_rate", interpolation_rate, 50.0);
-    nh.param<int>("interpolation_order", interpolation_order, 3);
-    nh.param<int>("interpolation_sample_num", interpolation_sample_num, 10);
-
-    // print
-    cout<<"[perception]:input_source: "<<input_source<<endl;
-    cout<<"[perception]:rate_hz: "<<rate_hz<<endl;
-    cout<<"[perception]:offset_yaw: "<<yaw_offset<<endl;
-    if(input_source==0) cout<<"[perception]:optitrack_frame: "<<optitrack_frame<<endl;
-    if(input_source==0) cout<<"[perception]:object_name: "<<object_name<<endl;
-    if(input_source>=4)cout<<"[perception]:d435i_with_imu: "<<d435i_with_imu<<endl;
-    cout<<"[perception]:reset_origin: "<<reset_origin<<endl;
-    cout<<"[perception]:interpolation: "<<interpolation<<endl;
+    cout<<"[perception]:interpolation: "<<(interpolation?"true":"false")<<endl;
     if(interpolation){
+        nh.param<float>("interpolation_rate", interpolation_rate, 50.0);
+        nh.param<int>("interpolation_order", interpolation_order, 3);
+        nh.param<int>("interpolation_sample_num", interpolation_sample_num, 10);
         cout<<"[perception]:interpolation_rate: "<<interpolation_rate<<endl;
         cout<<"[perception]:interpolation_order: "<<interpolation_order<<endl;
         cout<<"[perception]:interpolation_sample_num: "<<interpolation_sample_num<<endl;
@@ -554,43 +569,43 @@ int main(int argc, char **argv)
 
     // [SUB]
     if(input_source==0) optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/"+ object_name + "/pose", 100, mocap_cb);
-    if(input_source==1) lidar_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 100, lidar_cb);
-    if(input_source==2) gazebo_sub = nh.subscribe<nav_msgs::Odometry>("/drone_msg/ground_truth/odometry", 100, gazebo_cb);
-    if(input_source==3) t265_sub = nh.subscribe<nav_msgs::Odometry>("/t265/odom/sample", 100, t265_cb);
-    if(input_source==4) vins_fusion_sub = nh.subscribe<nav_msgs::Odometry>("/vins_estimator/odometry", 100, vins_fusion_cb);
-    if(input_source==5) orb_slam3_sub = nh.subscribe<geometry_msgs::PoseStamped>("/orb_slam3_ros/camera", 100, orb_slam3_cb);
+    if(input_source==1) tf_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 100, tf_cb);
+    if(input_source==2) gazebo_sub = nh.subscribe<nav_msgs::Odometry>(uav_name+"/drone_msg/ground_truth/odometry", 100, gazebo_cb);
+    if(input_source==3) t265_sub = nh.subscribe<nav_msgs::Odometry>(uav_name+"/t265/odom/sample", 100, t265_cb);
+    if(input_source==4) vins_fusion_sub = nh.subscribe<nav_msgs::Odometry>(uav_name+"vins_estimator/odometry", 100, vins_fusion_cb);
+    if(input_source==5) orb_slam3_sub = nh.subscribe<geometry_msgs::PoseStamped>(uav_name+"orb_slam3_ros/camera", 100, orb_slam3_cb);
 
     joy_sub = nh.subscribe<sensor_msgs::Joy>("/joy", 100, joy_cb);
 
     // [PUB]
     // Position + Attitude
     // mavros_extras/src/plugins/vision_pose_estimate.cpp: MavLink message (VISION_POSITION_ESTIMATE(#102)) -> uORB message (vehicle_visual_odometry.msg)
-    vision_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 10);
+    vision_pose_pub = nh.advertise<geometry_msgs::PoseStamped>(uav_name+"/mavros/vision_pose/pose", 10);
 
     // Position + Velocity + Attitude + Rate
     // mavros_extras/src/plugins/odom.cpp: Mavlink message (ODOMETRY(#331)) -> uORB message (vehicle_visual_odometry.msg)
-    vision_odom_pub = nh.advertise<nav_msgs::Odometry>("/mavros/odometry/out", 10);
+    vision_odom_pub = nh.advertise<nav_msgs::Odometry>(uav_name+"/mavros/odometry/out", 10);
 
     // Drone state
-    drone_state_pub = nh.advertise<drone_msgs::DroneState>("/drone_msg/drone_state", 10);
+    drone_state_pub = nh.advertise<drone_msgs::DroneState>(uav_name+"/drone_msg/drone_state", 10);
 
     // Radio Control Input
-    RC_input_pub = nh.advertise<drone_msgs::RCInput>("/joy/RCInput", 10);
+    RC_input_pub = nh.advertise<drone_msgs::RCInput>(uav_name+"/joy/RCInput", 10);
 
     //　Drone odometry for Rviz
-    odom_pub = nh.advertise<nav_msgs::Odometry>("/drone_msg/drone_odom", 10);
+    odom_pub = nh.advertise<nav_msgs::Odometry>(uav_name+"/drone_msg/drone_odom", 10);
 
     // Drone trajectory for Rviz
-    trajectory_pub = nh.advertise<nav_msgs::Path>("/drone_msg/drone_trajectory", 10);
+    trajectory_pub = nh.advertise<nav_msgs::Path>(uav_name+"/drone_msg/drone_trajectory", 10);
     
     // Ground station messages
-    message_pub = nh.advertise<drone_msgs::Message>("/drone_msg/message", 10);
+    message_pub = nh.advertise<drone_msgs::Message>(uav_name+"/drone_msg/message", 10);
 
     // Custome Timer Callback
     // ros::Timer timer = nh.createTimer(ros::Duration(10.0), timerCallback);
 
     // Receive Mavlink message by mavros from Autopilot
-    state_from_mavros _state_from_mavros;
+    state_from_mavros _state_from_mavros(uav_name, nh);
 
     // update
     ros::Rate rate(rate_hz);

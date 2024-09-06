@@ -108,9 +108,9 @@
 		</include>
 		<!-- Points_filter.cpp -->
 		<node unless="$(arg random_obs)" pkg="points_worker" name="points_filter_main" type="points_filter_main" output="screen" launch-prefix="gnome-terminal --tab --">
-			<remap from="/points_filter/sensor" to="/realsense_plugin/camera/local_pointclouds" />   <!-- if data_type == 2 -->
-			<remap from="/camera/depth/image_rect_raw" to="/realsense_plugin/camera/depth/image_raw" />   <!-- if data_type == 3 -->
-			<remap from="/camera/depth/camera_info" to="/realsense_plugin/camera/depth/camera_info" />    <!-- if data_type == 3 -->
+			<remap from="/points_filter/sensor" to="/mav_isir/camera/local_pointclouds" />   <!-- if data_type == 2 -->
+			<remap from="/camera/depth/image_rect_raw" to="/mav_isir/camera/depth/image_raw" />   <!-- if data_type == 3 -->
+			<remap from="/camera/depth/camera_info" to="/mav_isir/camera/depth/camera_info" />    <!-- if data_type == 3 -->
 			<param name="points_filter/frame_name" value="/world" type="string"/>
 			<param name="points_filter/object_link_name" value="/realsense_camera_link" type="string"/>
 			<!-- Sensory distance, considering only obstacles within sensory distance -->

@@ -213,7 +213,7 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.009999999776482582
           Style: Flat Squares
-          Topic: /realsense_plugin/camera/local_pointclouds
+          Topic: /mav_isir/camera/local_pointclouds
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true

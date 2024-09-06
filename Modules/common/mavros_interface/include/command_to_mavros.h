@@ -34,19 +34,8 @@ private:
 public:
     string uav_name;
 
-    command_to_mavros(void): command_nh("")
+    command_to_mavros(const string uav_name, const ros::NodeHandle& nh): command_nh(nh)
     {
-        command_nh.param<string>("uav_name", uav_name, "/uav0");
-
-        if (uav_name == "/uav0")
-        {
-            uav_name = "";
-        }
-
-        
-        bool use_quaternion = false;
-        command_nh.getParam("/mavros/setpoint_attitude/use_quaternion", use_quaternion);
-
         // =========================== [PUB] ===========================   
         // Pos / Vel / Acc / Yaw / Yaw_rate [Local Fixed Frame ENU_ROS]
         // mavros/src/plugins/setpoint_raw.cpp: Mavlink message (SET_POSITION_TARGET_LOCAL_NED (#84)) -> uORB message (trajectory_setpoint.msg)
@@ -69,11 +58,11 @@ public:
          
 		// Attitude [Local Fixed Frame ENU_ROS]
         // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_attitude_setpoint.msg)
-		if(use_quaternion) attitude_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/attitude", 10);
+		attitude_pub = command_nh.advertise<geometry_msgs::PoseStamped>(uav_name + "/mavros/setpoint_attitude/attitude", 10);
 
 		// Rate [Body Frame FRD]
         // mavros/src/plugins/setpoint_attitude.cpp: Mavlink message (SET_ATTITUDE_TARGET (#82)) -> uORB message (vehicle_rates_setpoint.msg)
-		else rate_pub = command_nh.advertise<geometry_msgs::TwistStamped>(uav_name + "/mavros/setpoint_attitude/cmd_vel", 10);
+		rate_pub = command_nh.advertise<geometry_msgs::TwistStamped>(uav_name + "/mavros/setpoint_attitude/cmd_vel", 10);
          
         // Actuator contorl, throttle for each single rotation direction motor
         // mavros/src/plugins/actuator_control.cpp : Mavlink message (SET_ACTUATOR_CONTROL_TARGET) -> nothing

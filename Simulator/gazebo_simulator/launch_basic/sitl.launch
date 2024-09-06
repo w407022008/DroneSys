@@ -37,11 +37,10 @@
 	<!-- PX4 configs -->
 	<arg name="interactive" default="true"/>
 	<!-- PX4 SITL -->
-	<arg unless="$(arg interactive)" name="px4_command_arg1" value="-d"/>
-	<arg     if="$(arg interactive)" name="px4_command_arg1" value=""/>
-	<!-- 节点源文件路径: ~/Firmware_v110/platforms/posix/src/px4/common/main.cpp -->
-	<node name="sitl" pkg="px4" type="px4" output="screen" 
-		args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS $(arg px4_command_arg1)"/>
+    <arg unless="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+    <arg     if="$(arg interactive)" name="px4_command_arg1" value=""/>
+    <node name="sitl" pkg="px4" type="px4" output="screen"
+        args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS $(arg px4_command_arg1)" required="true"/>
 
 	<!-- Spawn vehicle model -->
 	<!-- https://github.com/ros-simulation/gazebo_ros_pkgs/blob/kinetic-devel/gazebo_ros/scripts/spawn_model -->

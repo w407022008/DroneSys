@@ -42,13 +42,13 @@ public:
     void printf_param();
 
     //Traj_gen Calculation [Input: time_from_start; Output: Circle_trajectory;]
-    drone_msgs::PositionReference Circle_trajectory_generation(float time_from_start);
+    drone_msgs::PositionReference Circle_trajectory_generation(float time_from_start, float(&init_pos_xy)[2]);
 
-    drone_msgs::PositionReference Eight_trajectory_generation(float time_from_start);
+    drone_msgs::PositionReference Eight_trajectory_generation(float time_from_start, float(&init_pos_xy)[2]);
 
-    drone_msgs::PositionReference Step_trajectory_generation(float time_from_start);
+    drone_msgs::PositionReference Step_trajectory_generation(float time_from_start, float(&init_pos_xy)[2]);
 
-    drone_msgs::PositionReference Line_trajectory_generation(float time_from_start);
+    drone_msgs::PositionReference Line_trajectory_generation(float time_from_start, float(&init_pos_xy)[2]);
 
 private:
 
@@ -72,7 +72,7 @@ private:
 };
 
 
-drone_msgs::PositionReference Traj_gen::Circle_trajectory_generation(float time_from_start)
+drone_msgs::PositionReference Traj_gen::Circle_trajectory_generation(float time_from_start, float(&init_pos_xy)[2])
 {
     const float angle_1 = circle_omega_1 * time_from_start; //Angular velocity around a circle
     const float angle_2 = circle_omega_2 * time_from_start; //Angular velocity of undulation in z-axis
@@ -87,8 +87,8 @@ drone_msgs::PositionReference Traj_gen::Circle_trajectory_generation(float time_
 
     Circle_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
 
-    Circle_trajectory.position_ref[0] = radius * cos_angle + center_x;
-    Circle_trajectory.position_ref[1] = radius * sin_angle + center_y;
+    Circle_trajectory.position_ref[0] = radius * cos_angle + center_x + init_pos_xy[0];
+    Circle_trajectory.position_ref[1] = radius * sin_angle + center_y + init_pos_xy[1];
     Circle_trajectory.position_ref[2] = undulation * sin(angle_2) + center_z;
 
     Circle_trajectory.velocity_ref[0] = - radius * circle_omega_1 * sin_angle;
@@ -100,7 +100,7 @@ drone_msgs::PositionReference Traj_gen::Circle_trajectory_generation(float time_
     return Circle_trajectory;
 }
 
-drone_msgs::PositionReference Traj_gen::Line_trajectory_generation(float time_from_start)
+drone_msgs::PositionReference Traj_gen::Line_trajectory_generation(float time_from_start, float(&init_pos_xy)[2])
 {
     const float angle_1 = line_omega_1 * time_from_start; //Angular velocity mapping to linear velocity
     const float angle_2 = line_omega_2 * time_from_start; //Angular velocity of undulation in z-axis
@@ -116,8 +116,8 @@ drone_msgs::PositionReference Traj_gen::Line_trajectory_generation(float time_fr
 
     Line_trajectory.Move_mode = drone_msgs::PositionReference::XYZ_POS_VEL;
     
-    Line_trajectory.position_ref[0] = cos(angle_3) * radius * sin_angle + center_x;
-    Line_trajectory.position_ref[1] = sin(angle_3) * radius * sin_angle + center_y;
+    Line_trajectory.position_ref[0] = cos(angle_3) * radius * sin_angle + center_x + init_pos_xy[0];
+    Line_trajectory.position_ref[1] = sin(angle_3) * radius * sin_angle + center_y + init_pos_xy[1];
     Line_trajectory.position_ref[2] = undulation * sin(angle_2) + center_z;
 
     Line_trajectory.velocity_ref[0] = -sin(angle_3) * radius * sin_angle * line_omega_3  + cos(angle_3) * radius * cos_angle * line_omega_1;
@@ -130,7 +130,7 @@ drone_msgs::PositionReference Traj_gen::Line_trajectory_generation(float time_fr
 }
 
 
-drone_msgs::PositionReference Traj_gen::Eight_trajectory_generation(float time_from_start)
+drone_msgs::PositionReference Traj_gen::Eight_trajectory_generation(float time_from_start, float(&init_pos_xy)[2])
 {
     Eigen::Vector3f position;
     Eigen::Vector3f velocity;
@@ -153,7 +153,7 @@ drone_msgs::PositionReference Traj_gen::Eight_trajectory_generation(float time_f
     		cos(angle_3), -sin(angle_3), 0.0,
     		0.0,			0.0,		0.0;
 
-    Eigen::Vector3f origin_{center_x,center_y,center_z};
+    Eigen::Vector3f origin_{center_x + init_pos_xy[0],center_y + init_pos_xy[1],center_z};
     position = origin_ + undulation * sin(angle_2) * axis_3 +
     			R * radius/1.25 * (sin_angle * axis_1 + 2 * sin_angle * cos_angle * axis_2);
 
@@ -184,7 +184,7 @@ drone_msgs::PositionReference Traj_gen::Eight_trajectory_generation(float time_f
 }
 
 
-drone_msgs::PositionReference Traj_gen::Step_trajectory_generation(float time_from_start)
+drone_msgs::PositionReference Traj_gen::Step_trajectory_generation(float time_from_start, float(&init_pos_xy)[2])
 {
     drone_msgs::PositionReference Step_trajectory;
 
@@ -198,14 +198,14 @@ drone_msgs::PositionReference Traj_gen::Step_trajectory_generation(float time_fr
 
     if( i%2 == 0)
     {
-        Step_trajectory.position_ref[0] = step_length;
+        Step_trajectory.position_ref[0] = step_length + center_x + init_pos_xy[0];
     }else 
     {
-        Step_trajectory.position_ref[0] = - step_length;
+        Step_trajectory.position_ref[0] = - step_length + center_x + init_pos_xy[0];
     }
 
-    Step_trajectory.position_ref[1] = 0;
-    Step_trajectory.position_ref[2] = 1.0;
+    Step_trajectory.position_ref[1] = 0 + center_y + init_pos_xy[1];
+    Step_trajectory.position_ref[2] = 1.0 + center_z;
 
     Step_trajectory.velocity_ref[0] = 0;
     Step_trajectory.velocity_ref[1] = 0;

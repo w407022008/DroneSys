@@ -207,15 +207,8 @@ public:
     string uav_name;
     
     //constructed function
-    state_from_mavros(void):state_nh("~")
+    state_from_mavros(const string uav_name, const ros::NodeHandle& nh):state_nh(nh)
     {
-        state_nh.param<string>("uav_name", uav_name, "/uav0");
-
-        if (uav_name == "/uav0")
-        {
-            uav_name = "";
-        }
-
         // =========================== [SUB] ===========================
         // Drone status
         // mavros/src/plugins/sys_status.cpp: Mavlink message (MAVLINK_MSG_ID_SYS_STATUS (#1)) <- uORB message (vehicle_status.msg)

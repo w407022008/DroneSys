@@ -1,8 +1,8 @@
 <launch>
 	<!-- Inital position -->
 	<arg name="x" default="1.0"/>
-	<arg name="y" default="3.0"/>
-	<arg name="z" default="0.2"/>
+	<arg name="y" default="0.0"/>
+	<arg name="z" default="0.0"/>
 	<arg name="R" default="0"/>
 	<arg name="P" default="0"/>
 	<arg name="Y" default="0.0"/>
@@ -100,5 +100,6 @@
         </include>
     </group>
 
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find simulation_gazebo)/config/rviz_config/rviz_controller_multitest.rviz" />
 </launch>
 

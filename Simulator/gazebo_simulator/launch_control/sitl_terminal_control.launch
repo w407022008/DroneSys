@@ -33,7 +33,7 @@
         name="geometric_controller" output="screen" >
       <rosparam file="$(find geometric_control)/parameters/geometric_controller.yaml" />
       
-      <remap from="odometry" to="/drone_msg/drone_odom" />
+      <remap from="odometry" to="drone_msg/drone_odom" />
     </node>
 
     <!-- Differential Flatness Based Controller-->
@@ -42,14 +42,14 @@
       
       <param name="position_controller/use_rate_mode" value="True" />
       
-      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/state_estimate" to="drone_msg/drone_odom" />
     </node>
 
     <!-- Perception-Aware MPC Controller-->
     <node if="$(eval arg('custom_controller') == 3)" pkg="rpg_mpc" type="mpc_controller_node" name="mpc_controller_node" output="screen">
       <rosparam file="$(find rpg_mpc)/parameters/mpc_controller_mav.yaml" />
 
-      <remap from="command/state_estimate" to="/drone_msg/drone_odom" />
+      <remap from="command/state_estimate" to="drone_msg/drone_odom" />
     </node>
 
 	<!-- run the rviz -->

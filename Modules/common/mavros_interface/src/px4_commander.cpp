@@ -112,20 +112,23 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_commander");
     ros::NodeHandle nh("~");
 
+    string uav_name;
+    nh.param<string>("uav_name", uav_name, "");
+    if(uav_name!="") cout<<"[perception]: uav_name: "<<uav_name<<endl;
     // [SUB] control commands from planner
-    ros::Subscriber Command_sub = nh.subscribe<drone_msgs::ControlCommand>("/drone_msg/control_command", 10, Command_cb);
+    ros::Subscriber Command_sub = nh.subscribe<drone_msgs::ControlCommand>(uav_name+"/drone_msg/control_command", 10, Command_cb);
 
     // [SUB] control commands from ground station
-    ros::Subscriber station_command_sub = nh.subscribe<drone_msgs::ControlCommand>("/drone_msg/control_command_station", 10, station_command_cb);
+    ros::Subscriber station_command_sub = nh.subscribe<drone_msgs::ControlCommand>(uav_name+"/drone_msg/control_command_station", 10, station_command_cb);
     
     // [SUB] drone state
-    ros::Subscriber drone_state_sub = nh.subscribe<drone_msgs::DroneState>("/drone_msg/drone_state", 10, drone_state_cb);
+    ros::Subscriber drone_state_sub = nh.subscribe<drone_msgs::DroneState>(uav_name+"/drone_msg/drone_state", 10, drone_state_cb);
     
     // [PUB] rviz position
-    ros::Publisher rivz_ref_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/drone_msg/control/ref_pose_rviz", 10);
+    ros::Publisher rivz_ref_pose_pub = nh.advertise<geometry_msgs::PoseStamped>(uav_name+"/drone_msg/control/ref_pose_rviz", 10);
 
     // [PUB] ground station messages
-    message_pub = nh.advertise<drone_msgs::Message>("/drone_msg/message", 10);
+    message_pub = nh.advertise<drone_msgs::Message>(uav_name+"/drone_msg/message", 10);
 
     // custome timer callback
     ros::Timer timer = nh.createTimer(ros::Duration(10.0), timerCallback);
@@ -148,7 +151,7 @@ int main(int argc, char **argv)
     ros::Rate rate(Command_rate); // 10hz ~ 50hz
 
     // publish commands via mavros to autopilot
-    command_to_mavros _command_to_mavros;
+    command_to_mavros _command_to_mavros(uav_name, nh);
 
     printf_param();
     

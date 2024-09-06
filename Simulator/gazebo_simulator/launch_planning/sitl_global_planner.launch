@@ -283,7 +283,7 @@
 			<!-- maximum range to integrate (speedup!) -->
 			<param name="sensor_model/max_range" value="5.0" />
 			<!-- data source to integrate (PointCloud2) -->
-			<remap from="cloud_in" to="/realsense_plugin/camera/local_pointclouds" />
+			<remap from="cloud_in" to="/mav_isir/camera/local_pointclouds" />
 		</node>
 		
 		<!-- 启动全局规划算法 -->
@@ -291,7 +291,7 @@
 			<!-- 如果直接使用  GroundTruth 点云输入 -->
 			<!-- <remap from="/global_planner/global_pcl" to="/drone_msg/pcl_groundtruth" />-->
 			<remap if="$(arg mapper_enable)" from="/global_planner/global_pcl" to="/octomap_point_cloud_centers" />
-			<remap unless="$(arg mapper_enable)" from="/global_planner/local_pcl" to="/realsense_plugin/camera/local_pointclouds" />
+			<remap unless="$(arg mapper_enable)" from="/global_planner/local_pcl" to="/mav_isir/camera/local_pointclouds" />
 
 			<!-- 0: A_star; 1: hybrid A_star -->
 			<param name="global_planner/algorithm_mode" value="0" type="int"/>
@@ -333,7 +333,7 @@
 			<!-- 如果直接使用  GroundTruth 点云输入 -->
 			<!-- <remap from="/global_planner/global_pcl" to="/drone_msg/pcl_groundtruth" />-->
 			<remap if="$(arg mapper_enable)" from="/global_planner/global_pcl" to="/octomap_point_cloud_centers" />
-			<remap unless="$(arg mapper_enable)" from="/global_planner/local_pcl" to="/realsense_plugin/camera/local_pointclouds" />
+			<remap unless="$(arg mapper_enable)" from="/global_planner/local_pcl" to="/mav_isir/camera/local_pointclouds" />
 
 			<!-- 0: A_star; 1: hybrid A_star -->
 			<param name="global_planner/algorithm_mode" value="1" type="int"/>

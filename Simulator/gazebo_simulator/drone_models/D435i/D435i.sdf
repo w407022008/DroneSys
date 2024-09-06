@@ -132,16 +132,16 @@
         <visualize>1</visualize>
         <!-- kinect RGB-D Plugin -->
         <plugin name="camera_plugin" filename="libgazebo_ros_openni_kinect.so">
-
+          <robotNamespace></robotNamespace>
           <baseline>0.2</baseline>
           <alwaysOn>true</alwaysOn>
           <updateRate>0.0</updateRate>
-          <cameraName>realsense_plugin</cameraName>
-          <imageTopicName>camera/color/image_raw</imageTopicName>
-          <cameraInfoTopicName>camera/color/camera_info</cameraInfoTopicName>
-          <depthImageTopicName>camera/depth/image_raw</depthImageTopicName>
-          <depthImageCameraInfoTopicName>camera/depth/camera_info</depthImageCameraInfoTopicName>
-          <pointCloudTopicName>camera/local_pointclouds</pointCloudTopicName>
+          <cameraName>camera</cameraName>
+          <imageTopicName>color/image_raw</imageTopicName>
+          <cameraInfoTopicName>color/camera_info</cameraInfoTopicName>
+          <depthImageTopicName>depth/image_raw</depthImageTopicName>
+          <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+          <pointCloudTopicName>local_pointclouds</pointCloudTopicName>
           <frameName>realsense_camera_link</frameName>
           <pointCloudCutoff>0.0</pointCloudCutoff>
           <pointCloudCutoffMax>4.0</pointCloudCutoffMax>

@@ -262,7 +262,7 @@
 		<node if="$(eval arg('planner') == 1)" pkg="local_planner" name="local_planner" type="local_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">	
 			<!-- 如果直接使用  GroundTruth 点云输入 -->
 			<!-- <remap from="/planning/local_pcl" to="/drone_msg/pcl_groundtruth"/> -->
-			<remap from="/planning/local_pcl" to="/realsense_plugin/camera/local_pointclouds" />
+			<remap from="/planning/local_pcl" to="/mav_isir/camera/local_pointclouds" />
 			<!-- 参数 -->
 			<param name="local_planner/sim_mode" value="true" type="bool"/>
 			<param name="local_planner/gen_guide_point" value="true" type="bool"/>
@@ -310,7 +310,7 @@
 		<node if="$(eval arg('planner') == 0)" pkg="local_planner" name="local_planner" type="local_planner_main" output="screen" launch-prefix="gnome-terminal --tab --">
 			<!-- 如果直接使用  GroundTruth 点云输入 -->
 			<!-- <remap from="/planning/local_pcl" to="/drone_msg/pcl_groundtruth"/> -->
-			<remap from="/planning/local_pcl" to="/realsense_plugin/camera/local_pointclouds" />
+			<remap from="/planning/local_pcl" to="/mav_isir/camera/local_pointclouds" />
 			<!-- 参数 -->
 			<param name="local_planner/sim_mode" value="true" type="bool"/>
 			<param name="local_planner/path_tracking_enable" value="true" type="bool"/>

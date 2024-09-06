@@ -69,8 +69,8 @@ GeometricPositionControllerNode::GeometricPositionControllerNode(){
   rotors_motor_velocity_reference_pub_ = nh.advertise<mav_msgs::Actuators>(
       "command/motor_speed", 1);
   mavros_setpoint_raw_attitude_pub = nh.advertise<mavros_msgs::AttitudeTarget>(
-      "/mavros/setpoint_raw/attitude", 1);
-  drone_msg_pub = nh.advertise<drone_msgs::ControlCommand>("/drone_msg/control_command", 1);
+      "mavros/setpoint_raw/attitude", 1);
+  drone_msg_pub = nh.advertise<drone_msgs::ControlCommand>("drone_msg/control_command", 1);
   Command_to_pub.source = "geometry_controller";
   Command_to_pub.Command_ID = 0;
   if(control_frequency_>0.0)
