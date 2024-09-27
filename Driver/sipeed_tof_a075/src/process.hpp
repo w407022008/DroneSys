@@ -8,12 +8,6 @@ using namespace cv;
 class Tof_Filter {
 public:
         Tof_Filter(int width,int height,int kernelsize){
-        bufferdata= (uint16_t*)malloc(width*height*30*2);
-        bufferspat= (uint16_t*)malloc(width*height*2*3);
-        buffertof= (uint16_t*)malloc(width*height*2*3);
-        memset(bufferdata,0,width*height*2);
-        memset(bufferspat,0,width*height*2*3);
-        memset(buffertof,0,width*height*2*3);
         imgw=width;
         imgh=height;
         kernel_size=kernelsize;
@@ -51,29 +45,12 @@ public:
             }
     }
 
-    uint16_t* TemporalFilter(uint16_t*datap) {
+    uint16_t* SpatialFilter(const uint16_t* data,int filtertype) {
+        uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
 //        printf("vecsize:%lu\n", data.size());
-        if(temp_time_changed){
-            temp_time_changed=0;
-            memcpy(bufferdata,datap,imgw*imgh*2);
-        }
-        Mat deep_img=Mat(240,320,CV_16UC1);
-        for(int xp=0;xp<deep_img.cols;xp++)
-            for(int yp=0;yp<deep_img.rows;yp++){
-                uint32_t sum=0;
-                sum+=float(datap[320*yp+xp])*temple_alpha+float(bufferdata[320*yp+xp])*(1.0-temple_alpha);
-                deep_img.at<uint16_t>(yp,xp)=sum;
-            }
-        memcpy(bufferdata,deep_img.datastart,imgw*imgh*2);
-        // std::vector<uint16_t>data_out(deep_img.begin<uint16_t>(), deep_img.end<uint16_t>());
-        return bufferdata;
-    }
-
-    uint16_t* SpatialFilter(const uint16_t* data_data,int filtertype) {
-//        printf("vecsize:%lu\n", data.size());
-        memcpy(bufferspat,data_data,imgw*imgh*2*2);
-        Mat deep_img=Mat(240,320,CV_16UC1,bufferspat);
-        Mat ir_img=Mat(240,320,CV_16UC1,bufferspat+320*240);
+        memcpy(buffer,data,imgw*imgh*2);
+        Mat deep_img=Mat(240,320,CV_16UC1,buffer);
+        Mat ir_img=Mat(240,320,CV_16UC1,buffer+320*240);
         deep_img.convertTo(deep_img,CV_32FC1);
         ir_img.convertTo(ir_img,CV_32FC1);
         int kernelsize=kernel_size;
@@ -91,16 +68,32 @@ public:
             filter2D(deep_img,filter_out,CV_32FC1,kernel,Point(-1,-1),0,BORDER_REPLICATE);
         }
         filter_out.convertTo(filter_out,CV_16UC1);
-        std::vector<uint16_t>data_out(filter_out.begin<uint16_t>(), filter_out.end<uint16_t>());
-        Mat tmp=Mat(240,320,CV_16UC1,data_out.data());
-        memcpy(bufferdata,tmp.datastart,imgw*imgh*2);
-        // std::vector<uint16_t>data_out(deep_img.begin<uint16_t>(), deep_img.end<uint16_t>());
-        return bufferdata;
+        memcpy(buffer,filter_out.datastart,imgw*imgh*2);
+        // std::vector<uint16_t>data_out(filter_out.begin<uint16_t>(), filter_out.end<uint16_t>());
+        return buffer;
     }
-
-    std::vector<uint16_t> FlyingPointFilter(const uint16_t* data,float threshold) {
-        memcpy(buffertof,data,imgw*imgh*2);
-        Mat deep_img=Mat(240,320,CV_16UC1,buffertof);
+    uint16_t* TemporalFilter(uint16_t*data) {
+        static uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
+//        printf("vecsize:%lu\n", data.size());
+        if(temp_time_changed){
+            temp_time_changed=0;
+            memcpy(buffer,data,imgw*imgh*2);
+        }
+        Mat deep_img=Mat(240,320,CV_16UC1);
+        for(int xp=0;xp<deep_img.cols;xp++)
+            for(int yp=0;yp<deep_img.rows;yp++){
+                uint32_t sum=0;
+                sum+=float(data[320*yp+xp])*temple_alpha+float(buffer[320*yp+xp])*(1.0-temple_alpha);
+                deep_img.at<uint16_t>(yp,xp)=sum;
+            }
+        memcpy(buffer,deep_img.datastart,imgw*imgh*2);
+        // std::vector<uint16_t>data_out(deep_img.begin<uint16_t>(), deep_img.end<uint16_t>());
+        return buffer;
+    }
+    uint16_t* FlyingPointFilter(uint16_t*data,float threshold) {
+//        printf("vecsize:%lu\n", data.size());
+        uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
+        Mat deep_img=Mat(240,320,CV_16UC1,data);
         Mat l_img,r_img,u_img,d_img;
         deep_img(Rect(0,0,319,240)).copyTo(l_img);
         deep_img(Rect(1,0,319,240)).copyTo(r_img);
@@ -123,17 +116,107 @@ public:
         cv::max(tmp3,abs_diff,abs_diff);
         cv::max(tmp4,abs_diff,abs_diff);
         Mat absf,deepf;
-        deep_img.convertTo(deepf,CV_32FC1);
-        abs_diff.convertTo(absf,CV_32FC1);
+        deep_img.convertTo(deepf,CV_64FC1);
+        abs_diff.convertTo(absf,CV_64FC1);
         absf/=deepf;
         Mat mask=absf<threshold;
         Mat imgout;
         deep_img.copyTo(imgout,mask);
-//        std::cout<<mask<<std::endl;
-        std::vector<uint16_t>data_out(imgout.begin<uint16_t>(), imgout.end<uint16_t>());
-        return data_out;
+        memcpy(buffer,imgout.datastart,imgw*imgh*2);
+        // std::vector<uint16_t>data_out(filter_out.begin<uint16_t>(), filter_out.end<uint16_t>());
+        return buffer;
     }
     
+uint16_t* FlyingPointFilter(uint16_t* data){
+    cv::Mat image(imgh,imgw,CV_16UC1,data);
+    cv::Mat image_blur;
+    cv::GaussianBlur(image,image_blur,cv::Size(7,7),0);
+    
+    cv::Mat sobel_x, sobel_y;
+    cv::Sobel(image_blur,sobel_x,CV_64FC1,1,0,5);
+    cv::Sobel(image_blur,sobel_y,CV_64FC1,0,1,5);
+    
+    cv::Mat gradient_magnitude;
+    cv::magnitude(sobel_x,sobel_y,gradient_magnitude);
+    
+    double upper_bound = 6000;
+    double lower_bound = 2000;
+    
+    cv::Mat boundary_mask = cv::Mat::zeros(image.size(),CV_8UC1);
+    boundary_mask.setTo(255,gradient_magnitude >= upper_bound);
+    
+    std::deque<cv::Point> to_check;
+    for(int y=0;y<imgh;y++){
+    	for(int x=0;x<imgw;x++){
+    		if(boundary_mask.at<uchar>(y,x) == 255){
+    			to_check.push_back(cv::Point(x,y));
+    		}
+    	}
+    }
+    
+    std::vector<cv::Point> neighbors = { {-1,-1}, {-1,0}, {-1,-1},
+    					{0,-1},            {0,1},
+    					{1,-1},{1,0},{1,1}};
+    while(!to_check.empty()){
+    	cv::Point p = to_check.front();
+    	to_check.pop_front();
+    	
+    	for(const auto& neighbor : neighbors){
+    		cv::Point n(p.x+neighbor.x, p.y+neighbor.y);
+    		if(n.x>=0 && n.x<imgw && n.y>=0 && n.y<imgh){
+    			if(lower_bound <= gradient_magnitude.at<double>(n.y,n.x) && 
+    			gradient_magnitude.at<double>(n.y,n.x) < upper_bound && 
+    			boundary_mask.at<uchar>(n.y,n.x) == 0){
+    				boundary_mask.at<uchar>(n.y,n.x) = 255;
+    				to_check.push_back(n);
+    			}
+    		}
+    	}
+    }
+    
+    // cv::Mat mask_inv,filtered_image;
+    // cv::bitwise_not(boundary_mask, mask_inv);
+    // cv::bitwise_and(image,image,filtered_image,mask_inv);
+    // uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
+    // memcpy(buffer,filtered_image.datastart,imgw*imgh*2);
+    // return buffer;
+    cv::Mat filtered_image = image.clone();
+    cv::Mat frame;
+    cv::GaussianBlur(boundary_mask,frame,cv::Size(7,7),0);
+    cv::Canny(frame,frame,300,400);
+    // cv::Mat aaa;
+    // frame.convertTo(aaa,CV_16UC1);
+    // uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
+    // memcpy(buffer,aaa.datastart,imgw*imgh*2);
+    // return buffer;
+    
+    for(int y=0;y<frame.rows;++y){
+    	for(int x=0;x<frame.cols;++x){
+    		if(frame.at<uint16_t>(y,x) == 255){
+    			to_check.push_back(cv::Point(x,y));
+    		}
+    	}
+    }
+    while(!to_check.empty()){
+    	cv::Point p = to_check.front();
+    	to_check.pop_front();
+    	
+    	for(const auto& neighbor : neighbors){
+    		cv::Point n(p.x+neighbor.x, p.y+neighbor.y);
+    		if(n.x>=0 && n.x<gradient_magnitude.cols && n.y>=0 && n.y<gradient_magnitude.rows){
+    			if(boundary_mask.at<uchar>(n.y,n.x) == 255){
+    				filtered_image.at<uint16_t>(n.y,n.x) = filtered_image.at<uint16_t>(p.y,p.x);
+    				boundary_mask.at<uchar>(n.y,n.x) = 0;
+    				to_check.push_back(n);
+    			}
+    		}
+    	}
+    }
+    
+    uint16_t *buffer=(uint16_t*)malloc(imgw*imgh*2);
+    memcpy(buffer,filtered_image.datastart,imgw*imgh*2);
+    return buffer;
+}
     std::vector<uint8_t> NV12_RGB(std::vector<uint8_t> data,int width,int height){
         Mat mYUV(height + height/2, width, CV_8UC1, (void*)data.data());
         Mat mRGB;//(height, width, CV_8UC4);
@@ -158,8 +241,7 @@ public:
 //        auto ret= emscripten::val(emscripten::typed_memory_view(5, "1111"));
         return ret;
     }
-    
-    std::vector<uint16_t> concat(std::vector<uint16_t> deep,std::vector<uint16_t> status){
+    std::vector<uint16_t> TOF_cali(std::vector<uint16_t> deep,std::vector<uint16_t> status){
         if(!parm_inited)
             return std::vector<uint16_t>({0});
         Mat mDEEP(240,320, CV_16U,(void*)deep.data());
@@ -367,11 +449,8 @@ public:
         temple_alpha=times>1?1:times;
         temple_alpha=times<0?0:times;
         printf("times:%f\n",times);
-        temp_time_changed=1;
     }
     void free_mem(){
-        free(bufferdata);
-        free(bufferspat);
     }
     void set_kernel_size(int k){
         kernel_size=k;
@@ -476,11 +555,8 @@ public:
     }
 
     uint16_t depth_LUT[256];
-    uint16_t *bufferdata=NULL;
-    uint16_t *bufferspat=NULL;
-    uint16_t *buffertof=NULL;
     float temple_alpha=0.5;
-    int kernel_size=1;
+    int kernel_size=0;
     int imgw;
     int imgh;
     int correntid=0;

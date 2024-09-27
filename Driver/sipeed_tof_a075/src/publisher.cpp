@@ -99,8 +99,8 @@ void  InitPointCloudPublisher(ros::NodeHandle* n)
 {
     localNode=n;
         CaliInst = new Tof_Filter(320,240,7);
-        CaliInst->TemporalFilter_cfg(1.0);
-        CaliInst->set_kernel_size(1);
+        CaliInst->TemporalFilter_cfg(0.5);
+        CaliInst->set_kernel_size(7);
 
 
         init_libevent();
@@ -169,22 +169,36 @@ void timer_callback()
         // printf("get ret:%d size:%d\n",ret,retuestdata_size);
         stackframe_old_t oldframe = CaliInst->DecodePkg(requestdata);
         auto data = (uint16_t*)oldframe.depth;
-        
+        // printf("%s:%d\n",__FILE__,__LINE__);
 	// data = CaliInst->TemporalFilter(data);
-        
+        // printf("%s:%d\n",__FILE__,__LINE__);
 	// data = CaliInst->SpatialFilter(data,0);
-	
-	auto depth_filtered = CaliInst->FlyingPointFilter(data,0.03);
-	
-        // auto depth_map = CaliInst->concat(depth_filtered,std::vector<uint16_t>((uint16_t*)oldframe.status,(uint16_t*)((uint8_t*)oldframe.status)+sizeof(Image_t)));
-        
-        auto colormap = CaliInst->MapRGB2TOF(depth_filtered,std::vector<uint8_t>((uint8_t*)oldframe.rgb,(uint8_t*)((uint8_t*)oldframe.rgb)+sizeof(oldframe.rgb)));
-        
-        auto ir_map = CaliInst->concat(std::vector<uint16_t>((uint16_t*)oldframe.ir,(uint16_t*)((uint8_t*)oldframe.ir)+sizeof(Image_t)),std::vector<uint16_t>((uint16_t*)oldframe.status,(uint16_t*)((uint8_t*)oldframe.status)+sizeof(Image_t)));
+        // printf("%s:%d\n",__FILE__,__LINE__);
+	 data = CaliInst->FlyingPointFilter(data,0.05);
+	 // data = CaliInst->FlyingPointFilter(data);
+        // printf("%s:%d\n",__FILE__,__LINE__);
+        Mat filter_out(240,320,CV_16UC1,data);
+        std::vector<uint16_t>data_filtered(filter_out.begin<uint16_t>(), filter_out.end<uint16_t>());
+        auto tempcali=CaliInst->TOF_cali(data_filtered,std::vector<uint16_t>((uint16_t*)oldframe.status,(uint16_t*)((uint8_t*)oldframe.status)+sizeof(Image_t)));
+		// printf("%s:%d\n",__FILE__,__LINE__);
+        auto colormap_temp=CaliInst->MapRGB2TOF(tempcali,std::vector<uint8_t>((uint8_t*)oldframe.rgb,(uint8_t*)((uint8_t*)oldframe.rgb)+sizeof(oldframe.rgb)));
+        // printf("%s:%d\n",__FILE__,__LINE__);
+        auto tempcali_ir=CaliInst->TOF_cali(std::vector<uint16_t>((uint16_t*)oldframe.ir,(uint16_t*)((uint8_t*)oldframe.ir)+sizeof(Image_t)),std::vector<uint16_t>((uint16_t*)oldframe.status,(uint16_t*)((uint8_t*)oldframe.status)+sizeof(Image_t)));
+
+        std_msgs::Header header;
+        if (true)
+            header.stamp = ros::Time::now();
+        else
+            header.stamp = ros::Time(oldframe.framestamp/1000,(oldframe.framestamp%1000)*1000);
+
+        if (false)
+            header.frame_id = "None";
+        else
+            header.frame_id = "tof";
 
         // auto rgbmsg = sensor_msgs::Image();
         Mat mRGB(600, 800, CV_8UC4,(void*)oldframe.rgb);
-        Mat md(240, 320, CV_16UC1,(void*)oldframe.depth);
+        Mat md(240, 320, CV_16UC1,data);
         Mat mi(240, 320, CV_16UC1,(void*)oldframe.ir);
         Mat ms(240, 320, CV_16UC1,(void*)oldframe.status);
         Mat mRGB_bgr;
@@ -201,16 +215,10 @@ void timer_callback()
         sensor_msgs::Image smsg =
                 *cv_bridge::CvImage(std_msgs::Header(), "mono16", ms)
                 .toImageMsg().get();
-        
-        std_msgs::Header header;
-        header.stamp = ros::Time(oldframe.framestamp/1000,(oldframe.framestamp%1000)*1000);
-        header.frame_id = "tof";
-        
         rgbmsg.header=header;
         dmsg.header=header;
         imsg.header=header;
         smsg.header=header;
-        
         ROS_INFO("Publishing");
         publisher_rgb.publish(rgbmsg);
         publisher_d.publish(dmsg);
@@ -248,16 +256,16 @@ void timer_callback()
         pcmsg.fields[4].count = 1;
 
         float fox=uvf_parms[0];
-	float foy=uvf_parms[1];
-	float u0=uvf_parms[2];
-	float v0=uvf_parms[3];
+		float foy=uvf_parms[1];
+		float u0=uvf_parms[2];
+		float v0=uvf_parms[3];
         // printf("%f,%f,%f,%f\n",fox,foy,u0,v0);
-std::cout<<((float)depth_filtered[120*320+160])/1000<<std::endl;
+std::cout<<"dist at center: "<<((float)data[120*320+160])/4.0/1000<<std::endl;
         pcmsg.data.resize(320*240 *20, 0x00);
         uint8_t *ptr = pcmsg.data.data();
         // for (int j=0;j<240;j++){
         //     for (int i=0;i<320;i++)
-        //         std::cout<<depth_filtered[j*320+i]<<",";
+        //         std::cout<<tempcali[j*320+i]<<",";
         //         std::cout<<std::endl;
         // }
         
@@ -266,7 +274,8 @@ std::cout<<((float)depth_filtered[120*320+160])/1000<<std::endl;
         {
             float cx=(((float)i)-u0)/fox;
             float cy=(((float)j)-v0)/foy;
-            float dst=((float)depth_filtered[j*320+i])/1000;
+            //float dst = md.at<uint16_t>(j,i)/4.0/1000;
+            float dst=((float)tempcali[j*320+i])/4.0/1000;
             float x = dst*cx;
             float y = dst*cy;
             float z = dst;
@@ -274,12 +283,12 @@ std::cout<<((float)depth_filtered[120*320+160])/1000<<std::endl;
             *((float*)(ptr +  0)) = x;
             *((float*)(ptr +  4)) = y;
             *((float*)(ptr +  8)) = z;
-            uint32_t color=colormap[j*320+i];
+            uint32_t color=colormap_temp[j*320+i];
             uint32_t color_r=color&0xff;
             uint32_t color_g=(color&0xff00)>>8;
             uint32_t color_b=(color&0xff0000)>>16;
             *((uint32_t*)(ptr + 12)) = (color_r<<16)|(color_g<<8)|(color_b<<0);
-            *((float*)(ptr + 16)) = ir_map[j*320+i];
+            *((float*)(ptr + 16)) = tempcali_ir[j*320+i];
             ptr += 20;
         }
         publisher_pc.publish(pcmsg);
@@ -289,7 +298,7 @@ std::cout<<((float)depth_filtered[120*320+160])/1000<<std::endl;
 int main(int argc, char * argv[])
 {
   ros::init(argc, argv,"sipeed_tof");
-  ros::NodeHandle n;
+  ros::NodeHandle n("~");
   ros::Rate loop_rate(30);
   InitPointCloudPublisher(&n);
   while (ros::ok())
