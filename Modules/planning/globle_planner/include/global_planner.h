@@ -33,16 +33,12 @@ using namespace std;
 
 namespace Global_Planning
 {
-
-extern ros::Publisher message_pub;
-
 class Global_Planner
 {
 private:
 
     ros::NodeHandle global_planner_nh;
 
-    // 参数
     int algorithm_mode;
     bool is_2D;
     bool yaw_tracking_mode;
@@ -57,28 +53,19 @@ private:
     bool planner_enable_default;
     bool planner_enable;
 
-    // 本机位置
-    // 邻机位置
-    // 根据不同的输入（激光雷达输入、相机输入等）生成occupymap
-    // 调用路径规划算法 生成路径
-    // 调用轨迹优化算法 规划轨迹
 
-    // 订阅无人机状态、目标点、传感器数据（生成地图）、规划器使能
     ros::Subscriber goal_sub;
     ros::Subscriber planner_switch_sub;
     ros::Subscriber drone_state_sub;
-    // 支持2维激光雷达、3维激光雷达、D435i等实体传感器
-    // 支持直接输入全局已知点云
+    
     ros::Subscriber Gpointcloud_sub;
     ros::Subscriber Lpointcloud_sub;
     ros::Subscriber laserscan_sub;
-    // ？
 
-    // 发布控制指令
+
     ros::Publisher command_pub,path_cmd_pub;
     ros::Timer mainloop_timer, track_path_timer, safety_timer;
 
-    // A星规划器
     global_planning_alg::Ptr global_alg_ptr;
 
     drone_msgs::DroneState _DroneState;
@@ -90,7 +77,6 @@ private:
 
     double distance_to_goal;
 
-    // 规划器状态
     bool odom_ready;
     bool drone_ready;
     bool sensor_ready;
@@ -102,7 +88,6 @@ private:
     int Num_total_wp;
     int cur_id;
 
-    // 规划初始状态及终端状态
     Eigen::Vector3d start_pos, start_vel, start_acc, goal_pos, goal_vel;
 
     float desired_yaw;
@@ -110,10 +95,8 @@ private:
     ros::Time tra_start_time;
     float tra_running_time;
     
-    // 打印的提示消息
     string message;
 
-    // 五种状态机
     enum EXEC_STATE
     {
         WAIT_GOAL,
@@ -123,7 +106,6 @@ private:
     };
     EXEC_STATE exec_state;
 
-    // 回调函数
     void planner_switch_cb(const std_msgs::Bool::ConstPtr& msg);
     void goal_cb(const geometry_msgs::PoseStampedConstPtr& msg);
     void drone_state_cb(const drone_msgs::DroneStateConstPtr &msg);
@@ -135,8 +117,6 @@ private:
     void mainloop_cb(const ros::TimerEvent& e);
     void track_path_cb(const ros::TimerEvent& e);
    
-
-    // 【获取当前时间函数】 单位：秒
     float get_time_in_sec(const ros::Time& begin_time);
 
     int get_start_point_id(void);

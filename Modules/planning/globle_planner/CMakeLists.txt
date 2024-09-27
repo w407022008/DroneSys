@@ -45,7 +45,6 @@ add_executable(global_planner_main
 	src/A_star.cpp
 	src/kinodynamic_astar.cpp
 	src/occupy_map.cpp
-	src/tools.cpp
 	)
 
 target_link_libraries(global_planner_main

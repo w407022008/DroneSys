@@ -19,7 +19,6 @@
 
 namespace Global_Planning
 {
-    extern ros::Publisher message_pub;
 
 #define IN_CLOSE_SET 'a'
 #define IN_OPEN_SET 'b'

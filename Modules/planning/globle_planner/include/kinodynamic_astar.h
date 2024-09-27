@@ -24,8 +24,6 @@ using namespace std;
 
 namespace Global_Planning
 {
-extern ros::Publisher message_pub;
-
 class KinodynamicAstar: public global_planning_alg
 {
 private:

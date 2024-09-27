@@ -28,20 +28,17 @@ public:
     REACH_HORIZON = 3
   };
 
-    // 占据图类
+    std::vector<Eigen::Vector3d> path_pos;
+
     Occupy_map::Ptr Occupy_map_ptr;
 
-    // 重置
     virtual void reset()=0;
-    // 初始化
     virtual void init(ros::NodeHandle& nh)=0;
-    // 检查安全性
     virtual bool check_safety(Eigen::Vector3d &cur_pos, double safe_distance)=0;
-    // 搜索
     virtual int search(Eigen::Vector3d start_pt, Eigen::Vector3d start_vel, Eigen::Vector3d start_acc,
              Eigen::Vector3d end_pt, Eigen::Vector3d end_vel, bool init, bool dynamic = false,
              double time_start = -1.0)=0;
-    // 返回ros消息格式的路径
+             
     virtual nav_msgs::Path get_ros_path()=0;
 
     typedef shared_ptr<global_planning_alg> Ptr;
