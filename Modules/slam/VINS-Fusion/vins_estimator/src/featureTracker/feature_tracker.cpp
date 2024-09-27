@@ -10,6 +10,8 @@
  *******************************************************/
 
 #include "feature_tracker.h"
+#include <random>
+#include <algorithm>
 
 bool FeatureTracker::inBorder(const cv::Point2f &pt)
 {
@@ -114,11 +116,11 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         TicToc t_o;
         vector<uchar> status;
         vector<float> err;
-        if(hasPrediction)
+        if(hasPrediction) // !MULTIPLE_THREAD
         {
             cur_pts = predict_pts;
             cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 1, 
-            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
+                cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
             
             int succ_num = 0;
             for (size_t i = 0; i < status.size(); i++)
@@ -172,28 +174,69 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         setMask();
         ROS_DEBUG("set mask costs %fms", t_m.toc());
 
-        ROS_DEBUG("detect feature begins");
+        ROS_DEBUG("detect feature begins, pts_size: %d", static_cast<int>(cur_pts.size()));
         TicToc t_t;
         int n_max_cnt = MAX_CNT - static_cast<int>(cur_pts.size());
+        // std::cout<<"cur_pts_size:"<<static_cast<int>(cur_pts.size());
         if (n_max_cnt > 0)
         {
             if(mask.empty())
                 cout << "mask is empty " << endl;
             if (mask.type() != CV_8UC1)
                 cout << "mask type wrong " << endl;
-            cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
-        }
-        else
-            n_pts.clear();
-        ROS_DEBUG("detect feature costs: %f ms", t_t.toc());
+            if(CORNER_DETECTOR){
+                int cnt = MAX_CNT - cur_pts.size();
+                // FAST corner detector
+                vector<cv::KeyPoint> kps;
+                // cv::FAST(cur_img, kps, 10, true, cv::FastFeatureDetector::TYPE_9_16);
+                cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(3, true, cv::FastFeatureDetector::TYPE_9_16);
+                detector->detect(cur_img, kps, mask);
+        // std::cout<<" kps:"<<static_cast<int>(kps.size());
+                vector<pair<cv::KeyPoint, double>> qualities;
+                for(const auto& kp:kps){
+                    int x = static_cast<int>(kp.pt.x);
+                    int y = static_cast<int>(kp.pt.y);
+                    int window_size = 3;
+                    int x1 = max(0,x-window_size);
+                    int y1 = max(0,y-window_size);
+                    int x2 = min(cur_img.cols, x+window_size+1);
+                    int y2 = min(cur_img.cols, y+window_size+1);
+                    cv::Mat window = cur_img(cv::Rect(x1,y1,x2-x1,y2-y1));
+                    if(window.rows>1 && window.cols>1){
+                        cv::Mat eigenvalues;
+                        cv::cornerMinEigenVal(window,eigenvalues,3);
+                        double response;
+                        cv::minMaxLoc(eigenvalues,&response,nullptr);
+                        qualities.emplace_back(kp,response);
+                    }
+                }
+                sort(qualities.begin(), qualities.end(),[](const pair<cv::KeyPoint,double>& a, const pair<cv::KeyPoint,double>& b)
+                    {return a.second > b.second;});
+                vector<cv::KeyPoint> kps_selected;
+                for(int i=0;i<std::min(cnt,static_cast<int>(kps.size()));++i)
+                    kps_selected.push_back(qualities[i].first);
+                
+                // randomly select detected corners
+                // random_device rd;
+                // mt19937 g(rd());
+                // shuffle(kps.begin(),kps.end(),g);
+                // vector<cv::KeyPoint> kps_selected(kps.begin(),kps.begin()+std::min(cnt,static_cast<int>(kps.size())));
 
-        for (auto &p : n_pts)
-        {
-            cur_pts.push_back(p);
-            ids.push_back(n_id++);
-            track_cnt.push_back(1);
+                for(auto kp:kps_selected) n_pts.push_back(kp.pt);
+            }else
+                cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.05, MIN_DIST, mask, 3, false, 0.04);
+
+            for (auto &p : n_pts)
+            {
+                cur_pts.push_back(p);
+                ids.push_back(n_id++); // n_id: global id
+                track_cnt.push_back(1);
+            }
+            n_pts.clear();
+            //printf("feature cnt after add %d\n", (int)ids.size());
         }
-        //printf("feature cnt after add %d\n", (int)ids.size());
+        ROS_DEBUG("detect feature costs: %f ms, pts_size:%d", t_t.toc(), static_cast<int>(cur_pts.size()));
+        // std::cout<<" after:"<<static_cast<int>(cur_pts.size())<<" costs: "<<t_t.toc()<<std::endl;
     }
 
     cur_un_pts = undistortedPts(cur_pts, m_camera[0]);
@@ -501,7 +544,7 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
 {
     hasPrediction = true;
     predict_pts.clear();
-    predict_pts_debug.clear();
+    // predict_pts_debug.clear();
     map<int, Eigen::Vector3d>::iterator itPredict;
     for (size_t i = 0; i < ids.size(); i++)
     {
@@ -513,7 +556,7 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
             Eigen::Vector2d tmp_uv;
             m_camera[0]->spaceToPlane(itPredict->second, tmp_uv);
             predict_pts.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
-            predict_pts_debug.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
+            // predict_pts_debug.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
         }
         else
             predict_pts.push_back(prev_pts[i]);

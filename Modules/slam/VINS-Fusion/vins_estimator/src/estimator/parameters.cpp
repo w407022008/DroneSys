@@ -46,6 +46,7 @@ int MAX_CNT;
 int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
+int CORNER_DETECTOR;
 int FLOW_BACK;
 int TF_PUB;
 
@@ -90,6 +91,7 @@ void readParameters(std::string config_file)
     MIN_DIST = fsSettings["min_dist"];
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
+    CORNER_DETECTOR = fsSettings["corner_detector"];
     FLOW_BACK = fsSettings["flow_back"];
     TF_PUB = fsSettings["tf_pub"];
 

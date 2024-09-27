@@ -64,6 +64,7 @@ extern int MAX_CNT;
 extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
+extern int CORNER_DETECTOR;
 extern int FLOW_BACK;
 extern int TF_PUB;
 
