@@ -28,36 +28,51 @@ main( int argc, char** argv )
 
     //========= Handling Program options =========
     boost::program_options::options_description desc( "Allowed options" );
-    desc.add_options( )( "help", "produce help message" )(
+    desc.add_options( )( "help", "produce help message" )
+    (
     "width,w",
     boost::program_options::value< int >( &boardSize.width )->default_value( 8 ),
-    "Number of inner corners on the chessboard pattern in x direction" )(
+    "Number of inner corners on the chessboard pattern in x direction" )
+    (
     "height,h",
     boost::program_options::value< int >( &boardSize.height )->default_value( 12 ),
-    "Number of inner corners on the chessboard pattern in y direction" )(
+    "Number of inner corners on the chessboard pattern in y direction" )
+    (
     "size,s",
     boost::program_options::value< float >( &squareSize )->default_value( 7.f ),
-    "Size of one square in mm" )( "input,i",
-                                  boost::program_options::value< std::string >( &inputDir )->default_value( "calibrationdata" ),
-                                  "Input directory containing chessboard images" )(
+    "Size of one square in mm" )
+    ( 
+    "input,i",
+    boost::program_options::value< std::string >( &inputDir )->default_value( "calibrationdata" ),
+    "Input directory containing chessboard images" )
+    (
     "prefix,p",
-    boost::program_options::value< std::string >( &prefix )->default_value( "left-" ),
-    "Prefix of images" )( "file-extension,e",
-                          boost::program_options::value< std::string >( &fileExtension )->default_value( ".png" ),
-                          "File extension of images" )(
+    boost::program_options::value< std::string >( &prefix )->default_value( "left" ),
+    "Prefix of images" )
+    ( 
+    "file-extension,e",
+    boost::program_options::value< std::string >( &fileExtension )->default_value( ".jpg" ),
+    "File extension of images" )
+    (
     "camera-model",
     boost::program_options::value< std::string >( &cameraModel )->default_value( "mei" ),
-    "Camera model: kannala-brandt | mei | pinhole" )(
+    "Camera model: kannala-brandt | mei | pinhole" )
+    (
     "camera-name",
     boost::program_options::value< std::string >( &cameraName )->default_value( "camera" ),
-    "Name of camera" )( "opencv",
-                        boost::program_options::bool_switch( &useOpenCV )->default_value( true ),
-                        "Use OpenCV to detect corners" )(
+    "Name of camera" )
+    ( 
+    "opencv",
+    boost::program_options::bool_switch( &useOpenCV )->default_value( false ),
+    "Use OpenCV to detect corners" )
+    (
     "view-results",
-    boost::program_options::bool_switch( &viewResults )->default_value( false ),
-    "View results" )( "verbose,v",
-                      boost::program_options::bool_switch( &verbose )->default_value( true ),
-                      "Verbose output" );
+    boost::program_options::bool_switch( &viewResults )->default_value( true ),
+    "View results" )
+    ( 
+    "verbose,v",
+    boost::program_options::bool_switch( &verbose )->default_value( true ),
+    "Verbose output" );
 
     boost::program_options::positional_options_description pdesc;
     pdesc.add( "input", 1 );
@@ -207,13 +222,18 @@ main( int argc, char** argv )
             chessboard.getSketch( ).copyTo( sketch );
 
             cv::imshow( "Image", sketch );
-            cv::waitKey( 50 );
         }
         else if ( verbose )
         {
             std::cerr << "# INFO: Did not detect chessboard in image " << i + 1 << std::endl;
+            cv::imshow( "Image", image );
         }
+            cv::waitKey( 50 );
         chessboardFound.at( i ) = chessboard.cornersFound( );
+            // char key;
+            // do{
+            //     key = (char)cv::waitKey(0);
+            // }while(key!='q');
     }
     cv::destroyWindow( "Image" );
 

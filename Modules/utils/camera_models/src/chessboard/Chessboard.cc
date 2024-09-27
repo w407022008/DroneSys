@@ -1,5 +1,5 @@
 #include "camodocal/chessboard/Chessboard.h"
-
+#include <opencv2/opencv.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
@@ -162,6 +162,7 @@ Chessboard::findChessboardCornersImproved(const cv::Mat& image,
     {
         if (!checkChessboard(img, patternSize))
         {
+            // std::cout<<"CALIB_CB_FAST_CHECK failed!"<<std::endl;char key;
             return false;
         }
     }
@@ -207,6 +208,8 @@ Chessboard::findChessboardCornersImproved(const cv::Mat& image,
                 cv::threshold(img, thresh_img, thresh_level, 255, cv::THRESH_BINARY);
             }
 
+            // cv::imshow( "thresh_img", thresh_img );
+            // cv::waitKey( 50 );
             // MARTIN's Code
             // Use both a rectangular and a cross kernel. In this way, a more
             // homogeneous dilation is performed, which is crucial for small,
@@ -1583,10 +1586,11 @@ Chessboard::checkChessboard(const cv::Mat& image, cv::Size patternSize) const
     bool result = false;
     for (float threshLevel = blackLevel; threshLevel < whiteLevel && !result; threshLevel += 20.0f)
     {
-        cv::threshold(white, thresh, threshLevel + blackWhiteGap, 255, cv::THRESH_BINARY);
-
         std::vector< std::vector<cv::Point> > contours;
         std::vector<cv::Vec4i> hierarchy;
+
+        // get white contours
+        cv::threshold(white, thresh, threshLevel + blackWhiteGap, 255, cv::THRESH_BINARY);
 
         // Initialize contour retrieving routine
         cv::findContours(thresh, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
@@ -1594,6 +1598,7 @@ Chessboard::checkChessboard(const cv::Mat& image, cv::Size patternSize) const
         std::vector<std::pair<float, int> > quads;
         getQuadrangleHypotheses(contours, quads, 1);
 
+        // get black contours
         cv::threshold(black, thresh, threshLevel, 255, cv::THRESH_BINARY_INV);
 
         cv::findContours(thresh, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
