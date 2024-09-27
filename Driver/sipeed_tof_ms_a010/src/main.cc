@@ -26,7 +26,7 @@ using namespace cv;
 static Serial *pser;
 static float uvf_parms[4];
 static ros::NodeHandle *localNode;
-static ros::Publisher publisher_depth;
+static ros::Publisher publisher_depth_raw, publisher_depth_rect;
 static ros::Publisher publisher_pointcloud;
 
 static bool InitSipeedTOF_MSA010_Publisher(ros::NodeHandle *n) {
@@ -114,7 +114,9 @@ static bool InitSipeedTOF_MSA010_Publisher(ros::NodeHandle *n) {
   std::cout<<s.c_str()<<std::endl;
 */
 
-  publisher_depth = n->advertise<sensor_msgs::Image>("depth", 10);
+  std::cout<<"Initialization finished."<<std::endl;
+  publisher_depth_raw = n->advertise<sensor_msgs::Image>("depth_raw", 10);
+  publisher_depth_rect = n->advertise<sensor_msgs::Image>("depth_rect", 10);
   publisher_pointcloud = n->advertise<sensor_msgs::PointCloud2>("cloud", 10);
   //publisher_pointcloud = n->advertise<pcl::PointCloud<pcl::PointXYZ>>("cloud", 10); 
   return 0;
@@ -160,25 +162,104 @@ uint8_t* FlyingPointFilter(uint8_t* data,float threshold) {
     return buffer;
 }
 
+uint8_t* FlyingPointFilter(uint8_t* data){
+    uint8_t *buffer=NULL;
+    buffer= (uint8_t*)malloc(100*100);
+    memcpy(buffer,data,100*100);
+    cv::Mat image(100,100,CV_8UC1,data);
+    cv::Mat image_blur;
+    cv::GaussianBlur(image,image_blur,cv::Size(7,7),0);
+    
+    cv::Mat sobel_x, sobel_y;
+    cv::Sobel(image_blur,sobel_x,CV_64F,1,0,5);
+    cv::Sobel(image_blur,sobel_y,CV_64F,0,1,5);
+    
+    cv::Mat gradient_magnitude;
+    cv::magnitude(sobel_x,sobel_y,gradient_magnitude);
+    
+    double upper_bound = 1000;
+    double lower_bound = 500;
+    
+    cv::Mat boundary_mask = cv::Mat::zeros(image.size(),CV_8UC1);
+    boundary_mask.setTo(255,gradient_magnitude >= upper_bound);
+    
+    std::deque<cv::Point> to_check;
+    for(int y=0;y<gradient_magnitude.rows;y++){
+    	for(int x=0;x<gradient_magnitude.cols;x++){
+    		if(boundary_mask.at<uchar>(y,x) == 255){
+    			to_check.push_back(cv::Point(x,y));
+    		}
+    	}
+    }
+    
+    std::vector<cv::Point> neighbors = { {-1,-1}, {-1,0}, {-1,-1},
+    					{0,-1},            {0,1},
+    					{1,-1},{1,0},{1,1}};
+    while(!to_check.empty()){
+    	cv::Point p = to_check.front();
+    	to_check.pop_front();
+    	
+    	for(const auto& neighbor : neighbors){
+    		cv::Point n(p.x+neighbor.x, p.y+neighbor.y);
+    		if(n.x>=0 && n.x<gradient_magnitude.cols && n.y>=0 && n.y<gradient_magnitude.rows){
+    			if(lower_bound <= gradient_magnitude.at<double>(n.y,n.x) && 
+    			gradient_magnitude.at<double>(n.y,n.x) < upper_bound && 
+    			boundary_mask.at<uchar>(n.y,n.x) == 0){
+    				boundary_mask.at<uchar>(n.y,n.x) = 255;
+    				to_check.push_back(n);
+    			}
+    		}
+    	}
+    }
+    
+    cv::Mat filtered_image = image.clone();
+    cv::Mat frame;
+    cv::Canny(boundary_mask,frame,30,90);
+    
+    for(int y=0;y<frame.rows;++y){
+    	for(int x=0;x<frame.cols;++x){
+    		if(frame.at<uchar>(y,x) == 255){
+    			to_check.push_back(cv::Point(x,y));
+    		}
+    	}
+    }
+    while(!to_check.empty()){
+    	cv::Point p = to_check.front();
+    	to_check.pop_front();
+    	
+    	for(const auto& neighbor : neighbors){
+    		cv::Point n(p.x+neighbor.x, p.y+neighbor.y);
+    		if(n.x>=0 && n.x<gradient_magnitude.cols && n.y>=0 && n.y<gradient_magnitude.rows){
+    			if(boundary_mask.at<uchar>(n.y,n.x) == 255){
+    				filtered_image.at<uchar>(n.y,n.x) = filtered_image.at<uchar>(p.y,p.x);
+    				boundary_mask.at<uchar>(n.y,n.x) = 0;
+    				to_check.push_back(n);
+    			}
+    		}
+    	}
+    }
+    
+    memcpy(buffer,filtered_image.datastart,100*100);
+    return buffer;
+}
+
 static void timer_callback() {
   std::string s;
   std::stringstream sstream;
   frame_t *f;
-_more:
-  ser >> s;
-  if (s.empty()) {
-    return;
-  }
-  f = handle_process(s);
-  if (!f) {
-    goto _more;
-  }
+  do{
+    ser >> s;
+    if (s.empty()) {
+      return;
+    }
+    f = handle_process(s);
+  }while (!f);
   // cout << f << endl;
   uint8_t rows, cols, *depth;
   rows = f->frame_head.resolution_rows;
   cols = f->frame_head.resolution_cols;
   depth = f->payload;
-  depth = FlyingPointFilter(depth,0.03);
+  //depth = FlyingPointFilter(depth,0.03);
   cv::Mat md(rows, cols, CV_8UC1, depth);
 
   sstream << md.size();
@@ -190,7 +271,13 @@ _more:
   sensor_msgs::Image msg_depth =
       *cv_bridge::CvImage(header, "mono8", md).toImageMsg().get();
   ROS_INFO("Publishing: depth:%s", sstream.str().c_str());
-  publisher_depth.publish(msg_depth);
+  publisher_depth_raw.publish(msg_depth);
+  
+  depth = FlyingPointFilter(depth);
+  md = cv::Mat(rows, cols, CV_8UC1, depth);
+  msg_depth =
+      *cv_bridge::CvImage(header, "mono8", md).toImageMsg().get();
+  publisher_depth_rect.publish(msg_depth);
   
   
   float fox = uvf_parms[0];
@@ -295,6 +382,7 @@ int main(int argc, char *argv[]) {
   while(InitSipeedTOF_MSA010_Publisher(&n)){
     ros::Duration(0.1).sleep();
   }
+  std::cout<<"Start driving."<<std::endl;
   while (ros::ok()) {
     timer_callback();
     ros::spinOnce();
