@@ -62,6 +62,9 @@ target_link_libraries(kitti_odom_test vins_lib)
 add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 target_link_libraries(kitti_gps_test vins_lib) 
 
+install(DIRECTORY config
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+)
 ## Mark executables and/or libraries for installation
  install(TARGETS vins_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

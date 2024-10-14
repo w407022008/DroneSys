@@ -49,6 +49,9 @@ add_executable(loop_fusion_node
 
 target_link_libraries(loop_fusion_node ${catkin_LIBRARIES}  ${OpenCV_LIBS} ${CERES_LIBRARIES}) 
 
+install(DIRECTORY vocabulary_files
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/vocabulary_files
+)
 ## Mark executables and/or libraries for installation
  install(TARGETS loop_fusion_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

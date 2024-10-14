@@ -72,6 +72,16 @@ install(DIRECTORY include/
     DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
     )
 
+# Install config files
+install(DIRECTORY config/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+    )
+
+# Install lib files
+install(DIRECTORY lib/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+    )
+
 # Install launch files
 install(DIRECTORY launch/
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch

@@ -83,7 +83,7 @@ target_link_libraries(camera_models ${Boost_LIBRARIES} ${OpenCV_LIBS} ${CERES_LI
 
 ## Mark cpp header files for installation
 install(DIRECTORY include/camodocal
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}/..
   FILES_MATCHING PATTERN "*.h"
 )
 
