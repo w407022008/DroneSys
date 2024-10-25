@@ -1,6 +1,6 @@
 <launch>
 	<!-- Inital position -->
-	<arg name="x" default="1.0"/>
+	<arg name="x" default="0.0"/>
 	<arg name="y" default="0.0"/>
 	<arg name="z" default="0.0"/>
 	<arg name="R" default="0"/>
@@ -66,7 +66,7 @@
         <!-- PX4 SITL and vehicle spawn -->
         <include file="$(find simulation_gazebo)/launch_basic/single_vehicle_spawn_sdf.launch">
             <arg name="x" value="$(eval 1 + arg('x'))"/>
-            <arg name="y" value="$(eval 0 + arg('y'))"/>
+            <arg name="y" value="$(eval 0.5 + arg('y'))"/>
             <arg name="z" value="$(eval 0 + arg('z'))"/>
             <arg name="R" value="$(eval 0 + arg('R'))"/>
             <arg name="P" value="$(eval 0 + arg('P'))"/>

@@ -33,6 +33,7 @@ sed -i '30i add_compile_options(-std=c++17)' ./Modules/control/rpg_mpc/CMakeList
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/perception/OptiTrack/CMakeLists.txt
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/perception/points_worker/CMakeLists.txt
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/perception/state_predictor/CMakeLists.txt
+sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/perception/opencv_sgbm/CMakeLists.txt
 
 ## Slam
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/slam/VINS-Fusion/loop_fusion/CMakeLists.txt
@@ -46,16 +47,26 @@ sed -i -e s/"CMAKE_CXX_STANDARD 14"/"CMAKE_CXX_STANDARD 17"/g ./Modules/slam/ope
 sed -i -e s/"CMAKE_CXX_STANDARD 14"/"CMAKE_CXX_STANDARD 17"/g ./Modules/slam/open_vins/ov_msckf/CMakeLists.txt
 
 ## planning
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/plan_env/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/bspline/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/path_searching/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/active_perception/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/bspline_opt/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/traj_utils/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/plan_manage/CMakeLists.txt
+sed -i -e s/"set(CMAKE_CXX_STANDARD 14)"/"set(CMAKE_CXX_STANDARD 17)"/g ./Modules/planning/fuel_planner/exploration_manager/CMakeLists.txt
+
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/globle_planner/CMakeLists.txt
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/local_planner/CMakeLists.txt
 sed -i '16,19d' ./Modules/planning/local_planner/src/geo_guide_apf.cpp
+
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/FastPlanner/CMakeLists.txt
 sed -i '65i add_compile_options(-std=c++17)' ./Modules/planning/FastPlanner/ThirdParty/sdf_tools/CMakeLists.txt
 sed -i -e s/"-std=c++0x"/"-std=c++17"/g ./Modules/planning/FastPlanner/ThirdParty/sdf_tools/CMakeLists.txt
 sed -i '5i #include <stdlib.h>' ./Modules/planning/FastPlanner/ThirdParty/arc_utilities/include/arc_utilities/first_order_deformation.h
 
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/ego-planner/CMakeLists.txt
-sed -i -e s/"mat_jerk(i, j)"/"mat_jerk((int)i, (int)j)"/g ./Modules/planning/ego-planner/include/polynomial_traj.h
+#sed -i -e s/"mat_jerk(i, j)"/"mat_jerk((int)i, (int)j)"/g ./Modules/planning/ego-planner/include/polynomial_traj.h
 
 sed -i -e s/"-std=c++14"/"-std=c++17"/g ./Modules/planning/histo-planner/CMakeLists.txt
 

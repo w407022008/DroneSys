@@ -262,6 +262,25 @@ void keyboardControlCallback(std_msgs::String msg){
                       odom.pose.pose.position.z);
   if (msg.data == "i") {
     if (keyboard_control) {
+
+      // Takeoff
+      Command_Now.header.stamp = ros::Time::now();
+      Command_Now.Mode  = drone_msgs::ControlCommand::Idle;
+      Command_Now.Command_ID = 1;
+      Command_Now.source = "traj_server";
+      Command_Now.Reference_State.yaw_ref = 999;
+      command_pub.publish(Command_Now);   
+      cout << "Switched to OFFBOARD and armed, drone will take off after 1.0s"<<endl;
+      ros::Duration(1.0).sleep();
+
+      Command_Now.header.stamp = ros::Time::now();
+      Command_Now.Mode = drone_msgs::ControlCommand::Takeoff;
+      Command_Now.Command_ID = Command_Now.Command_ID + 1;
+      Command_Now.source = "traj_server";
+      command_pub.publish(Command_Now);
+      cout << "Takeoff for 1.0s"<<endl;
+      ros::Duration(1.0).sleep();
+
       double yaw = 0.0;
       for (int i = 0; i < 100; ++i) {
         pos(2) += 0.01;
