@@ -7,7 +7,7 @@
   <maintainer email="w407022008@gmail.com">ze wang</maintainer>
   <license>TODO</license>
 
-  <build_depend>message_generation</build_depend>
+  <!-- <build_depend>message_generation</build_depend> -->
   <!-- <exec_depend>message_runtime</exec_depend> -->
 
   <buildtool_depend>catkin</buildtool_depend>

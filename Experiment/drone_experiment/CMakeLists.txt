@@ -7,8 +7,8 @@ project(drone_experiment)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  message_generation  
+find_package(catkin REQUIRED
+  # message_generation  
   # roscpp
   # geometry_msgs
   # nav_msgs
@@ -25,20 +25,16 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
-
+catkin_package()
 
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  # geometry_msgs 
-  # nav_msgs
-  # sensor_msgs
-  # std_msgs
-)
+#generate_messages(
+#  DEPENDENCIES
+#)
 
 
 
@@ -49,7 +45,6 @@ generate_messages(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -93,7 +88,12 @@ include_directories(
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
-
+install(DIRECTORY config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+)
+install(DIRECTORY scripts/
+DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
+)
 #############
 ## Testing ##
 #############
