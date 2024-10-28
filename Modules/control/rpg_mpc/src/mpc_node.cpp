@@ -282,7 +282,7 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     }
     Command_to_pub.Attitude_sp.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
 
-    Command_to_pub.Attitude_sp.desired_throttle = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+    Command_to_pub.Attitude_sp.collective_accel = control_cmd.collective_thrust; // collective accel [m/s^2] rather att_setpoint.thrust_body[]
     drone_msg_pub.publish(Command_to_pub);
   }
   // publish mavros attitude setpoint
@@ -292,7 +292,7 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
     // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
     // bit 4: use hover thrust estimation, bit 5: reserved
-    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 6: 3D body thrust sp, bit 7: collective accel, bit 8: attitude
     if(rate_control_){
       att_setpoint.type_mask = 0b10010000; // only bodyrates setpoint
     }else{
@@ -302,7 +302,7 @@ void MPCControllerNode::TimedPublishCommand(const ros::TimerEvent& e){
     // att_setpoint.type_mask = 0b00011111; // only attitude setpoint
     att_setpoint.body_rate = quadrotor_common::eigenToGeometry(control_cmd.bodyrates);
 
-    att_setpoint.thrust = control_cmd.collective_thrust; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = control_cmd.collective_thrust; // collective accel rather att_setpoint.thrust_body[]
 
     mavros_setpoint_raw_attitude_pub.publish(att_setpoint);
   }

@@ -174,7 +174,7 @@ void prinft_attitude_reference(const drone_msgs::AttitudeReference& _AttitudeRef
     cout.setf(ios::showpos);
 
     cout << "Attitude_sp [R P Y]  : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    cout << "Throttle_sp [ 0-1 ]  : " << _AttitudeReference.desired_throttle <<endl;
+    cout << "Collective accel [ m/s^2 ]  : " << _AttitudeReference.collective_accel <<endl;
 }
 
 void prinft_ref_pose(const geometry_msgs::PoseStamped& ref_pose)
@@ -261,7 +261,7 @@ Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
 
 //Throttle to Attitude
 //Thrust to Attitude
-//Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
+//Input: desired thrust (desired throttle [0,1]?) and yaw_sp(rad)
 //Output: desired attitude (quaternion)
 drone_msgs::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp)
 {
@@ -272,11 +272,11 @@ drone_msgs::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, 
     // desired body_z axis = -normalize(thrust_vector)
     Eigen::Vector3d body_x, body_y, body_z;
 
-    double thr_sp_length = thr_sp.norm();
+    double thr_sp_norm = thr_sp.norm();
 
-    //cout << "thr_sp_length : "<< thr_sp_length << endl;
+    //cout << "thr_sp_norm : "<< thr_sp_norm << endl;
 
-    if (thr_sp_length > 0.00001f) {
+    if (thr_sp_norm > 0.00001f) {
             body_z = thr_sp.normalized();
 
     } else {
@@ -322,7 +322,7 @@ drone_msgs::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, 
     rotation_to_euler(R_sp, att_sp);
 
     //cout << "Desired euler [R P Y]: "<< att_sp[0]* 180/M_PI <<" [deg] " << att_sp[1]* 180/M_PI <<" [deg] "<< att_sp[2]* 180/M_PI <<" [deg] "<< endl;
-    //cout << "Desired Thrust: "<< thr_sp_length<< endl;
+    //cout << "Desired Thrust: "<< thr_sp_norm<< endl;
     // cout << "q_sp [x y z w]: "<< q_sp.x() <<" [ ] " << q_sp.y() <<" [ ] "<<q_sp.z() <<" [ ] "<<q_sp.w() <<" [ ] "<<endl;
     // cout << "R_sp : "<< R_sp(0, 0) <<" " << R_sp(0, 1) <<" "<< R_sp(0, 2) << endl;
     // cout << "     : "<< R_sp(1, 0) <<" " << R_sp(1, 1) <<" "<< R_sp(1, 2) << endl;
@@ -333,7 +333,7 @@ drone_msgs::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, 
     _AttitudeReference.thrust_sp[1] = thr_sp[1];
     _AttitudeReference.thrust_sp[2] = thr_sp[2];
 
-    _AttitudeReference.desired_throttle = thr_sp_length; 
+    _AttitudeReference.collective_accel = thr_sp_norm; 
 
     _AttitudeReference.desired_att_q.w = q_sp.w();
     _AttitudeReference.desired_att_q.x = q_sp.x();

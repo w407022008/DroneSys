@@ -467,14 +467,14 @@ int main(int argc, char **argv)
                 _command_to_mavros.send_attitude_rate_setpoint(
                     quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.desired_att_q),
                     quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.body_rate),
-                    Command_Now.Attitude_sp.desired_throttle);
+                    Command_Now.Attitude_sp.collective_accel);
                 break;
 
             // ================================= Rate =================================
             case drone_msgs::ControlCommand::Rate:
                 _command_to_mavros.send_rate_setpoint(
                     quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.body_rate),
-                    Command_Now.Attitude_sp.desired_throttle);
+                    Command_Now.Attitude_sp.collective_accel);
                 break;
         }
 

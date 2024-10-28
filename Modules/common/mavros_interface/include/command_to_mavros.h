@@ -108,10 +108,10 @@ public:
     void send_acc_xyz_setpoint(const Eigen::Vector3d& accel_sp, float yaw_sp);
 
     // rotation
-    void send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float throttle);
-    void send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float throttle);
-    void send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, const float throttle_sp);
-    void send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float throttle);
+    void send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float collective_accel);
+    void send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float collective_accel);
+    void send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, const float collective_accel_sp);
+    void send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float collective_accel);
     
     // motor speed
     void send_actuator_setpoint(const Eigen::Vector4d& actuator_sp);
@@ -343,15 +343,15 @@ void command_to_mavros::send_acc_xyz_setpoint(const Eigen::Vector3d& accel_sp, f
 
 }
 
-// quaternion attitude + body_rate + throttle
-void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float throttle_sp)
+// quaternion attitude + body_rate + collective_accel
+void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Quaterniond& attitude_q_sp, const Eigen::Vector3d& body_rate_sp, const float collective_accel_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
     // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
     // bit 4: use hover thrust estimation, bit 5: reserved
-    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 6: 3D body thrust sp, bit 7: collective_accel, bit 8: attitude
 
     att_setpoint.type_mask = 0b00010000;
 
@@ -364,20 +364,20 @@ void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Quaterniond& at
     att_setpoint.orientation.z = attitude_q_sp.z();
     att_setpoint.orientation.w = attitude_q_sp.w();
 
-    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = collective_accel_sp; // collective accel [m/s^2] rather att_setpoint.thrust_body[]
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
-// quaternion attitude + throttle
-void command_to_mavros::send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float throttle_sp)
+// quaternion attitude + collective_accel
+void command_to_mavros::send_attitude_setpoint(const Eigen::Quaterniond& attitude_q_sp, const float collective_accel_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
     // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
     // bit 4: use hover thrust estimation, bit 5: reserved
-    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 6: 3D body thrust sp, bit 7: collective_accel, bit 8: attitude
 
     att_setpoint.type_mask = 0b00010111;
 
@@ -386,20 +386,20 @@ void command_to_mavros::send_attitude_setpoint(const Eigen::Quaterniond& attitud
     att_setpoint.orientation.z = attitude_q_sp.z();
     att_setpoint.orientation.w = attitude_q_sp.w();
 
-    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = collective_accel_sp; // collective accel [m/s^2] rather att_setpoint.thrust_body[]
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
-// quaternion attitude + throttle + body_yaw_rate
-void command_to_mavros::send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float throttle_sp)
+// quaternion attitude + collective_accel + body_yaw_rate
+void command_to_mavros::send_attitude_setpoint_yawrate(const Eigen::Quaterniond& attitude_q_sp, const float yaw_rate_sp, const float collective_accel_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
     // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
     // bit 4: use hover thrust estimation, bit 5: reserved
-    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 6: 3D body thrust sp, bit 7: collective_accel, bit 8: attitude
 
     att_setpoint.type_mask = 0b00010011;
 
@@ -408,7 +408,7 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const Eigen::Quaterniond&
     att_setpoint.orientation.z = attitude_q_sp.z();
     att_setpoint.orientation.w = attitude_q_sp.w();
 
-    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = collective_accel_sp; // collective accel [m/s^2] rather att_setpoint.thrust_body[]
 
     // att_setpoint.body_rate.x = 0.0;
     // att_setpoint.body_rate.y = 0.0;
@@ -417,15 +417,15 @@ void command_to_mavros::send_attitude_setpoint_yawrate(const Eigen::Quaterniond&
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
 
-// body_rate + throttle
-void command_to_mavros::send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, float throttle_sp)
+// body_rate + collective_accel
+void command_to_mavros::send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, float collective_accel_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
     //Mappings: If any of these bits are set, the corresponding input should be ignored:
     // bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. 
     // bit 4: use hover thrust estimation, bit 5: reserved
-    // bit 6: 3D body thrust sp instead of throttle, bit 7: throttle, bit 8: attitude
+    // bit 6: 3D body thrust sp, bit 7: collective_accel, bit 8: attitude
 
     att_setpoint.type_mask = 0b10010000;
 
@@ -433,7 +433,7 @@ void command_to_mavros::send_rate_setpoint(const Eigen::Vector3d& body_rate_sp, 
     att_setpoint.body_rate.y = body_rate_sp[1];
     att_setpoint.body_rate.z = body_rate_sp[2];
 
-    att_setpoint.thrust = throttle_sp; // throttle [0,1] rather att_setpoint.thrust_body[]
+    att_setpoint.thrust = collective_accel_sp; // collective accel [m/s^2] rather att_setpoint.thrust_body[]
 
     setpoint_raw_attitude_pub.publish(att_setpoint);
 }
