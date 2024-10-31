@@ -401,9 +401,9 @@ void GeometricPositionController::ComputeDesiredBodyrates(const Eigen::Matrix3d&
 
   Eigen::Matrix3d R = odometry_.orientation.toRotationMatrix();
   // Angle error according to lee et al.
-  Eigen::Matrix3d angle_error_matrix = 0.5 * (desired_R.transpose() * R - R.transpose() * desired_R);
+  Eigen::Matrix3d angle_error_matrix = -0.5 * (desired_R.transpose() * R - R.transpose() * desired_R);
   vectorFromSkewMatrix(angle_error_matrix, desired_bodyrates);
-  // *desired_bodyrates = (*desired_bodyrates).cwiseProduct(controller_parameters_.attitude_gain_);
+  *desired_bodyrates = (*desired_bodyrates).cwiseProduct(controller_parameters_.attitude_gain_);
 }
 
 void GeometricPositionController::ComputeDesiredAngularAcc(const Eigen::Vector3d& attitude_error_vector,
@@ -434,12 +434,12 @@ void GeometricPositionController::ComputeDesiredAngularAcc(const Eigen::Vector3d
   Eigen::Vector3d bodyrates_des_proj = R * body_rate_des;
   Eigen::Vector3d bodyrate_error = odometry_.angular_velocity - bodyrates_des_proj;
 
-  // Eigen::Matrix3d inertia_inv_ = vehicle_parameters_.inertia_.inverse();
-  // *desired_angular_acceleration = -1 * inertia_inv_ * attitude_error_vector.cwiseProduct(controller_parameters_.attitude_gain_)
-  //                          - inertia_inv_ * bodyrate_error.cwiseProduct(controller_parameters_.angular_rate_gain_)
-  //                          + odometry_.angular_velocity.cross(odometry_.angular_velocity); // we don't need the inertia matrix here
-  *desired_angular_acceleration = -1 * attitude_error_vector.cwiseProduct(normalized_attitude_gain_)
-                           - bodyrate_error.cwiseProduct(normalized_angular_rate_gain_)
+  Eigen::Matrix3d inertia_inv_ = vehicle_parameters_.inertia_.inverse();
+  *desired_angular_acceleration = -1 * inertia_inv_ * attitude_error_vector//.cwiseProduct(controller_parameters_.attitude_gain_)
+                           - inertia_inv_ * bodyrate_error.cwiseProduct(controller_parameters_.angular_rate_gain_)
                            + odometry_.angular_velocity.cross(odometry_.angular_velocity); // we don't need the inertia matrix here
+  // *desired_angular_acceleration = -1 * attitude_error_vector.cwiseProduct(normalized_attitude_gain_)
+  //                          - bodyrate_error.cwiseProduct(normalized_angular_rate_gain_)
+  //                          + odometry_.angular_velocity.cross(odometry_.angular_velocity); // we don't need the inertia matrix here
 }
 }

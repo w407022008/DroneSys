@@ -217,6 +217,10 @@ void printf_command_control(const drone_msgs::ControlCommand& Command_Now)
             cout << "Command: [ Disarm ] " <<endl;
             break;
 
+        case drone_msgs::ControlCommand::Attitude:
+            cout << "Command: [ Attitude ] " <<endl;
+            break;
+        
         case drone_msgs::ControlCommand::AttitudeRate:
             cout << "Command: [ AttitudeRate ] " <<endl;
             break;

@@ -34,8 +34,9 @@ quadrotor_common::ControlCommand PositionController::run(
   quadrotor_common::ControlCommand reference_inputs;
   if(reference_state.position.norm() > 0.001 || reference_state.velocity.norm() > 0.001){
     // Compute angular_rate_ref and angular_accel_ref based on Differential Flatness
+    // from additional trajectory smoothness information
     if (config.perform_aerodynamics_compensation) {
-      // Compute reference inputs that compensate for aerodynamic drag
+      // Compute reference inputs as feed forward terms with compensation for aerodynamic drag
       computeAeroCompensatedReferenceInputs(reference_state, state_estimate,
                                             config, &reference_inputs,
                                             &drag_accelerations);
@@ -43,7 +44,7 @@ quadrotor_common::ControlCommand PositionController::run(
       // In this case we are not considering aerodynamic accelerations
       drag_accelerations = Eigen::Vector3d::Zero();
 
-      // Compute reference inputs as feed forward terms
+      // Compute reference inputs as feed forward terms w.o. compensation for aerodynamic drag
       reference_inputs = computeNominalReferenceInputs(
           reference_state, state_estimate.orientation);
     }
@@ -91,10 +92,10 @@ quadrotor_common::ControlCommand PositionController::run(
     command.control_mode = quadrotor_common::ControlMode::ATTITUDE;
     command.orientation = desired_attitude;
 
+    command.bodyrates = reference_inputs.bodyrates+feedback_bodyrates;
     // In ATTITUDE control mode the x-y-bodyrates contain just the feed forward
     // terms. The z-bodyrate has to be from feedback control
-    command.bodyrates = reference_inputs.bodyrates;
-    command.bodyrates.z() += feedback_bodyrates.z();
+    // command.bodyrates.z() += feedback_bodyrates.z();
   }
 
   command.angular_accelerations = reference_inputs.angular_accelerations;// neglect feedbacck
@@ -365,6 +366,9 @@ Eigen::Vector3d PositionController::computePIDErrorAcc(
   // with a PID controller
   Eigen::Vector3d acc_error;
 
+  Eigen::Vector3d velocity_in_world =  state_estimate.orientation.toRotationMatrix()
+                                     * state_estimate.velocity;
+
   // x acceleration
   double x_pos_error =
       reference_state.position.x() - state_estimate.position.x();
@@ -372,7 +376,7 @@ Eigen::Vector3d PositionController::computePIDErrorAcc(
                           config.pxy_error_max);
 
   double x_vel_error =
-      reference_state.velocity.x() - state_estimate.velocity.x();
+      reference_state.velocity.x() - velocity_in_world.x();
   quadrotor_common::limit(&x_vel_error, -config.vxy_error_max,
                           config.vxy_error_max);
 
@@ -385,7 +389,7 @@ Eigen::Vector3d PositionController::computePIDErrorAcc(
                           config.pxy_error_max);
 
   double y_vel_error =
-      reference_state.velocity.y() - state_estimate.velocity.y();
+      reference_state.velocity.y() - velocity_in_world.y();
   quadrotor_common::limit(&y_vel_error, -config.vxy_error_max,
                           config.vxy_error_max);
 
@@ -398,7 +402,7 @@ Eigen::Vector3d PositionController::computePIDErrorAcc(
                           config.pz_error_max);
 
   double z_vel_error =
-      reference_state.velocity.z() - state_estimate.velocity.z();
+      reference_state.velocity.z() - velocity_in_world.z();
   quadrotor_common::limit(&z_vel_error, -config.vz_error_max,
                           config.vz_error_max);
 
@@ -501,31 +505,15 @@ Eigen::Vector3d PositionController::computeFeedBackControlBodyrates(
   // Compute desired body rates from control error
   Eigen::Vector3d bodyrates;
 
-  double qw,qx,qy,qz,sgn;
-  qw = q_e.w();
-  qx = q_e.x();
-  qy = q_e.y();
-  qz = q_e.z();
-  sgn = qw/abs(qw);
-  double scl = 1/sqrt(qw*qw+qz*qz);
-  Eigen::Vector3d q_erp = Eigen::Vector3d((qw*qx-qy*qz)*scl,(qw*qy+qx*qz)*scl,0.0);
-  double yaw_error = qz*scl;
-  quadrotor_common::limit(&yaw_error, -config.yaw_error_max,
-                          config.yaw_error_max);
-  Eigen::Vector3d q_ey = Eigen::Vector3d(0.0,0.0,yaw_error);
-
-  bodyrates = 2 * (config.krp * q_erp + config.kyaw * q_ey);
-
-  // Same or
-  // if (q_e.w() >= 0) {
-  //   bodyrates.x() = 2.0 * config.krp * q_e.x();
-  //   bodyrates.y() = 2.0 * config.krp * q_e.y();
-  //   bodyrates.z() = 2.0 * config.kyaw * q_e.z();
-  // } else {
-  //   bodyrates.x() = -2.0 * config.krp * q_e.x();
-  //   bodyrates.y() = -2.0 * config.krp * q_e.y();
-  //   bodyrates.z() = -2.0 * config.kyaw * q_e.z();
-  // }
+  if (q_e.w() >= 0) {
+    bodyrates.x() = 2.0 * config.krp * q_e.x();
+    bodyrates.y() = 2.0 * config.krp * q_e.y();
+    bodyrates.z() = 2.0 * config.kyaw * q_e.z();
+  } else {
+    bodyrates.x() = -2.0 * config.krp * q_e.x();
+    bodyrates.y() = -2.0 * config.krp * q_e.y();
+    bodyrates.z() = -2.0 * config.kyaw * q_e.z();
+  }
 
   return bodyrates;
 }

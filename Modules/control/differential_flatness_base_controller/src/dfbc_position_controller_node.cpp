@@ -70,26 +70,27 @@ DFBCPositionControllerNode::~DFBCPositionControllerNode() {
 }
 
 bool DFBCPositionControllerNode::InitializeParams() {
+  const std::string path_rel_to_node = "position_controller";
 
-  if (!quadrotor_common::getParam("control_frequency", control_frequency_, 200.0f, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/control_frequency", control_frequency_, 200.0f, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("poly_interpolation", poly_interpolation_, true, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/poly_interpolation", poly_interpolation_, true, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("polynomial_order", kPolynomialOrderOfContinuity_, 5, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/polynomial_order", kPolynomialOrderOfContinuity_, 5, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("go_to_pose_max_velocity", go_to_pose_max_velocity_, 1.5, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/go_to_pose_max_velocity", go_to_pose_max_velocity_, 1.5, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("go_to_pose_max_normalized_thrust", go_to_pose_max_normalized_thrust_, 12.0, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/go_to_pose_max_normalized_thrust", go_to_pose_max_normalized_thrust_, 12.0, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("go_to_pose_max_roll_pitch_rate", go_to_pose_max_roll_pitch_rate_, 0.5, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/go_to_pose_max_roll_pitch_rate", go_to_pose_max_roll_pitch_rate_, 0.5, pnh_)){
     return false;
   }
-  if (!quadrotor_common::getParam("poly_interpo_sampling_rate", kGoToPoseTrajectorySamplingFrequency_, 50.0, pnh_)){
+  if (!quadrotor_common::getParam(path_rel_to_node+"/poly_interpo_sampling_rate", kGoToPoseTrajectorySamplingFrequency_, 50.0, pnh_)){
     return false;
   }
 

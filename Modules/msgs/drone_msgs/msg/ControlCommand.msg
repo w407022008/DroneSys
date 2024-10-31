@@ -13,8 +13,9 @@ uint8 Hold=2
 uint8 Land=3
 uint8 Move=4
 uint8 Disarm=5
-uint8 AttitudeRate=6
-uint8 Rate=7
+uint8 Attitude=6
+uint8 AttitudeRate=7
+uint8 Rate=8
 
 ## Setpoint Reference
 PositionReference Reference_State

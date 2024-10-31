@@ -21,7 +21,7 @@
 	<!-- 1: Geometric controller -->
 	<!-- 2: Differential Flatness based controller -->
 	<!-- 3: MPC controller -->
-	<arg name="custom_controller" default="1"/>
+	<arg name="custom_controller" default="2"/>
 
 	<!-- run the terminal_control.cpp -->
 	<node pkg="control" type="terminal_control" name="terminal_control" output="screen" launch-prefix="gnome-terminal --tab --">	
@@ -39,9 +39,7 @@
     <!-- Differential Flatness Based Controller-->
     <node if="$(eval arg('custom_controller') == 2)" pkg="differential_flatness_base_controller" type="dfbc_position_controller_node" name="dfbc_position_controller_node" output="screen">
       <rosparam file="$(find differential_flatness_base_controller)/parameters/position_controller.yaml" />
-      
-      <param name="position_controller/use_rate_mode" value="True" />
-      
+            
       <remap from="command/state_estimate" to="drone_msg/drone_odom" />
     </node>
 

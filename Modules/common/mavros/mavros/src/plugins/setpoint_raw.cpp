@@ -250,9 +250,9 @@ private:
 				"on px4/apm_config.yaml. Actuation will be ignored.");
 			return;
 		} else {
-			if (thrust_scaling == 0.0) {
-				ROS_WARN_THROTTLE_NAMED(5, "setpoint_raw", "thrust_scaling parameter is set to zero.");
-			}
+			// if (thrust_scaling == 0.0) {
+			// 	ROS_WARN_THROTTLE_NAMED(5, "setpoint_raw", "thrust_scaling parameter is set to zero.");
+			// }
 			thrust = req->thrust;//std::min(1.0, std::max(0.0, req->thrust * thrust_scaling));
 		}
 

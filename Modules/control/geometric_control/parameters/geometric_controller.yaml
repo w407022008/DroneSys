@@ -1,6 +1,6 @@
-rate_control: false
+rate_control: true
 # Lee position controller parameters
 position_gain: {x: 10, y: 10, z: 10}
 velocity_gain: {x: 8, y: 8, z: 8}
-attitude_gain: {x: 1, y: 1, z: 1}
+attitude_gain: {x: 8, y: 8, z: 8}
 angular_rate_gain: {x: 0.1, y: 0.1, z: 0.025}

@@ -462,6 +462,13 @@ int main(int argc, char **argv)
                 }
                 break;
 
+            // ================================= Attitude =================================
+            case drone_msgs::ControlCommand::Attitude:
+                _command_to_mavros.send_attitude_setpoint(
+                    quadrotor_common::geometryToEigen(Command_Now.Attitude_sp.desired_att_q),
+                    Command_Now.Attitude_sp.collective_accel);
+                break;
+
             // ================================= AttitudeRate =================================
             case drone_msgs::ControlCommand::AttitudeRate:
                 _command_to_mavros.send_attitude_rate_setpoint(
@@ -562,7 +569,7 @@ geometry_msgs::PoseStamped get_rviz_ref_posistion(const drone_msgs::ControlComma
         ref_pose.pose.position.z = Disarm_height;
         ref_pose.pose.orientation = _DroneState.attitude_q;
     }
-    else if(cmd.Mode >= drone_msgs::ControlCommand::AttitudeRate)
+    else if(cmd.Mode >= drone_msgs::ControlCommand::Attitude)
     {
         ref_pose.pose.position.x = cmd.Reference_State.position_ref[0];
         ref_pose.pose.position.y = cmd.Reference_State.position_ref[1];
