@@ -92,12 +92,14 @@ class Estimator
         MARGIN_SECOND_NEW = 1
     };
 
+    double processTimeCost, featureTrackingTimeCost;
+
     std::mutex mProcess;
     std::mutex mBuf;
     std::mutex mPropagate;
-    queue<pair<double, Eigen::Vector3d>> accBuf;
-    queue<pair<double, Eigen::Vector3d>> gyrBuf;
-    queue<pair<double, map<int, vector<pair<int, Eigen::Matrix<double, 7, 1> > > > > > featureBuf;
+    queue<pair<double, Vector3d>> accBuf;
+    queue<pair<double, Vector3d>> gyrBuf;
+    queue<pair<double, map<int, vector<pair<int, Matrix<double, 7, 1> > > > > > featureBuf;
     double prevTime, curTime;
     bool openExEstimation;
 
@@ -110,8 +112,8 @@ class Estimator
     MarginalizationFlag  marginalization_flag;
     Vector3d g;
 
-    Matrix3d ric[2];
-    Vector3d tic[2];
+    std::vector<Matrix3d> ric;
+    std::vector<Vector3d> tic;
 
     Vector3d        Ps[(WINDOW_SIZE + 1)];
     Vector3d        Vs[(WINDOW_SIZE + 1)];

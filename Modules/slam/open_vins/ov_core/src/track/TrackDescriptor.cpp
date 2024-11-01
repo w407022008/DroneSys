@@ -352,6 +352,7 @@ void TrackDescriptor::feed_stereo(const CameraData &message, size_t msg_id_left,
   PRINT_ALL("[TIME-DESC]: %.4f seconds for total\n", (rT5 - rT1).total_microseconds() * 1e-6);
 }
 
+// get ORB feature from a new camera image
 void TrackDescriptor::perform_detection_monocular(const cv::Mat &img0, const cv::Mat &mask0, std::vector<cv::KeyPoint> &pts0,
                                                   cv::Mat &desc0, std::vector<size_t> &ids0) {
 
@@ -400,6 +401,7 @@ void TrackDescriptor::perform_detection_monocular(const cv::Mat &img0, const cv:
   }
 }
 
+// get new stereo pair ORB features and match to each other
 void TrackDescriptor::perform_detection_stereo(const cv::Mat &img0, const cv::Mat &img1, const cv::Mat &mask0, const cv::Mat &mask1,
                                                std::vector<cv::KeyPoint> &pts0, std::vector<cv::KeyPoint> &pts1, cv::Mat &desc0,
                                                cv::Mat &desc1, size_t cam_id0, size_t cam_id1, std::vector<size_t> &ids0,
@@ -477,6 +479,7 @@ void TrackDescriptor::perform_detection_stereo(const cv::Mat &img0, const cv::Ma
   }
 }
 
+// match 2 features by knn with robust test and finding RANSAC Fundamental
 void TrackDescriptor::robust_match(const std::vector<cv::KeyPoint> &pts0, const std::vector<cv::KeyPoint> &pts1, const cv::Mat &desc0,
                                    const cv::Mat &desc1, size_t id0, size_t id1, std::vector<cv::DMatch> &matches) {
 
@@ -535,6 +538,7 @@ void TrackDescriptor::robust_match(const std::vector<cv::KeyPoint> &pts0, const 
   }
 }
 
+// strong nearest neighbour test
 void TrackDescriptor::robust_ratio_test(std::vector<std::vector<cv::DMatch>> &matches) {
   // Loop through all matches
   for (auto &match : matches) {
@@ -551,6 +555,7 @@ void TrackDescriptor::robust_ratio_test(std::vector<std::vector<cv::DMatch>> &ma
   }
 }
 
+// Mutual nearest neighbour test
 void TrackDescriptor::robust_symmetry_test(std::vector<std::vector<cv::DMatch>> &matches1, std::vector<std::vector<cv::DMatch>> &matches2,
                                            std::vector<cv::DMatch> &good_matches) {
   // for all matches image 1 -> image 2

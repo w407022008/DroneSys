@@ -47,8 +47,10 @@ int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
 int CORNER_DETECTOR;
+int EQUALIZE_METHOD;
 int FLOW_BACK;
 int TF_PUB;
+int PRINT;
 
 
 template <typename T>
@@ -92,8 +94,10 @@ void readParameters(std::string config_file)
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
     CORNER_DETECTOR = fsSettings["corner_detector"];
+    EQUALIZE_METHOD = fsSettings["equalize_method"];
     FLOW_BACK = fsSettings["flow_back"];
     TF_PUB = fsSettings["tf_pub"];
+    PRINT = fsSettings["print_info"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
@@ -153,16 +157,31 @@ void readParameters(std::string config_file)
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
 
-    ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
-    if (ESTIMATE_EXTRINSIC == 2)
+    NUM_OF_CAM = fsSettings["num_of_cam"];
+    STEREO = fsSettings["use_stereo"];
+    printf("camera number %d\n", NUM_OF_CAM);
+
+    if(NUM_OF_CAM == 1)
+        STEREO = 0;
+    else if(NUM_OF_CAM != 1 && NUM_OF_CAM != 2)
     {
-        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
-        RIC.push_back(Eigen::Matrix3d::Identity());
-        TIC.push_back(Eigen::Vector3d::Zero());
-        EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
+        printf("num_of_cam should be 1 or 2\n");
+        assert(0);
     }
-    else 
+
+
+    ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
+
+    for(int id=0; id<NUM_OF_CAM; ++id)
     {
+        int pn = config_file.find_last_of('/');
+        std::string configPath = config_file.substr(0, pn);
+        
+        std::string camCalib;
+        fsSettings["cam"+std::to_string(id)+"_calib"] >> camCalib;
+        std::string camPath = configPath + "/" + camCalib;
+        CAM_NAMES.push_back(camPath);
+
         if ( ESTIMATE_EXTRINSIC == 1)
         {
             ROS_WARN(" Optimize extrinsic param around initial guess!");
@@ -177,43 +196,30 @@ void readParameters(std::string config_file)
         cv::cv2eigen(cv_T, T);
         RIC.push_back(T.block<3, 3>(0, 0));
         TIC.push_back(T.block<3, 1>(0, 3));
-    } 
-    
-    NUM_OF_CAM = fsSettings["num_of_cam"];
-    printf("camera number %d\n", NUM_OF_CAM);
-
-    if(NUM_OF_CAM != 1 && NUM_OF_CAM != 2)
-    {
-        printf("num_of_cam should be 1 or 2\n");
-        assert(0);
     }
-
-
-    int pn = config_file.find_last_of('/');
-    std::string configPath = config_file.substr(0, pn);
-    
-    std::string cam0Calib;
-    fsSettings["cam0_calib"] >> cam0Calib;
-    std::string cam0Path = configPath + "/" + cam0Calib;
-    CAM_NAMES.push_back(cam0Path);
-
-    if(NUM_OF_CAM == 2)
+    if (ESTIMATE_EXTRINSIC == 2) // TODO: Currently Only estimate cam0 extrinsic
     {
-        STEREO = 1;
-        std::string cam1Calib;
-        fsSettings["cam1_calib"] >> cam1Calib;
-        std::string cam1Path = configPath + "/" + cam1Calib; 
-        //printf("%s cam1 path\n", cam1Path.c_str() );
-        CAM_NAMES.push_back(cam1Path);
+        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
+        RIC[0] = Eigen::Matrix3d::Identity();
+        TIC[0] = Eigen::Vector3d::Zero();
+        EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
+    }
+    // if(NUM_OF_CAM == 2)
+    // {
+    //     STEREO = 1;
+    //     std::string cam1Calib;
+    //     fsSettings["cam1_calib"] >> cam1Calib;
+    //     std::string cam1Path = configPath + "/" + cam1Calib; 
+    //     //printf("%s cam1 path\n", cam1Path.c_str() );
+    //     CAM_NAMES.push_back(cam1Path);
         
-        cv::Mat cv_T;
-        fsSettings["body_T_cam1"] >> cv_T;
-        Eigen::Matrix4d T;
-        cv::cv2eigen(cv_T, T);
-        RIC.push_back(T.block<3, 3>(0, 0));
-        TIC.push_back(T.block<3, 1>(0, 3));
-    }
-
+    //     cv::Mat cv_T;
+    //     fsSettings["body_T_cam1"] >> cv_T;
+    //     Eigen::Matrix4d T;
+    //     cv::cv2eigen(cv_T, T);
+    //     RIC.push_back(T.block<3, 3>(0, 0));
+    //     TIC.push_back(T.block<3, 1>(0, 3));
+    // }
     INIT_DEPTH = 5.0;
     BIAS_ACC_THRESHOLD = 0.1;
     BIAS_GYR_THRESHOLD = 0.1;

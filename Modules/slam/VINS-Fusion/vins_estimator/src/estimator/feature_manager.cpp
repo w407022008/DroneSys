@@ -21,7 +21,7 @@ FeatureManager::FeatureManager(Matrix3d _Rs[])
         ric[i].setIdentity();
 }
 
-void FeatureManager::setRic(Matrix3d _ric[])
+void FeatureManager::setRic(std::vector<Eigen::Matrix3d> _ric)
 {
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
@@ -63,7 +63,7 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
     {
         FeaturePerFrame f_per_fra(id_pts.second[0].second, td);
         assert(id_pts.second[0].first == 0);
-        if(id_pts.second.size() == 2)
+        if(id_pts.second.size() == 2) // stereo pair camera
         {
             f_per_fra.rightObservation(id_pts.second[1].second);
             assert(id_pts.second[1].first == 1);
@@ -257,7 +257,7 @@ bool FeatureManager::solvePoseByPnP(Eigen::Matrix3d &R, Eigen::Vector3d &P,
     return true;
 }
 
-void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[], Matrix3d ric[])
+void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[], std::vector<Vector3d> tic, std::vector<Matrix3d> ric)
 {
 
     if(frameCnt > 0)
@@ -300,7 +300,7 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
     }
 }
 
-void FeatureManager::triangulate(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[], Matrix3d ric[])
+void FeatureManager::triangulate(int frameCnt, Vector3d Ps[], Matrix3d Rs[], std::vector<Vector3d> tic, std::vector<Matrix3d> ric)
 {
     for (auto &it_per_id : feature)
     {

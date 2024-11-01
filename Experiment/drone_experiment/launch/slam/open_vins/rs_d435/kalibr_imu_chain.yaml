@@ -15,39 +15,41 @@ imu0:
   # Inflated values (to account for unmodelled effects)
   #  - white noise multiplied by 2
   #  - bias random walk multiplied by 10
-  accelerometer_noise_density: 0.020852024130193214
-  accelerometer_random_walk: 0.0012667400220330491
-  gyroscope_noise_density: 0.002096614407563353
-  gyroscope_random_walk: 8.342180722181616e-05
+  accelerometer_noise_density: 4.2759962922928010e-02
+  accelerometer_random_walk: 2.1197800805113692e-03
+  gyroscope_noise_density: 2.9014667528472456e-03
+  gyroscope_random_walk: 3.3212504327539752e-05
   rostopic: /camera/imu
   time_offset: 0.0
   update_rate: 400.0
   # three different modes supported:
   # "calibrated" (same as "kalibr"), "kalibr", "rpng"
+  # "kalibr" contains Dw6^T, Da6^T, R_IMUtoGYRO and Tg9
+  # "rpng" contains Dw6, Da6, R_IMUtoACC, Tg9, where D_6 are up-triangular matrices
   model: "kalibr"
   # how to get from Kalibr imu.yaml result file:
-  #   - Tw is imu0:gyroscopes:M:
+  #   - Tw is Dw^{-1} imu0:gyroscopes:M:
   #   - R_IMUtoGYRO: is imu0:gyroscopes:C_gyro_i:
-  #   - Ta is imu0:accelerometers:M:
-  #   - R_IMUtoACC not used by Kalibr
+  #   - Ta is Da^{-1} imu0:accelerometers:M:
+  #   - R_IMUtoACC not used by Kalibr, set as Identical since the base inertial frame must coincide with one
   #   - Tg is imu0:gyroscopes:A:
   Tw:
-    - [ 1.0, 0.0, 0.0 ]
-    - [ 0.0, 1.0, 0.0 ]
-    - [ 0.0, 0.0, 1.0 ]
+    - [ 0.99074,0.00000,-0.00000 ]
+    - [ 0.00755,1.03406,-0.00000 ]
+    - [ -0.00358,0.00327,0.99698 ]
   R_IMUtoGYRO:
-    - [ 1.0, 0.0, 0.0 ]
-    - [ 0.0, 1.0, 0.0 ]
-    - [ 0.0, 0.0, 1.0 ]
+    - [ 0.99987,0.00831,-0.01404 ]
+    - [ -0.00888,0.99912,-0.04097 ]
+    - [ 0.01369,0.04109,0.99906 ]
   Ta:
-    - [ 1.0, 0.0, 0.0 ]
-    - [ 0.0, 1.0, 0.0 ]
-    - [ 0.0, 0.0, 1.0 ]
+    - [ 1.02385,-0.00000,-0.00000 ]
+    - [ 0.00095,1.00200,0.00000 ]
+    - [ -0.00119,0.00853,0.99411 ]
   R_IMUtoACC:
     - [ 1.0, 0.0, 0.0 ]
     - [ 0.0, 1.0, 0.0 ]
     - [ 0.0, 0.0, 1.0 ]
   Tg:
-    - [ 0.0, 0.0, 0.0 ]
-    - [ 0.0, 0.0, 0.0 ]
-    - [ 0.0, 0.0, 0.0 ]
+    - [ 0.002445,0.001446,-0.011641 ]
+    - [ 0.000464,0.001442,-0.013310 ]
+    - [ 0.001764,0.000472,-0.000950 ]

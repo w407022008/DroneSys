@@ -41,7 +41,7 @@ body_T_cam1: !!opencv-matrix
 #Multiple thread support
 multiple_thread: 1      # thread to process separately from feature extract
 input_rate: 20          # camera msg accepted rate
-cut_rate: 2             # processing once after feature extracting and optical flow tracking
+cut_rate: 1             # processing once after feature extracting and optical flow tracking
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking

@@ -97,9 +97,9 @@ void Estimator::setParameter()
     mProcess.lock();
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        tic[i] = TIC[i];
-        ric[i] = RIC[i];
-        cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
+        tic.push_back(TIC[i]);
+        ric.push_back(RIC[i]);
+        cout << " exitrinsic cam " << i << endl  << RIC[i] << endl << TIC[i].transpose() << endl;
     }
     f_manager.setRic(ric);
     ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
@@ -108,7 +108,7 @@ void Estimator::setParameter()
     td = TD;
     g = G;
     cout << "set g " << g.transpose() << endl;
-    featureTracker.readIntrinsicParameter(CAM_NAMES);
+    featureTracker.readIntrinsicParameter(CAM_NAMES, STEREO);
 
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !initThreadFlag)
@@ -162,12 +162,27 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     inputImageCnt++;
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
+    
+    // Histogram equalize
+    if (EQUALIZE_METHOD == EqualizeMethod::HISTOGRAM) {
+      cv::equalizeHist(_img, _img);
+      if(!_img1.empty())
+          cv::equalizeHist(_img1, _img1);
+    } else if (EQUALIZE_METHOD == EqualizeMethod::CLAHE) {
+      double eq_clip_limit = 10.0;
+      cv::Size eq_win_size = cv::Size(8, 8);
+      cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(eq_clip_limit, eq_win_size);
+      clahe->apply(_img, _img);
+      if(!_img1.empty())
+          clahe->apply(_img1, _img1);
+    }
 
     if(_img1.empty())
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    //printf("featureTracker time: %f\n", featureTrackerTime.toc());
+    
+    featureTrackingTimeCost =featureTrackerTime.toc();
 
     if (SHOW_TRACK)
     {
@@ -319,9 +334,9 @@ void Estimator::processMeasurements()
             processImage(feature.second, feature.first);
             prevTime = curTime;
 
-            // printf("process time: %f\n", processTime.toc());
+            processTimeCost = processTime.toc();
 
-            printStatistics(*this, 0);
+            if(PRINT) printStatistics(*this, 0);
 
             std_msgs::Header header;
             header.frame_id = "world";

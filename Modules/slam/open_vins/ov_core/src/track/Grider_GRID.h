@@ -60,7 +60,7 @@ public:
    * @brief This function will perform grid extraction using FAST.
    * @param img Image we will do FAST extraction on
    * @param mask Region of the image we do not want to extract features in (255 = do not detect features)
-   * @param valid_locs Valid 2d grid locations we will extract in (instead of the whole image)
+   * @param valid_locs Valid 2d grid locations we will extract in (instead of the whole image, fast with griding)
    * @param pts vector of extracted points we will return
    * @param num_features max number of features we want to extract
    * @param grid_x size of grid in the x-direction / u-direction

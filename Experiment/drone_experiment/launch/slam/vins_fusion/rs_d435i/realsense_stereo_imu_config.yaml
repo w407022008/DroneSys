@@ -4,6 +4,7 @@
 #support: 1 imu 1 cam; 1 imu 2 cam: 2 cam; 
 imu: 1         
 num_of_cam: 1
+use_stereo: 1
 
 imu_topic: "/camera/imu"
 image0_topic: "/camera/infra1/image_rect_raw"
@@ -24,18 +25,18 @@ body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 9.9915078785525546e-01, -3.3645392494669100e-02, -2.3784253028041137e-02, 1.4804753990883948e-02,
-       -3.2690418530357028e-02, -9.9868624829977115e-01, 3.9460283745029578e-02, 4.6756462734344723e-02,
-       -2.5080663159739405e-02, -3.8649256406919658e-02, -9.9893803377119461e-01, 1.0346569515432877e-02,
+   data: [9.9890951657303739e-01, -9.6971302737238405e-03, 4.5669939394258723e-02, 4.8253060025444397e-02,
+       -9.9590854225282098e-03, -9.9993521629194460e-01, 5.5117907008143310e-03, 5.6019349486439655e-02,
+       4.5613532173770781e-02, -5.9606110120713155e-03, -9.9894137805929129e-01, 3.3371361389410681e-01,
        0., 0., 0., 1. ]
 
 body_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [9.9998344885283819e-01, 4.0581272123018635e-03, -4.0784340024061705e-03, 8.6436697056769818e-02,
-       -4.0609472763258499e-03, -9.9999152079006104e-01, -6.8341436908052875e-04, 8.0100610070546197e-03,
-       4.0756260380595986e-03, 6.9996536324247959e-04, -9.9999144962388964e-01, 6.3326311034842611e-02, 
+   data: [9.9678242751377089e-01, -8.4049380046894058e-03, 7.9712917503321573e-02, -1.3510531459371063e-02,
+       -8.8581147297223627e-03, -9.9994654399785055e-01, 5.3331932451860676e-03, 5.7129154828036197e-02,
+       7.9663831210839336e-02, -6.0221394780219303e-03, -9.9680359541532493e-01, 3.8260487082181555e-01,
        0., 0., 0., 1.]
 
 #Multiple thread support
@@ -43,14 +44,19 @@ multiple_thread: 1      # thread to process separately from feature extract
 input_rate: 20          # camera msg accepted rate
 cut_rate: 1             # processing once after feature extracting and optical flow tracking
 
-#feature traker paprameters
+#feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking
 min_dist: 30            # min distance (pixel) between two features 
 #freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
 F_threshold: 1.0        # ransac threshold (pixel)
-show_track: 0           # publish tracking image as topic
+show_track: 1           # publish tracking image as topic
+corner_detector: 2      # : FAST corner detector; 1: shi-tomasi corner detector; 2: FAST with grid
+equalize_method: 2      # 0: NONE, 1: HISTOGRAM, 2: CLAHE
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
+
+#visualization parameters
 tf_pub: 0               # publish tf transform of vio_imu from world
+print_info: 1
 
 #optimization parameters
 max_solver_time: 0.01  # max solver itration time (s), to guarantee real time

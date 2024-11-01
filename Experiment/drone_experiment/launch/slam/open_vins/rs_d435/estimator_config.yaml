@@ -1,48 +1,55 @@
 %YAML:1.0 # need to specify the file type at the top!
 
 verbosity: "INFO" # ALL, DEBUG, INFO, WARNING, ERROR, SILENT
+num_opencv_threads: -1 # -1: auto (usually num of cores), 0/1: serial, >1: number of threads
 
-use_fej: true # if first-estimate Jacobians should be used (enable for good consistency)
-integration: "rk4" # discrete, rk4, analytical (if rk4 or analytical used then analytical covariance propagation is used)
+max_cameras: 2 # how many cameras we have 1 = mono, 2 = stereo, >2 = binocular (all mono tracking)
 use_stereo: true # if we have more than 1 camera, if we should try to track stereo constraints between pairs
-max_cameras: 1 # how many cameras we have 1 = mono, 2 = stereo, >2 = binocular (all mono tracking)
+downsample_cameras: false # downsample image in half if true before feature extract and tracking
 
+# masks for our images one by one
+use_mask: false
+mask0: ""
+mask1: ""
+mask2: ""
+
+# imu and camera spacial-temporal
+# imu config should also have the correct noise values
+relative_config_imu: "kalibr_imu_chain.yaml"
+relative_config_imucam: "kalibr_imucam_chain.yaml"
+
+# ==================================================================
+# main parameters
+# ==================================================================
+track_frequency: 30.0 # force frequency of image callback at (frames per second)
+max_clones: 11 # how many clones in the sliding window
+# MSCKF_update
+max_msckf_in_update: 40 # max number of MSCKF features to use in the update
+# SLAM_update
+max_slam: 50 # max number of features in our state vector
+max_slam_in_update: 25 # how many slam features in a batch (update can be split into sequential updates of batches, the smaller value ,the more sequential, the faster but not accurate)
+dt_slam_delay: 1 # force delay after initialized (helps with stability from bad initialization...)
+
+# option flags for params calibration
 calib_cam_extrinsics: true # if the transform between camera and IMU should be optimized R_ItoC, p_CinI
 calib_cam_intrinsics: true # if camera intrinsics should be optimized (focal, center, distortion)
-calib_cam_timeoffset: true # if timeoffset between camera and IMU should be optimized
-calib_imu_intrinsics: false # if imu intrinsics should be calibrated (rotation and skew-scale matrix)
-calib_imu_g_sensitivity: false # if gyroscope gravity sensitivity (Tg) should be calibrated
-
-max_clones: 11 # how many clones in the sliding window
-max_slam: 50 # number of features in our state vector
-max_slam_in_update: 25 # update can be split into sequential updates of batches, how many in a batch
-max_msckf_in_update: 40 # how many MSCKF features to use in the update
-dt_slam_delay: 1 # delay before initializing (helps with stability from bad initialization...)
-
-gravity_mag: 9.81 # magnitude of gravity in this location
-
-feat_rep_msckf: "GLOBAL_3D"
-feat_rep_slam: "ANCHORED_MSCKF_INVERSE_DEPTH"
-feat_rep_aruco: "ANCHORED_MSCKF_INVERSE_DEPTH"
-
-# zero velocity update parameters we can use
-# we support either IMU-based or disparity detection.
-try_zupt: false
-zupt_chi2_multipler: 0 # set to 0 for only disp-based
-zupt_max_velocity: 0.1
-zupt_noise_multiplier: 10
-zupt_max_disparity: 0.5 # set to 0 for only imu-based
-zupt_only_at_beginning: false
+calib_cam_timeoffset: false # if timeoffset between camera and IMU should be optimized
+calib_imu_intrinsics: true # if imu intrinsics should be calibrated (rotation and skew-scale matrix)
+calib_imu_g_sensitivity: true # if gyroscope gravity sensitivity (Tg) should be calibrated
 
 # ==================================================================
+# Initialization
 # ==================================================================
 
-init_window_time: 2.0 # how many seconds to collect initialization information
-init_imu_thresh: 1.5 # threshold for variance of the accelerometer to detect a "jerk" in motion
-init_max_disparity: 10.0 # max disparity to consider the platform stationary (dependent on resolution)
-init_max_features: 50 # how many features to track during initialization (saves on computation)
+init_window_time: 2.0 # how many seconds of collection window imu data for initialization information of imu_state
+init_max_features: 100 # how many features (from total camera) to track during initialization (saves on computation)
+init_max_disparity: 5.0 # max disparity to consider the platform stationary or in motion (dependent on resolution)
 
-init_dyn_use: false # if dynamic initialization should be used
+# with static method
+init_imu_thresh: 0.5 # threshold for variance of the accelerometer to detect a "jerk" in motion, i.e if stable2move front_variance(win2to1) < thresh && back_var(win1to0) > thresh
+
+# if static init fail, with dynamic-optimization method
+init_dyn_use: true # if dynamic initialization should be used
 init_dyn_mle_opt_calib: false # if we should optimize calibration during intialization (not recommended)
 init_dyn_mle_max_iter: 50 # how many iterations the MLE refinement should use (zero to skip the MLE)
 init_dyn_mle_max_time: 0.05 # how many seconds the MLE should be completed in
@@ -56,10 +63,71 @@ init_dyn_inflation_bg: 10 # what to inflate the recovered bias_g covariance by
 init_dyn_inflation_ba: 100 # what to inflate the recovered bias_a covariance by
 init_dyn_min_rec_cond: 1e-12 # reciprocal condition number thresh for info inversion
 
-init_dyn_bias_g: [ 0.0, 0.0, 0.0 ] # initial gyroscope bias guess
-init_dyn_bias_a: [ 0.0, 0.0, 0.0 ] # initial accelerometer bias guess
+init_dyn_bias_g: [ -0.0033,-0.0006,0.0009 ] # initial gyroscope bias guess
+init_dyn_bias_a: [ -0.0291,-0.0613,0.0451 ] # initial accelerometer bias guess
 
 # ==================================================================
+# State Propagation
+# ==================================================================
+use_fej: true # if first-estimate Jacobians should be used (enable for good consistency)
+integration: "rk4" # discrete, rk4, analytical (if rk4 or analytical used then analytical covariance propagation is used)
+
+gravity_mag: 9.81 # magnitude of gravity in this location
+
+# ==================================================================
+# Front-end Feature Tracking
+# ==================================================================
+num_pts: 200 # number of points (from total camera) we will extract and try to track
+
+# we use a KLT or ORB descriptor based feature tracking method
+use_klt: true # if true we will use KLT, otherwise use a ORB descriptor + robust matching
+fast_threshold: 10 # threshold for FAST extraction (warning: lower thresh, more expensive, more features)
+histogram_method: "NONE" # equalize: NONE, HISTOGRAM, CLAHE
+grid_x: 10 # extraction "sub-grid count" for horizontal direction (uniform tracking)
+grid_y: 10 # extraction "sub-grid count" for vertical direction (uniform tracking)
+min_px_dist: 15 # distance between features (features near each other provide less information)
+# - KLT is better implemented...KLT for smooth motion and precise
+# - ORB for strong motion and robust
+knn_ratio: 0.70 # descriptor knn threshold for the top two descriptor matches
+
+# aruco tag tracker for the system
+# DICT_6X6_1000 from https://chev.me/arucogen/
+use_aruco: false
+num_aruco: 0
+downsize_aruco: true
+
+# ==================================================================
+# Back-end State Update
+# ==================================================================
+
+# camera noises (std) and chi-squared threshold multipliers
+up_msckf_sigma_px: 1
+up_msckf_chi2_multipler: 1
+up_slam_sigma_px: 1
+up_slam_chi2_multipler: 1
+up_aruco_sigma_px: 1
+up_aruco_chi2_multipler: 1
+
+# feature representation (global 3d or local depth)
+feat_rep_msckf: "GLOBAL_3D"
+feat_rep_slam: "ANCHORED_MSCKF_INVERSE_DEPTH"
+feat_rep_aruco: "ANCHORED_MSCKF_INVERSE_DEPTH"
+
+
+# ==================================================================
+# Zero Velocity Update
+# ==================================================================
+# we support either IMU-based or disparity detection.
+try_zupt: true
+zupt_chi2_multipler: 0 # set to 0 for only disparity-based
+zupt_max_velocity: 0.1
+zupt_noise_multiplier: 10
+zupt_max_disparity: 5 # set to 0 for only imu-based
+zupt_only_at_beginning: true
+
+
+# ==================================================================
+# Log Record
 # ==================================================================
 
 record_timing_information: false # if we want to record timing information of the method
@@ -71,49 +139,5 @@ save_total_state: false
 filepath_est: "/tmp/ov_estimate.txt"
 filepath_std: "/tmp/ov_estimate_std.txt"
 filepath_gt: "/tmp/ov_groundtruth.txt"
-
-# ==================================================================
-# ==================================================================
-
-# our front-end feature tracking parameters
-# we have a KLT and descriptor based (KLT is better implemented...)
-use_klt: true # if true we will use KLT, otherwise use a ORB descriptor + robust matching
-num_pts: 200 # number of points (per camera) we will extract and try to track
-fast_threshold: 30 # threshold for fast extraction (warning: lower threshs can be expensive)
-grid_x: 5 # extraction sub-grid count for horizontal direction (uniform tracking)
-grid_y: 5 # extraction sub-grid count for vertical direction (uniform tracking)
-min_px_dist: 15 # distance between features (features near each other provide less information)
-knn_ratio: 0.70 # descriptor knn threshold for the top two descriptor matches
-track_frequency: 31.0 # frequency we will perform feature tracking at (in frames per second / hertz)
-downsample_cameras: false # will downsample image in half if true
-num_opencv_threads: 4 # -1: auto, 0-1: serial, >1: number of threads
-histogram_method: "HISTOGRAM" # NONE, HISTOGRAM, CLAHE
-
-# aruco tag tracker for the system
-# DICT_6X6_1000 from https://chev.me/arucogen/
-use_aruco: false
-num_aruco: 1024
-downsize_aruco: true
-
-# ==================================================================
-# ==================================================================
-
-# camera noises and chi-squared threshold multipliers
-up_msckf_sigma_px: 1
-up_msckf_chi2_multipler: 1
-up_slam_sigma_px: 1
-up_slam_chi2_multipler: 1
-up_aruco_sigma_px: 1
-up_aruco_chi2_multipler: 1
-
-# masks for our images
-use_mask: false
-
-# imu and camera spacial-temporal
-# imu config should also have the correct noise values
-relative_config_imu: "kalibr_imu_chain.yaml"
-relative_config_imucam: "kalibr_imucam_chain.yaml"
-
-
 
 

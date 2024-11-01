@@ -77,7 +77,7 @@ void FeatureDatabase::update_feature(size_t id, double timestamp, size_t cam_id,
   std::shared_ptr<Feature> feat = std::make_shared<Feature>();
   feat->featid = id;
   feat->uvs[cam_id].push_back(Eigen::Vector2f(u, v));
-  feat->uvs_norm[cam_id].push_back(Eigen::Vector2f(u_n, v_n));
+  feat->uvs_norm[cam_id].push_back(Eigen::Vector2f(u_n, v_n)); // undistorted
   feat->timestamps[cam_id].push_back(timestamp);
 
   // Append this new feature into our database

@@ -76,7 +76,7 @@ public:
     // We want to have equally distributed features
     // NOTE: If we have more grids than number of total points, we calc the biggest grid we can do
     // NOTE: Thus if we extract 1 point per grid we have
-    // NOTE:    -> 1 = num_features / (grid_x * grid_y))
+    // NOTE:    -> 1 = num_features / (grid_x * grid_y)
     // NOTE:    -> grid_x = ratio * grid_y (keep the original grid ratio)
     // NOTE:    -> grid_y = sqrt(num_features / ratio)
     if (num_features < grid_x * grid_y) {

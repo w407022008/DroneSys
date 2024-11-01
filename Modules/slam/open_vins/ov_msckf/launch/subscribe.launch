@@ -2,12 +2,12 @@
 
     <!-- what config we are going to run (should match folder name) -->
     <arg name="verbosity"   default="INFO" /> <!-- ALL, DEBUG, INFO, WARNING, ERROR, SILENT -->
-    <arg name="config"      default="euroc_mav" /> <!-- euroc_mav, tum_vi, rpng_aruco -->
+    <arg name="config"      default="rs_d435" /> <!-- euroc_mav, tum_vi, rpng_aruco -->
     <arg name="config_path" default="$(find ov_msckf)/../config/$(arg config)/estimator_config.yaml" />
 
     <!-- mono or stereo and what ros bag to play -->
     <arg name="max_cameras" default="2" />
-    <arg name="use_stereo"  default="true" />
+    <arg name="use_stereo"  default="false" />
     <arg name="bag_start"   default="0" /> <!-- v1-2: 0, mh1: 40, mh2: 35, mh3: 17.5, mh4-5: 15 -->
     <arg name="bag_rate"    default="1" />
     <arg name="dataset"     default="V1_01_easy" /> <!-- V1_01_easy, V1_02_medium, V2_02_medium -->
@@ -27,6 +27,9 @@
     <arg name="rviz"  default="true" />
     <arg name="path_gt"     default="$(find ov_data)/$(arg config)/$(arg dataset).txt" />
 
+    <!-- <node name="republish_infra1" type="republish" pkg="image_transport" args="compressed in:=/camera/infra1/image_rect_raw raw out:=/infra1" /> -->
+    <!-- <node name="republish_infra2" type="republish" pkg="image_transport" args="compressed in:=/camera/infra2/image_rect_raw raw out:=/infra2" /> -->
+            
     <!-- MASTER NODE! -->
 <!--    <node name="ov_msckf" pkg="ov_msckf" type="run_subscribe_msckf" output="screen" clear_params="true" required="true" launch-prefix="gdb -ex run &#45;&#45;args">-->
     <node name="ov_msckf" pkg="ov_msckf" type="run_subscribe_msckf" output="screen" clear_params="true" required="true">

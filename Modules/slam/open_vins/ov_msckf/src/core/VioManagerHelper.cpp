@@ -153,7 +153,7 @@ bool VioManager::try_to_initialize(const ov_core::CameraData &message) {
         }
       }
 
-      // Now we have initialized we will propagate the state to the current timestep
+      // Now we have initialized we will propagate the state to the current timestamp
       // In general this should be ok as long as the initialization didn't take too long to perform
       // Propagating over multiple seconds will become an issue if the initial biases are bad
       size_t clone_rate = (size_t)((double)camera_timestamps_to_init.size() / (double)params.state_options.max_clone_size) + 1;

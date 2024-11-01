@@ -369,12 +369,12 @@ void VioManager::do_feature_propagate_update(const ov_core::CameraData &message)
   feats_lost = trackFEATS->get_feature_database()->features_not_containing_newer(state->_timestamp, false, true);
 
   // Don't need to get the oldest features until we reach our max number of clones
-  if ((int)state->_clones_IMU.size() > state->_options.max_clone_size || (int)state->_clones_IMU.size() > 5) {
+  // if ((int)state->_clones_IMU.size() > state->_options.max_clone_size || (int)state->_clones_IMU.size() > 5) {
     feats_marg = trackFEATS->get_feature_database()->features_containing(state->margtimestep(), false, true);
     if (trackARUCO != nullptr && message.timestamp - startup_time >= params.dt_slam_delay) {
       feats_slam = trackARUCO->get_feature_database()->features_containing(state->margtimestep(), false, true);
     }
-  }
+  // }
 
   // Remove any lost features that were from other image streams
   // E.g: if we are cam1 and cam0 has not processed yet, we don't want to try to use those in the update yet
@@ -484,18 +484,18 @@ void VioManager::do_feature_propagate_update(const ov_core::CameraData &message)
   std::vector<std::shared_ptr<Feature>> feats_slam_DELAYED, feats_slam_UPDATE;
   for (size_t i = 0; i < feats_slam.size(); i++) {
     if (state->_features_SLAM.find(feats_slam.at(i)->featid) != state->_features_SLAM.end()) {
-      feats_slam_UPDATE.push_back(feats_slam.at(i));
+      feats_slam_UPDATE.push_back(feats_slam.at(i)); // features used into slam update
       // PRINT_DEBUG("[UPDATE-SLAM]: found old feature %d (%d
       // measurements)\n",(int)feats_slam.at(i)->featid,(int)feats_slam.at(i)->timestamps_left.size());
     } else {
-      feats_slam_DELAYED.push_back(feats_slam.at(i));
+      feats_slam_DELAYED.push_back(feats_slam.at(i)); // features marginalized
       // PRINT_DEBUG("[UPDATE-SLAM]: new feature ready %d (%d
       // measurements)\n",(int)feats_slam.at(i)->featid,(int)feats_slam.at(i)->timestamps_left.size());
     }
   }
 
-  // Concatenate our MSCKF feature arrays (i.e., ones not being used for slam updates)
-  std::vector<std::shared_ptr<Feature>> featsup_MSCKF = feats_lost;
+  // Concatenate our MSCKF feature arrays (i.e., those not being used for slam updates)
+  std::vector<std::shared_ptr<Feature>> featsup_MSCKF = feats_lost; // features used into msckf update
   featsup_MSCKF.insert(featsup_MSCKF.end(), feats_marg.begin(), feats_marg.end());
   featsup_MSCKF.insert(featsup_MSCKF.end(), feats_maxtracks.begin(), feats_maxtracks.end());
 

@@ -93,6 +93,7 @@ void TrackKLT::feed_new_camera(const CameraData &message) {
   }
 }
 
+// process a new camera iamge to update feature into feature_database
 void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
 
   // Lock this data feed for this camera
@@ -199,6 +200,7 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
   PRINT_ALL("[TIME-KLT]: %.4f seconds for total\n", (rT5 - rT1).total_microseconds() * 1e-6);
 }
 
+// process new stereo pair images to update feature into feature_database
 void TrackKLT::feed_stereo(const CameraData &message, size_t msg_id_left, size_t msg_id_right) {
 
   // Lock this data feed for this camera
@@ -392,20 +394,21 @@ void TrackKLT::feed_stereo(const CameraData &message, size_t msg_id_left, size_t
   PRINT_ALL("[TIME-KLT]: %.4f seconds for total\n", (rT6 - rT1).total_microseconds() * 1e-6);
 }
 
+// detect features
 void TrackKLT::perform_detection_monocular(const std::vector<cv::Mat> &img0pyr, const cv::Mat &mask0, std::vector<cv::KeyPoint> &pts0,
                                            std::vector<size_t> &ids0) {
-
-  // Create a 2D occupancy grid for this current image
+  // STEP 1: Create a 2D occupancy grid for this current image
+  // ====================================
   // Note that we scale this down, so that each grid point is equal to a set of pixels
   // This means that we will reject points that less than grid_px_size points away then existing features
   cv::Size size_close((int)((float)img0pyr.at(0).cols / (float)min_px_dist),
                       (int)((float)img0pyr.at(0).rows / (float)min_px_dist)); // width x height
-  cv::Mat grid_2d_close = cv::Mat::zeros(size_close, CV_8UC1);
+  cv::Mat grid_2d_close = cv::Mat::zeros(size_close, CV_8UC1); // whether a feature in the close area
   float size_x = (float)img0pyr.at(0).cols / (float)grid_x;
   float size_y = (float)img0pyr.at(0).rows / (float)grid_y;
   cv::Size size_grid(grid_x, grid_y); // width x height
-  cv::Mat grid_2d_grid = cv::Mat::zeros(size_grid, CV_8UC1);
-  cv::Mat mask0_updated = mask0.clone();
+  cv::Mat grid_2d_grid = cv::Mat::zeros(size_grid, CV_8UC1); // num of features detected in this grid
+  cv::Mat mask0_updated = mask0.clone(); // a mask indicate that no another feature in its close area
   auto it0 = pts0.begin();
   auto it1 = ids0.begin();
   while (it0 != pts0.end()) {
@@ -454,15 +457,20 @@ void TrackKLT::perform_detection_monocular(const std::vector<cv::Mat> &img0pyr, 
       grid_2d_grid.at<uint8_t>(y_grid, x_grid) += 1;
     }
     // Append this to the local mask of the image
-    if (x - min_px_dist >= 0 && x + min_px_dist < img0pyr.at(0).cols && y - min_px_dist >= 0 && y + min_px_dist < img0pyr.at(0).rows) {
-      cv::Point pt1(x - min_px_dist, y - min_px_dist);
-      cv::Point pt2(x + min_px_dist, y + min_px_dist);
-      cv::rectangle(mask0_updated, pt1, pt2, cv::Scalar(255), -1);
-    }
+    cv::Point2f center(x,y);
+    cv::circle(mask0_updated, center, min_px_dist, cv::Scalar(255), -1);
+    // if (x - min_px_dist >= 0 && x + min_px_dist < img0pyr.at(0).cols && y - min_px_dist >= 0 && y + min_px_dist < img0pyr.at(0).rows) {
+    //   cv::Point pt1(x - min_px_dist, y - min_px_dist);
+    //   cv::Point pt2(x + min_px_dist, y + min_px_dist);
+    //   cv::rectangle(mask0_updated, pt1, pt2, cv::Scalar(255), -1);
+    // }
     it0++;
     it1++;
   }
 
+
+  // STEP 2: Add more new features if there is not enough
+  // ====================================
   // First compute how many more features we need to extract from this image
   // If we don't need any features, just return
   double min_feat_percent = 0.50;
@@ -470,16 +478,11 @@ void TrackKLT::perform_detection_monocular(const std::vector<cv::Mat> &img0pyr, 
   if (num_featsneeded < std::min(20, (int)(min_feat_percent * num_features)))
     return;
 
-  // This is old extraction code that would extract from the whole image
-  // This can be slow as this will recompute extractions for grid areas that we have max features already
-  // std::vector<cv::KeyPoint> pts0_ext;
-  // Grider_FAST::perform_griding(img0pyr.at(0), mask0_updated, pts0_ext, num_features, grid_x, grid_y, threshold, true);
-
   // We also check a downsampled mask such that we don't extract in areas where it is all masked!
   cv::Mat mask0_grid;
   cv::resize(mask0, mask0_grid, size_grid, 0.0, 0.0, cv::INTER_NEAREST);
 
-  // Create grids we need to extract from and then extract our features (use fast with griding)
+  // Create grids we need to extract from
   int num_features_grid = (int)((double)num_features / (double)(grid_x * grid_y)) + 1;
   int num_features_grid_req = std::max(1, (int)(min_feat_percent * num_features_grid));
   std::vector<std::pair<int, int>> valid_locs;
@@ -490,8 +493,14 @@ void TrackKLT::perform_detection_monocular(const std::vector<cv::Mat> &img0pyr, 
       }
     }
   }
+  // Extract our features (use fast with griding)
   std::vector<cv::KeyPoint> pts0_ext;
   Grider_GRID::perform_griding(img0pyr.at(0), mask0_updated, valid_locs, pts0_ext, num_features, grid_x, grid_y, threshold, true);
+
+  // This is old extraction code that would extract from the whole image
+  // This can be slow as this will recompute extractions for grid areas that we have max features already
+  // std::vector<cv::KeyPoint> pts0_ext;
+  // Grider_FAST::perform_griding(img0pyr.at(0), mask0_updated, pts0_ext, num_features, grid_x, grid_y, threshold, true);
 
   // Now, reject features that are close a current feature
   std::vector<cv::KeyPoint> kpts0_new;
@@ -527,21 +536,22 @@ void TrackKLT::perform_detection_monocular(const std::vector<cv::Mat> &img0pyr, 
   }
 }
 
+// detect features in the stereo pair images and match to each other
 void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, const std::vector<cv::Mat> &img1pyr, const cv::Mat &mask0,
                                         const cv::Mat &mask1, size_t cam_id_left, size_t cam_id_right, std::vector<cv::KeyPoint> &pts0,
                                         std::vector<cv::KeyPoint> &pts1, std::vector<size_t> &ids0, std::vector<size_t> &ids1) {
-
-  // Create a 2D occupancy grid for this current image
+  // STEP 1: Create a 2D occupancy grid for this current image
+  // ====================================
   // Note that we scale this down, so that each grid point is equal to a set of pixels
   // This means that we will reject points that less then grid_px_size points away then existing features
   cv::Size size_close0((int)((float)img0pyr.at(0).cols / (float)min_px_dist),
                        (int)((float)img0pyr.at(0).rows / (float)min_px_dist)); // width x height
-  cv::Mat grid_2d_close0 = cv::Mat::zeros(size_close0, CV_8UC1);
+  cv::Mat grid_2d_close0 = cv::Mat::zeros(size_close0, CV_8UC1); // whether a feature in the close area
   float size_x0 = (float)img0pyr.at(0).cols / (float)grid_x;
   float size_y0 = (float)img0pyr.at(0).rows / (float)grid_y;
   cv::Size size_grid0(grid_x, grid_y); // width x height
-  cv::Mat grid_2d_grid0 = cv::Mat::zeros(size_grid0, CV_8UC1);
-  cv::Mat mask0_updated = mask0.clone();
+  cv::Mat grid_2d_grid0 = cv::Mat::zeros(size_grid0, CV_8UC1); // num of features detected in this grid
+  cv::Mat mask0_updated = mask0.clone(); // a mask indicate that no another feature in its close area
   auto it0 = pts0.begin();
   auto it1 = ids0.begin();
   while (it0 != pts0.end()) {
@@ -599,6 +609,9 @@ void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, con
     it1++;
   }
 
+
+  // STEP 2: Add more new features if the total is not enough
+  // ====================================
   // First compute how many more features we need to extract from this image
   double min_feat_percent = 0.50;
   int num_featsneeded_0 = num_features - (int)pts0.size();
@@ -623,7 +636,8 @@ void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, con
     std::vector<std::pair<int, int>> valid_locs;
     for (int x = 0; x < grid_2d_grid0.cols; x++) {
       for (int y = 0; y < grid_2d_grid0.rows; y++) {
-        if ((int)grid_2d_grid0.at<uint8_t>(y, x) < num_features_grid_req && (int)mask0_grid.at<uint8_t>(y, x) != 255) {
+        if ((int)grid_2d_grid0.at<uint8_t>(y, x) < num_features_grid_req // num of features are not enough in this grid
+            && (int)mask0_grid.at<uint8_t>(y, x) != 255) {
           valid_locs.emplace_back(x, y);
         }
       }
@@ -649,6 +663,9 @@ void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, con
       pts0_new.push_back(kpt.pt);
     }
 
+
+    // STEP 3: KLT track left features in the right
+    // ====================================
     // TODO: Project points from the left frame into the right frame
     // TODO: This will not work for large baseline systems.....
     // TODO: If we had some depth estimates we could do a better projection
@@ -709,16 +726,20 @@ void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, con
     }
   }
 
+
+
+  // STEP 4: Add more new features in the right if not enough
+  // ====================================
   // RIGHT: Now summarise the number of tracks in the right image
   // RIGHT: We will try to extract some monocular features if we have the room
   // RIGHT: This will also remove features if there are multiple in the same location
   cv::Size size_close1((int)((float)img1pyr.at(0).cols / (float)min_px_dist), (int)((float)img1pyr.at(0).rows / (float)min_px_dist));
-  cv::Mat grid_2d_close1 = cv::Mat::zeros(size_close1, CV_8UC1);
+  cv::Mat grid_2d_close1 = cv::Mat::zeros(size_close1, CV_8UC1); // whether a feature in the close area
   float size_x1 = (float)img1pyr.at(0).cols / (float)grid_x;
   float size_y1 = (float)img1pyr.at(0).rows / (float)grid_y;
   cv::Size size_grid1(grid_x, grid_y); // width x height
-  cv::Mat grid_2d_grid1 = cv::Mat::zeros(size_grid1, CV_8UC1);
-  cv::Mat mask1_updated = mask0.clone();
+  cv::Mat grid_2d_grid1 = cv::Mat::zeros(size_grid1, CV_8UC1); // num of features detected in this grid
+  cv::Mat mask1_updated = mask0.clone(); // a mask indicate that no another feature in its close area
   it0 = pts1.begin();
   it1 = ids1.begin();
   while (it0 != pts1.end()) {
@@ -826,6 +847,7 @@ void TrackKLT::perform_detection_stereo(const std::vector<cv::Mat> &img0pyr, con
   }
 }
 
+// match features in the 2 adjacent frame images by finding RANSAC Fundamental
 void TrackKLT::perform_matching(const std::vector<cv::Mat> &img0pyr, const std::vector<cv::Mat> &img1pyr, std::vector<cv::KeyPoint> &kpts0,
                                 std::vector<cv::KeyPoint> &kpts1, size_t id0, size_t id1, std::vector<uchar> &mask_out) {
 

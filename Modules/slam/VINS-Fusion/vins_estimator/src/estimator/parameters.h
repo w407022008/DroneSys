@@ -64,9 +64,11 @@ extern int MAX_CNT;
 extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
+extern int EQUALIZE_METHOD;
 extern int CORNER_DETECTOR;
 extern int FLOW_BACK;
 extern int TF_PUB;
+extern int PRINT;
 
 void readParameters(std::string config_file);
 
@@ -92,4 +94,18 @@ enum NoiseOrder
     O_GN = 3,
     O_AW = 6,
     O_GW = 9
+};
+
+enum CornerDetector
+{
+    FAST = 0,
+    FAST_GRID = 2,
+    SHI = 1
+};
+
+enum EqualizeMethod
+{
+    NONE = 0,
+    HISTOGRAM = 1,
+    CLAHE = 2
 };
