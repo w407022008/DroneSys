@@ -258,7 +258,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     loop_point_cloud.header = header;
 
 
-    for (auto &it_per_id : estimator.f_manager.feature)
+    for (auto &it_per_id : estimator.f_manager.feature_list)
     {
         int used_num;
         used_num = it_per_id.feature_per_frame.size();
@@ -283,7 +283,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     sensor_msgs::PointCloud margin_cloud;
     margin_cloud.header = header;
 
-    for (auto &it_per_id : estimator.f_manager.feature)
+    for (auto &it_per_id : estimator.f_manager.feature_list)
     { 
         int used_num;
         used_num = it_per_id.feature_per_frame.size();
@@ -389,7 +389,7 @@ void pubKeyframe(const Estimator &estimator)
         sensor_msgs::PointCloud point_cloud;
         point_cloud.header.stamp = ros::Time(estimator.Headers[WINDOW_SIZE - 2]);
         point_cloud.header.frame_id = "world";
-        for (auto &it_per_id : estimator.f_manager.feature)
+        for (auto &it_per_id : estimator.f_manager.feature_list)
         {
             int frame_size = it_per_id.feature_per_frame.size();
             if(it_per_id.start_frame < WINDOW_SIZE - 2 && it_per_id.start_frame + frame_size - 1 >= WINDOW_SIZE - 2 && it_per_id.solve_flag == 1)

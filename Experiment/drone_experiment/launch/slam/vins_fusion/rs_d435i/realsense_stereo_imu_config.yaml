@@ -50,7 +50,7 @@ min_dist: 30            # min distance (pixel) between two features
 #freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
 F_threshold: 1.0        # ransac threshold (pixel)
 show_track: 1           # publish tracking image as topic
-corner_detector: 2      # : FAST corner detector; 1: shi-tomasi corner detector; 2: FAST with grid
+corner_detector: 2      # 0: FAST corner detector; 1: shi-tomasi corner detector; 2: FAST with grid
 equalize_method: 2      # 0: NONE, 1: HISTOGRAM, 2: CLAHE
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 

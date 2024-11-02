@@ -90,6 +90,63 @@ public:
     map<int, cv::Point2f> prevLeftPtsMap;
 };
 
+#define byMinEigenVal false
+
+static void perform_FAST(const cv::Mat &img, const cv::Mat &mask, std::vector<cv::Point2f> &cur_pts, 
+                            std::vector<cv::Point2f> &pts, int num_features, 
+                            int threshold=10, bool nonmaxSuppression=true){
+    int cnt = num_features - cur_pts.size();
+    // FAST corner detector
+    vector<cv::KeyPoint> kps;
+    // cv::FAST(img, kps, 10, true, cv::FastFeatureDetector::TYPE_9_16);
+    cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(threshold, nonmaxSuppression, cv::FastFeatureDetector::TYPE_9_16);
+    detector->detect(img, kps, mask);
+    // std::sort(kps.begin(), kps.end(), [](const cv::KeyPoint& a, const cv::KeyPoint& b){return a.response > b.response;});
+
+    if(byMinEigenVal){
+        // - select by cornerMinEigenVal quality
+        vector<pair<cv::KeyPoint, double>> qualities;
+        for(const auto& kp:kps){
+            int x = static_cast<int>(kp.pt.x);
+            int y = static_cast<int>(kp.pt.y);
+            int window_size = 3;
+            int x1 = max(0,x-window_size);
+            int y1 = max(0,y-window_size);
+            int x2 = min(img.cols, x+window_size+1);
+            int y2 = min(img.cols, y+window_size+1);
+            cv::Mat window = img(cv::Rect(x1,y1,x2-x1,y2-y1));
+            if(window.rows>1 && window.cols>1){
+                cv::Mat eigenvalues;
+                cv::cornerMinEigenVal(window,eigenvalues,3);
+                double response;
+                cv::minMaxLoc(eigenvalues,&response,nullptr);
+                qualities.emplace_back(kp,response);
+            }
+        }
+        sort(qualities.begin(), qualities.end(),[](const pair<cv::KeyPoint,double>& a, const pair<cv::KeyPoint,double>& b)
+            {return a.second > b.second;});
+        int count = 0;
+        for(auto kpt:qualities){
+            pts.push_back(kpt.first.pt);
+            count++;
+            if(count==cnt) break;
+        }
+        return;
+        // for(int i=0;i<std::min(cnt,static_cast<int>(kps.size()));++i)
+        //     kps.at(i) = qualities[i].first;
+    }else{
+        // - get the top number from this
+        std::sort(kps.begin(), kps.end(), 
+                [](const cv::KeyPoint& a, const cv::KeyPoint& b){return a.response > b.response;});
+        int count = 0;
+        for(auto kp:kps){
+            pts.push_back(kp.pt);
+            count++;
+            if(count==cnt) break;
+        }
+    }
+}
+
 static void perform_griding(const cv::Mat &img, const cv::Mat &mask, std::vector<cv::Point2f> &cur_pts, 
                             std::vector<cv::Point2f> &pts, int num_features, 
                             int grid_x=10, int grid_y=10, int threshold=10, bool nonmaxSuppression=true) {
@@ -177,7 +234,7 @@ static void perform_griding(const cv::Mat &img, const cv::Mat &mask, std::vector
             std::vector<cv::KeyPoint> pts_new;
             cv::FAST(img(img_roi), pts_new, threshold, nonmaxSuppression);
             
-            if(false){
+            if(byMinEigenVal){
                 // - select by cornerMinEigenVal quality
                 vector<pair<cv::KeyPoint, double>> qualities;
                 for(const auto& kp:pts_new){

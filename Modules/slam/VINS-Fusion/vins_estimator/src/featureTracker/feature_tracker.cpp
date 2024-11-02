@@ -66,6 +66,30 @@ void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file, co
         stereo_cam = use_stereo;
 }
 
+void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
+{
+    hasPrediction = true;
+    predict_pts.clear();
+    // predict_pts_debug.clear();
+    map<int, Eigen::Vector3d>::iterator itPredict;
+    for (size_t i = 0; i < ids.size(); i++)
+    {
+        //printf("prevLeftId size %d prevLeftPts size %d\n",(int)prevLeftIds.size(), (int)prevLeftPts.size());
+        int id = ids[i];
+        itPredict = predictPts.find(id);
+        if (itPredict != predictPts.end())
+        {
+            Eigen::Vector2d tmp_uv;
+            m_camera[0]->spaceToPlane(itPredict->second, tmp_uv);
+            predict_pts.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
+            // predict_pts_debug.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
+        }
+        else
+            predict_pts.push_back(prev_pts[i]);
+    }
+}
+
+// new feature detection and KLT tracking
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
@@ -157,7 +181,11 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             cout << "mask type wrong " << endl;
 
         vector<cv::Point2f> n_pts;
-        if(CORNER_DETECTOR == CornerDetector::FAST_GRID)
+        if(CORNER_DETECTOR == CornerDetector::FAST)
+        {
+            // FAST corner detector
+            perform_FAST(cur_img, mask, cur_pts, n_pts, MAX_CNT, 5, true);
+        }else if(CORNER_DETECTOR == CornerDetector::FAST_GRID)
         {
             // FAST corner detector with griding
             perform_griding(cur_img, mask, cur_pts, n_pts, MAX_CNT, 10, 10, 5, true);
@@ -165,49 +193,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         {
             // Shi-Tomasi corner detector
             cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.05, MIN_DIST, mask, 3, false, 0.04);
-        }else if(CORNER_DETECTOR == CornerDetector::FAST)
-        {
-            int cnt = MAX_CNT - cur_pts.size();
-            // FAST corner detector
-            vector<cv::KeyPoint> kps;
-            // cv::FAST(cur_img, kps, 10, true, cv::FastFeatureDetector::TYPE_9_16);
-            cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(3, true, cv::FastFeatureDetector::TYPE_9_16);
-            detector->detect(cur_img, kps, mask);
-            // std::sort(kps.begin(), kps.end(), [](const cv::KeyPoint& a, const cv::KeyPoint& b){return a.response > b.response;});
-
-            // select by cornerMinEigenVal quality
-            vector<pair<cv::KeyPoint, double>> qualities;
-            for(const auto& kp:kps){
-                int x = static_cast<int>(kp.pt.x);
-                int y = static_cast<int>(kp.pt.y);
-                int window_size = 3;
-                int x1 = max(0,x-window_size);
-                int y1 = max(0,y-window_size);
-                int x2 = min(cur_img.cols, x+window_size+1);
-                int y2 = min(cur_img.cols, y+window_size+1);
-                cv::Mat window = cur_img(cv::Rect(x1,y1,x2-x1,y2-y1));
-                if(window.rows>1 && window.cols>1){
-                    cv::Mat eigenvalues;
-                    cv::cornerMinEigenVal(window,eigenvalues,3);
-                    double response;
-                    cv::minMaxLoc(eigenvalues,&response,nullptr);
-                    qualities.emplace_back(kp,response);
-                }
-            }
-            sort(qualities.begin(), qualities.end(),[](const pair<cv::KeyPoint,double>& a, const pair<cv::KeyPoint,double>& b)
-                {return a.second > b.second;});
-            vector<cv::KeyPoint> kps_selected;
-            for(int i=0;i<std::min(cnt,static_cast<int>(kps.size()));++i)
-                kps_selected.push_back(qualities[i].first);
-            
-            // randomly select detected corners
-            // random_device rd;
-            // mt19937 g(rd());
-            // shuffle(kps.begin(),kps.end(),g);
-            // vector<cv::KeyPoint> kps_selected(kps.begin(),kps.begin()+std::min(cnt,static_cast<int>(kps.size())));
-
-            for(auto kp:kps_selected) n_pts.push_back(kp.pt);
-        }
+        } 
 
         for (auto &p : n_pts)
         {
@@ -367,6 +353,37 @@ void FeatureTracker::robustTestWithRANSACFundamental()
     }
 }
 
+void FeatureTracker::setMask()
+{
+    mask = cv::Mat(row, col, CV_8UC1, cv::Scalar(255));
+
+    // prefer to keep features that are tracked for long time
+    vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
+
+    for (unsigned int i = 0; i < cur_pts.size(); i++)
+        cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(cur_pts[i], ids[i])));
+
+    sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
+         {
+            return a.first > b.first;
+         });
+
+    cur_pts.clear();
+    ids.clear();
+    track_cnt.clear();
+
+    for (auto &it : cnt_pts_id)
+    {
+        if (mask.at<uchar>(it.second.first) == 255)
+        {
+            cur_pts.push_back(it.second.first);
+            ids.push_back(it.second.second);
+            track_cnt.push_back(it.first);
+            cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
+        }
+    }
+}
+
 vector<cv::Point2f> FeatureTracker::undistortedPts(vector<cv::Point2f> &pts, camodocal::CameraPtr cam)
 {
     vector<cv::Point2f> un_pts;
@@ -420,6 +437,12 @@ vector<cv::Point2f> FeatureTracker::ptsVelocity(vector<int> &ids, vector<cv::Poi
     return pts_velocity;
 }
 
+
+cv::Mat FeatureTracker::getTrackImage()
+{
+    return imTrack;
+}
+
 void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight, 
                                vector<int> &curLeftIds,
                                vector<cv::Point2f> &curLeftPts, 
@@ -436,8 +459,12 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
 
     for (size_t j = 0; j < curLeftPts.size(); j++)
     {
-        double len = std::min(1.0, 1.0 * track_cnt[j] / 20);
-        cv::circle(imTrack, curLeftPts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+        if(track_cnt[j]<4)
+            cv::circle(imTrack, curLeftPts[j], 2, cv::Scalar(0, 255, 0), 2);
+        else{
+            double len = std::min(1.0, 1.0 * track_cnt[j] / 20);
+            cv::circle(imTrack, curLeftPts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+        }
     }
     if (!imRight.empty() && stereo_cam)
     {
@@ -475,78 +502,6 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
     //cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));
 }
 
-void FeatureTracker::removeOutliers(set<int> &removePtsIds)
-{
-    std::set<int>::iterator itSet;
-    vector<uchar> status;
-    for (size_t i = 0; i < ids.size(); i++)
-    {
-        itSet = removePtsIds.find(ids[i]);
-        if(itSet != removePtsIds.end())
-            status.push_back(0);
-        else
-            status.push_back(1);
-    }
-
-    reduceVector(prev_pts, status);
-    reduceVector(ids, status);
-    reduceVector(track_cnt, status);
-}
-
-
-void FeatureTracker::setMask()
-{
-    mask = cv::Mat(row, col, CV_8UC1, cv::Scalar(255));
-
-    // prefer to keep features that are tracked for long time
-    vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
-
-    for (unsigned int i = 0; i < cur_pts.size(); i++)
-        cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(cur_pts[i], ids[i])));
-
-    sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
-         {
-            return a.first > b.first;
-         });
-
-    cur_pts.clear();
-    ids.clear();
-    track_cnt.clear();
-
-    for (auto &it : cnt_pts_id)
-    {
-        if (mask.at<uchar>(it.second.first) == 255)
-        {
-            cur_pts.push_back(it.second.first);
-            ids.push_back(it.second.second);
-            track_cnt.push_back(it.first);
-            cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
-        }
-    }
-}
-
-void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
-{
-    hasPrediction = true;
-    predict_pts.clear();
-    // predict_pts_debug.clear();
-    map<int, Eigen::Vector3d>::iterator itPredict;
-    for (size_t i = 0; i < ids.size(); i++)
-    {
-        //printf("prevLeftId size %d prevLeftPts size %d\n",(int)prevLeftIds.size(), (int)prevLeftPts.size());
-        int id = ids[i];
-        itPredict = predictPts.find(id);
-        if (itPredict != predictPts.end())
-        {
-            Eigen::Vector2d tmp_uv;
-            m_camera[0]->spaceToPlane(itPredict->second, tmp_uv);
-            predict_pts.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
-            // predict_pts_debug.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
-        }
-        else
-            predict_pts.push_back(prev_pts[i]);
-    }
-}
 
 void FeatureTracker::showUndistortion(const string &name)
 {
@@ -585,7 +540,20 @@ void FeatureTracker::showUndistortion(const string &name)
     // cv::waitKey(0);
 }
 
-cv::Mat FeatureTracker::getTrackImage()
+void FeatureTracker::removeOutliers(set<int> &removePtsIds)
 {
-    return imTrack;
+    std::set<int>::iterator itSet;
+    vector<uchar> status;
+    for (size_t i = 0; i < ids.size(); i++)
+    {
+        itSet = removePtsIds.find(ids[i]);
+        if(itSet != removePtsIds.end())
+            status.push_back(0);
+        else
+            status.push_back(1);
+    }
+
+    reduceVector(prev_pts, status);
+    reduceVector(ids, status);
+    reduceVector(track_cnt, status);
 }
