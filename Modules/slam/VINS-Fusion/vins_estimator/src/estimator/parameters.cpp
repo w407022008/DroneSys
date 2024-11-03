@@ -161,13 +161,12 @@ void readParameters(std::string config_file)
     STEREO = fsSettings["use_stereo"];
     printf("camera number %d\n", NUM_OF_CAM);
 
-    if(NUM_OF_CAM == 1)
-        STEREO = 0;
-    else if(NUM_OF_CAM != 1 && NUM_OF_CAM != 2)
+    if(NUM_OF_CAM != 1 && NUM_OF_CAM != 2)
     {
-        printf("num_of_cam should be 1 or 2\n");
+        printf("system does not support multi-camera now!\n");
         assert(0);
-    }
+    }else if(NUM_OF_CAM != 2)
+        STEREO = 0;
 
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];

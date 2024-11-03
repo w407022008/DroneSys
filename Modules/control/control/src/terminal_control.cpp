@@ -499,35 +499,33 @@ void keyboardControl()
                 }
                 dis = sqrt(dis);
 
-                if(!_pause_ && time_trajectory>0.01){
+                if(_pause_){
+                    Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
+                    Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
+                    Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
+                }else if(time_trajectory<0.01)
+                {
+                    if(dis>0.3){
+                        Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_VEL;
+                        Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_to_pub.Reference_State.time_from_start = 0.0;
+                        Command_to_pub.Reference_State.velocity_ref[0] = dif[0]/dis;
+                        Command_to_pub.Reference_State.velocity_ref[1] = dif[1]/dis;
+                        Command_to_pub.Reference_State.velocity_ref[2] = dif[2]/dis;
+                        Command_to_pub.Reference_State.yaw_ref = 0.0;
+                    }else{
+                        Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_POS;
+                        Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_to_pub.Reference_State.time_from_start = 0.0;
+                        Command_to_pub.Reference_State.position_ref[0] = Command_to_pub.Reference_State.position_ref[0];
+                        Command_to_pub.Reference_State.position_ref[1] = Command_to_pub.Reference_State.position_ref[1];
+                        Command_to_pub.Reference_State.position_ref[2] = Command_to_pub.Reference_State.position_ref[2];
+                        Command_to_pub.Reference_State.yaw_ref = 0.0;
+                        time_trajectory = time_trajectory + 0.002;
+                    }
+                }else{
                     custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
-                }else{
-                    if(_pause_){
-                        Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
-                        Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
-                        Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
-                    }else if(time_trajectory<0.01)
-                    {
-                        if(dis>0.3){
-                            Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_VEL;
-                            Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
-                            Command_to_pub.Reference_State.time_from_start = 0.0;
-                            Command_to_pub.Reference_State.velocity_ref[0] = dif[0]/dis;
-                            Command_to_pub.Reference_State.velocity_ref[1] = dif[1]/dis;
-                            Command_to_pub.Reference_State.velocity_ref[2] = dif[2]/dis;
-                            Command_to_pub.Reference_State.yaw_ref = 0.0;
-                        }else{
-                            Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_POS;
-                            Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
-                            Command_to_pub.Reference_State.time_from_start = 0.0;
-                            Command_to_pub.Reference_State.position_ref[0] = Command_to_pub.Reference_State.position_ref[0];
-                            Command_to_pub.Reference_State.position_ref[1] = Command_to_pub.Reference_State.position_ref[1];
-                            Command_to_pub.Reference_State.position_ref[2] = Command_to_pub.Reference_State.position_ref[2];
-                            Command_to_pub.Reference_State.yaw_ref = 0.0;
-                            time_trajectory = time_trajectory + 0.002;
-                        }
-                    }
                 }
                 mesg = "Trajectory tracking: " + 
                                         std::to_string(time_trajectory) + " / " +
@@ -566,35 +564,33 @@ void keyboardControl()
                 }
                 dis = sqrt(dis);
 
-                if(!_pause_ && time_trajectory>0.01){
+                if(_pause_){
+                    Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
+                    Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
+                    Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
+                }else if(time_trajectory<0.01)
+                {
+                    if(dis>0.3){
+                        Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_VEL;
+                        Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_to_pub.Reference_State.time_from_start = 0.0;
+                        Command_to_pub.Reference_State.velocity_ref[0] = dif[0]/dis;
+                        Command_to_pub.Reference_State.velocity_ref[1] = dif[1]/dis;
+                        Command_to_pub.Reference_State.velocity_ref[2] = dif[2]/dis;
+                        Command_to_pub.Reference_State.yaw_ref = 0.0;
+                    }else{
+                        Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_POS;
+                        Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
+                        Command_to_pub.Reference_State.time_from_start = 0.0;
+                        Command_to_pub.Reference_State.position_ref[0] = Command_to_pub.Reference_State.position_ref[0];
+                        Command_to_pub.Reference_State.position_ref[1] = Command_to_pub.Reference_State.position_ref[1];
+                        Command_to_pub.Reference_State.position_ref[2] = Command_to_pub.Reference_State.position_ref[2];
+                        Command_to_pub.Reference_State.yaw_ref = 0.0;
+                        time_trajectory = time_trajectory + 0.002;
+                    }
+                }else{
                     custom_controller_available = true;
                     time_trajectory = time_trajectory + 0.01;
-                }else{
-                    if(_pause_){
-                        Command_to_pub.Reference_State.velocity_ref[0] = 0.0;
-                        Command_to_pub.Reference_State.velocity_ref[1] = 0.0;
-                        Command_to_pub.Reference_State.velocity_ref[2] = 0.0;
-                    }else if(time_trajectory<0.01)
-                    {
-                        if(dis>0.3){
-                            Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_VEL;
-                            Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
-                            Command_to_pub.Reference_State.time_from_start = 0.0;
-                            Command_to_pub.Reference_State.velocity_ref[0] = dif[0]/dis;
-                            Command_to_pub.Reference_State.velocity_ref[1] = dif[1]/dis;
-                            Command_to_pub.Reference_State.velocity_ref[2] = dif[2]/dis;
-                            Command_to_pub.Reference_State.yaw_ref = 0.0;
-                        }else{
-                            Command_to_pub.Reference_State.Move_mode  = drone_msgs::PositionReference::XYZ_POS;
-                            Command_to_pub.Reference_State.Move_frame = drone_msgs::PositionReference::ENU_FRAME;
-                            Command_to_pub.Reference_State.time_from_start = 0.0;
-                            Command_to_pub.Reference_State.position_ref[0] = Command_to_pub.Reference_State.position_ref[0];
-                            Command_to_pub.Reference_State.position_ref[1] = Command_to_pub.Reference_State.position_ref[1];
-                            Command_to_pub.Reference_State.position_ref[2] = Command_to_pub.Reference_State.position_ref[2];
-                            Command_to_pub.Reference_State.yaw_ref = 0.0;
-                            time_trajectory = time_trajectory + 0.002;
-                        }
-                    }
                 }
 
                 mesg = "Trajectory tracking: " + 

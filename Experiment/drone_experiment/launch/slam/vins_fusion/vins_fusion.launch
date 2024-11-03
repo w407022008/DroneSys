@@ -2,11 +2,14 @@
 	<arg name="loop_closure" default="false"/>
 	<arg name="gps_global" default="false"/>
 	<arg name="onboard" default="true"/>
-	<arg name="rviz" default="false"/>
+	<arg name="rviz" default="true"/>
 	
     <group if="$(arg onboard)">	
     	<!-- VINS Fusion SLAM -->
-        <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="$(find drone_experiment)/launch/slam/vins_fusion/rs_d435i/realsense_stereo_imu_config.yaml" />
+        <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="$(find drone_experiment)/launch/slam/vins_fusion/rs_d435i/realsense_stereo_imu_config.yaml" >
+        <!-- remap from="/vins_estimator/odometry"   to="/odometry"/-->
+        <!-- remap from="/vins_estimator/path"   to="/path"/-->
+        </node>
 		<!-- loop closure SLAM -->
 		<node if="$(arg loop_closure)" name="VINSLoop" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find drone_experiment)/launch/slam/vins_fusion/rs_d435i/realsense_stereo_imu_config.yaml" launch-prefix="gnome-terminal --tab --"/>
     </group>
@@ -30,5 +33,5 @@
 	</node>
 
     <!-- Visualization - RViz-->
-    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find vins)/../config/vins_rviz_config.rviz" launch-prefix="gnome-terminal --tab --"/>
+    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find vins)/config/vins_rviz_config.rviz"/>
 </launch>
