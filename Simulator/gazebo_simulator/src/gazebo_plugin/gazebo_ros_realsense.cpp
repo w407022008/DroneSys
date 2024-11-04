@@ -42,10 +42,10 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   this->itnode_ = new image_transport::ImageTransport(*this->rosnode_);
 
-  this->color_pub_ = this->itnode_->advertiseCamera("camera/color/image_raw", 2);
-  this->ir1_pub_ = this->itnode_->advertiseCamera("camera/ir/image_raw", 2);
-  this->ir2_pub_ = this->itnode_->advertiseCamera("camera/ir2/image_raw", 2);
-  this->depth_pub_ = this->itnode_->advertiseCamera("camera/depth/image_raw", 2);
+  this->color_pub_ = this->itnode_->advertiseCamera("color/image_raw", 2);
+  this->ir1_pub_ = this->itnode_->advertiseCamera("infra1/image_raw", 2);
+  this->ir2_pub_ = this->itnode_->advertiseCamera("infra2/image_raw", 2);
+  this->depth_pub_ = this->itnode_->advertiseCamera("depth/image_raw", 2);
 }
 
 void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
