@@ -506,8 +506,8 @@ int FastExplorationManager::planTrajectory(
     planner_manager_->waypointsReplanAlongTour(ed_->path_next_goal_, vel, acc, time_lb);
     ed_->next_goal_ = next_viewpoint_to_visit;
 
-  } else if (true || first_plan || len > too_far_along_path) {
-    first_plan = false;
+  } else if (first_plan || len > too_far_along_path) {
+    // first_plan = false; // kinodynamicReplan has some unknown error
     // Next viewpoint is far away, select intermediate goal on geometric path (this also deal with
     // dead end)
     std::cout << "[pathSearching]:Far goal." << std::endl;
