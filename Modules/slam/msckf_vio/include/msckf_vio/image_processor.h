@@ -183,11 +183,11 @@ private:
   void pruneGridFeatures();
 
   /*
-   * @brief publish
+   * @brief publishFeatures
    *    Publish the features on the current image including
    *    both the tracked and newly detected ones.
    */
-  void publish();
+  void publishFeatures();
 
   /*
    * @brief drawFeaturesMono
@@ -271,10 +271,6 @@ private:
       std::vector<cv::Point2f>& pts_out,
       const cv::Matx33d &rectification_matrix = cv::Matx33d::eye(),
       const cv::Vec4d &new_intrinsics = cv::Vec4d(1,1,0,0));
-  void rescalePoints(
-      std::vector<cv::Point2f>& pts1,
-      std::vector<cv::Point2f>& pts2,
-      float& scaling_factor);
   std::vector<cv::Point2f> distortPoints(
       const std::vector<cv::Point2f>& pts_in,
       const cv::Vec4d& intrinsics,
@@ -360,8 +356,8 @@ private:
   std::vector<cv::Mat> curr_cam1_pyramid_;
 
   // Features in the previous and current image.
-  boost::shared_ptr<GridFeatures> prev_features_ptr;
-  boost::shared_ptr<GridFeatures> curr_features_ptr;
+  boost::shared_ptr<GridFeatures> prev_grid_features_ptr;
+  boost::shared_ptr<GridFeatures> curr_grid_features_ptr;
 
   // Number of features after each outlier removal step.
   int before_tracking;

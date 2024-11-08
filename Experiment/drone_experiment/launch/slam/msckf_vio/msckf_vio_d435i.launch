@@ -15,15 +15,15 @@
       <rosparam command="load" file="$(arg calibration_file)"/>
       <param name="grid_row" value="4"/>
       <param name="grid_col" value="5"/>
-      <param name="grid_min_feature_num" value="3"/>
-      <param name="grid_max_feature_num" value="4"/>
-      <param name="pyramid_levels" value="3"/>
-      <param name="patch_size" value="15"/>
       <param name="fast_threshold" value="10"/>
-      <param name="max_iteration" value="30"/>
-      <param name="track_precision" value="0.01"/>
-      <param name="ransac_threshold" value="3"/>
-      <param name="stereo_threshold" value="5"/>
+      <param name="grid_min_feature_num" value="3"/>  <!-- features at least per grid-->
+      <param name="grid_max_feature_num" value="4"/>  <!-- features at most per grid-->
+      <param name="pyramid_levels" value="3"/>        <!-- KLT pyramid-->
+      <param name="patch_size" value="15"/>           <!-- KLT patch-->
+      <param name="max_iteration" value="30"/>        <!-- KLT iteration-->
+      <param name="track_precision" value="0.01"/>    <!-- KLT precision-->
+      <param name="ransac_threshold" value="3"/>      <!-- RANSAC check-->
+      <param name="stereo_threshold" value="5"/>      <!-- stereo match-->
 
       <remap from="~imu" to="/camera/imu"/>
       <remap from="~cam0_image" to="/camera/infra1/image_rect_raw"/>
