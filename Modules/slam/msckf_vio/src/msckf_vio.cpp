@@ -178,7 +178,7 @@ bool MsckfVio::loadParameters() {
 
 bool MsckfVio::createRosIO() {
   odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 10);
-  feature_pub = nh.advertise<sensor_msgs::PointCloud2>(
+  feature_pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(
       "feature_point_cloud", 10);
 
   reset_srv = nh.advertiseService("reset",
@@ -226,6 +226,72 @@ bool MsckfVio::initialize() {
   return true;
 }
 
+void MsckfVio::mocapOdomCallback(
+    const nav_msgs::OdometryConstPtr& msg) {
+  static bool first_mocap_odom_msg = true;
+
+  // If this is the first mocap odometry messsage, set
+  // the initial frame.
+  if (first_mocap_odom_msg) {
+    Quaterniond orientation;
+    Vector3d translation;
+    tf::pointMsgToEigen(
+        msg->pose.pose.position, translation);
+    tf::quaternionMsgToEigen(
+        msg->pose.pose.orientation, orientation);
+    //tf::vectorMsgToEigen(
+    //    msg->transform.translation, translation);
+    //tf::quaternionMsgToEigen(
+    //    msg->transform.rotation, orientation);
+    mocap_initial_frame.linear() = orientation.toRotationMatrix();
+    mocap_initial_frame.translation() = translation;
+    first_mocap_odom_msg = false;
+  }
+
+  // Transform the ground truth.
+  Quaterniond orientation;
+  Vector3d translation;
+  //tf::vectorMsgToEigen(
+  //    msg->transform.translation, translation);
+  //tf::quaternionMsgToEigen(
+  //    msg->transform.rotation, orientation);
+  tf::pointMsgToEigen(
+      msg->pose.pose.position, translation);
+  tf::quaternionMsgToEigen(
+      msg->pose.pose.orientation, orientation);
+
+  Eigen::Isometry3d T_b_v_gt;
+  T_b_v_gt.linear() = orientation.toRotationMatrix();
+  T_b_v_gt.translation() = translation;
+  Eigen::Isometry3d T_b_w_gt = mocap_initial_frame.inverse() * T_b_v_gt;
+
+  //Eigen::Vector3d body_velocity_gt;
+  //tf::vectorMsgToEigen(msg->twist.twist.linear, body_velocity_gt);
+  //body_velocity_gt = mocap_initial_frame.linear().transpose() *
+  //  body_velocity_gt;
+
+  // Ground truth tf.
+  if (publish_tf) {
+    tf::Transform T_b_w_gt_tf;
+    tf::transformEigenToTF(T_b_w_gt, T_b_w_gt_tf);
+    tf_pub.sendTransform(tf::StampedTransform(
+          T_b_w_gt_tf, msg->header.stamp, fixed_frame_id, child_frame_id+"_mocap"));
+  }
+
+  // Ground truth odometry.
+  nav_msgs::Odometry mocap_odom_msg;
+  mocap_odom_msg.header.stamp = msg->header.stamp;
+  mocap_odom_msg.header.frame_id = fixed_frame_id;
+  mocap_odom_msg.child_frame_id = child_frame_id+"_mocap";
+
+  tf::poseEigenToMsg(T_b_w_gt, mocap_odom_msg.pose.pose);
+  //tf::vectorEigenToMsg(body_velocity_gt,
+  //    mocap_odom_msg.twist.twist.linear);
+
+  mocap_odom_pub.publish(mocap_odom_msg);
+  return;
+}
+
 void MsckfVio::imuCallback(
     const sensor_msgs::ImuConstPtr& msg) {
 
@@ -237,7 +303,6 @@ void MsckfVio::imuCallback(
 
   if (!is_gravity_set) {
     if (imu_msg_buffer.size() < 200) return;
-    //if (imu_msg_buffer.size() < 10) return;
     initializeGravityAndBias();
     is_gravity_set = true;
   }
@@ -262,10 +327,10 @@ void MsckfVio::initializeGravityAndBias() {
     sum_linear_acc += linear_acc;
   }
 
-  state_server.imu_state.gyro_bias =
-    sum_angular_vel / imu_msg_buffer.size();
-  //IMUState::gravity =
-  //  -sum_linear_acc / imu_msg_buffer.size();
+  // zero gyro assumption?
+  if(state_server.imu_state.gyro_bias.norm()<1e-4)
+    state_server.imu_state.gyro_bias =
+      sum_angular_vel / imu_msg_buffer.size();
   // This is the gravity in the IMU frame.
   Vector3d gravity_imu =
     sum_linear_acc / imu_msg_buffer.size();
@@ -371,7 +436,7 @@ void MsckfVio::featureCallback(
     state_server.imu_state.time = msg->header.stamp.toSec();
   }
 
-  static double max_processing_time = 0.0;
+  // static double max_processing_time = 0.0;
   static int critical_time_cntr = 0;
   double processing_start_time = ros::Time::now().toSec();
 
@@ -438,72 +503,6 @@ void MsckfVio::featureCallback(
     //    publish_time, publish_time/processing_time);
   }
 
-  return;
-}
-
-void MsckfVio::mocapOdomCallback(
-    const nav_msgs::OdometryConstPtr& msg) {
-  static bool first_mocap_odom_msg = true;
-
-  // If this is the first mocap odometry messsage, set
-  // the initial frame.
-  if (first_mocap_odom_msg) {
-    Quaterniond orientation;
-    Vector3d translation;
-    tf::pointMsgToEigen(
-        msg->pose.pose.position, translation);
-    tf::quaternionMsgToEigen(
-        msg->pose.pose.orientation, orientation);
-    //tf::vectorMsgToEigen(
-    //    msg->transform.translation, translation);
-    //tf::quaternionMsgToEigen(
-    //    msg->transform.rotation, orientation);
-    mocap_initial_frame.linear() = orientation.toRotationMatrix();
-    mocap_initial_frame.translation() = translation;
-    first_mocap_odom_msg = false;
-  }
-
-  // Transform the ground truth.
-  Quaterniond orientation;
-  Vector3d translation;
-  //tf::vectorMsgToEigen(
-  //    msg->transform.translation, translation);
-  //tf::quaternionMsgToEigen(
-  //    msg->transform.rotation, orientation);
-  tf::pointMsgToEigen(
-      msg->pose.pose.position, translation);
-  tf::quaternionMsgToEigen(
-      msg->pose.pose.orientation, orientation);
-
-  Eigen::Isometry3d T_b_v_gt;
-  T_b_v_gt.linear() = orientation.toRotationMatrix();
-  T_b_v_gt.translation() = translation;
-  Eigen::Isometry3d T_b_w_gt = mocap_initial_frame.inverse() * T_b_v_gt;
-
-  //Eigen::Vector3d body_velocity_gt;
-  //tf::vectorMsgToEigen(msg->twist.twist.linear, body_velocity_gt);
-  //body_velocity_gt = mocap_initial_frame.linear().transpose() *
-  //  body_velocity_gt;
-
-  // Ground truth tf.
-  if (publish_tf) {
-    tf::Transform T_b_w_gt_tf;
-    tf::transformEigenToTF(T_b_w_gt, T_b_w_gt_tf);
-    tf_pub.sendTransform(tf::StampedTransform(
-          T_b_w_gt_tf, msg->header.stamp, fixed_frame_id, child_frame_id+"_mocap"));
-  }
-
-  // Ground truth odometry.
-  nav_msgs::Odometry mocap_odom_msg;
-  mocap_odom_msg.header.stamp = msg->header.stamp;
-  mocap_odom_msg.header.frame_id = fixed_frame_id;
-  mocap_odom_msg.child_frame_id = child_frame_id+"_mocap";
-
-  tf::poseEigenToMsg(T_b_w_gt, mocap_odom_msg.pose.pose);
-  //tf::vectorEigenToMsg(body_velocity_gt,
-  //    mocap_odom_msg.twist.twist.linear);
-
-  mocap_odom_pub.publish(mocap_odom_msg);
   return;
 }
 
@@ -619,7 +618,7 @@ void MsckfVio::processModel(const double& time,
       state_server.state_cov.transpose()) / 2.0;
   state_server.state_cov = state_cov_fixed;
 
-  // Update the state correspondes to null space.
+  // Update the state corresponds to null space.
   imu_state.orientation_null = imu_state.orientation;
   imu_state.position_null = imu_state.position;
   imu_state.velocity_null = imu_state.velocity;
@@ -788,6 +787,154 @@ void MsckfVio::addFeatureObservations(
   return;
 }
 
+void MsckfVio::removeLostFeatures() {
+
+  // Remove the features that lost track.
+  // BTW, find the size the final Jacobian matrix and residual vector.
+  int jacobian_row_size = 0;
+  vector<FeatureIDType> invalid_feature_ids(0);
+  vector<FeatureIDType> processed_feature_ids(0);
+
+  for (auto iter = map_server.begin();
+      iter != map_server.end(); ++iter) {
+    // Rename the feature to be checked.
+    auto& feature = iter->second;
+
+    // Pass the features that are still being tracked.
+    if (feature.observations.find(state_server.imu_state.id) !=
+        feature.observations.end()) continue;
+    if (feature.observations.size() < 3) {
+      invalid_feature_ids.push_back(feature.id);
+      continue;
+    }
+
+    // Check if the feature can be initialized if it
+    // has not been.
+    if (!feature.is_initialized) {
+      if (!feature.checkMotion(state_server.cam_states)) {
+        invalid_feature_ids.push_back(feature.id);
+        continue;
+      } else {
+        if(!feature.initializePosition(state_server.cam_states)) {
+          invalid_feature_ids.push_back(feature.id);
+          continue;
+        }
+      }
+    }
+
+    jacobian_row_size += 4*feature.observations.size() - 3;
+    processed_feature_ids.push_back(feature.id);
+  }
+
+  //cout << "invalid/processed feature #: " <<
+  //  invalid_feature_ids.size() << "/" <<
+  //  processed_feature_ids.size() << endl;
+  //cout << "jacobian row #: " << jacobian_row_size << endl;
+
+  // Remove the features that do not have enough measurements.
+  for (const auto& feature_id : invalid_feature_ids)
+    map_server.erase(feature_id);
+
+  // Return if there is no lost feature to be processed.
+  if (processed_feature_ids.size() == 0) return;
+
+  MatrixXd H_x = MatrixXd::Zero(jacobian_row_size,
+      21+6*state_server.cam_states.size());
+  VectorXd r = VectorXd::Zero(jacobian_row_size);
+  int stack_cntr = 0;
+
+  // Process the features which lose track.
+  for (const auto& feature_id : processed_feature_ids) {
+    auto& feature = map_server[feature_id];
+
+    vector<StateIDType> cam_state_ids(0);
+    for (const auto& measurement : feature.observations)
+      cam_state_ids.push_back(measurement.first);
+
+    MatrixXd H_xj;
+    VectorXd r_j;
+    featureJacobian(feature.id, cam_state_ids, H_xj, r_j);
+
+    if (chiSuqaredGatingTest(H_xj, r_j, cam_state_ids.size()-1)) {
+      H_x.block(stack_cntr, 0, H_xj.rows(), H_xj.cols()) = H_xj;
+      r.segment(stack_cntr, r_j.rows()) = r_j;
+      stack_cntr += H_xj.rows();
+    }
+
+    // Put an upper bound on the row size of measurement Jacobian,
+    // which helps guarantee the executation time.
+    if (stack_cntr > 1500) break;
+  }
+
+  H_x.conservativeResize(stack_cntr, H_x.cols());
+  r.conservativeResize(stack_cntr);
+
+  // Perform the measurement update step.
+  measurementUpdate(H_x, r);
+
+  // Remove all processed features from the map.
+  for (const auto& feature_id : processed_feature_ids)
+    map_server.erase(feature_id);
+
+  return;
+}
+
+void MsckfVio::featureJacobian(
+    const FeatureIDType& feature_id,
+    const std::vector<StateIDType>& cam_state_ids,
+    MatrixXd& H_x, VectorXd& r) {
+
+  const auto& feature = map_server[feature_id];
+
+  // Check how many camera states in the provided camera
+  // id camera has actually seen this feature.
+  vector<StateIDType> valid_cam_state_ids(0);
+  for (const auto& cam_id : cam_state_ids) {
+    if (feature.observations.find(cam_id) ==
+        feature.observations.end()) continue;
+
+    valid_cam_state_ids.push_back(cam_id);
+  }
+
+  int jacobian_row_size = 0;
+  jacobian_row_size = 4 * valid_cam_state_ids.size();
+
+  MatrixXd H_xj = MatrixXd::Zero(jacobian_row_size,
+      21+state_server.cam_states.size()*6);
+  MatrixXd H_fj = MatrixXd::Zero(jacobian_row_size, 3);
+  VectorXd r_j = VectorXd::Zero(jacobian_row_size);
+  int stack_cntr = 0;
+
+  for (const auto& cam_id : valid_cam_state_ids) {
+
+    Matrix<double, 4, 6> H_xi = Matrix<double, 4, 6>::Zero();
+    Matrix<double, 4, 3> H_fi = Matrix<double, 4, 3>::Zero();
+    Vector4d r_i = Vector4d::Zero();
+    measurementJacobian(cam_id, feature.id, H_xi, H_fi, r_i);
+
+    auto cam_state_iter = state_server.cam_states.find(cam_id);
+    int cam_state_cntr = std::distance(
+        state_server.cam_states.begin(), cam_state_iter);
+
+    // Stack the Jacobians.
+    H_xj.block<4, 6>(stack_cntr, 21+6*cam_state_cntr) = H_xi;
+    H_fj.block<4, 3>(stack_cntr, 0) = H_fi;
+    r_j.segment<4>(stack_cntr) = r_i;
+    stack_cntr += 4;
+  }
+
+  // Project the residual and Jacobians onto the nullspace
+  // of H_fj.
+  JacobiSVD<MatrixXd> svd_helper(H_fj, ComputeFullU | ComputeThinV);
+  MatrixXd A = svd_helper.matrixU().rightCols(
+      jacobian_row_size - 3);
+
+  H_x = A.transpose() * H_xj;
+  r = A.transpose() * r_j;
+
+  return;
+}
+
 void MsckfVio::measurementJacobian(
     const StateIDType& cam_state_id,
     const FeatureIDType& feature_id,
@@ -857,62 +1004,6 @@ void MsckfVio::measurementJacobian(
   // Compute the residual.
   r = z - Vector4d(p_c0(0)/p_c0(2), p_c0(1)/p_c0(2),
       p_c1(0)/p_c1(2), p_c1(1)/p_c1(2));
-
-  return;
-}
-
-void MsckfVio::featureJacobian(
-    const FeatureIDType& feature_id,
-    const std::vector<StateIDType>& cam_state_ids,
-    MatrixXd& H_x, VectorXd& r) {
-
-  const auto& feature = map_server[feature_id];
-
-  // Check how many camera states in the provided camera
-  // id camera has actually seen this feature.
-  vector<StateIDType> valid_cam_state_ids(0);
-  for (const auto& cam_id : cam_state_ids) {
-    if (feature.observations.find(cam_id) ==
-        feature.observations.end()) continue;
-
-    valid_cam_state_ids.push_back(cam_id);
-  }
-
-  int jacobian_row_size = 0;
-  jacobian_row_size = 4 * valid_cam_state_ids.size();
-
-  MatrixXd H_xj = MatrixXd::Zero(jacobian_row_size,
-      21+state_server.cam_states.size()*6);
-  MatrixXd H_fj = MatrixXd::Zero(jacobian_row_size, 3);
-  VectorXd r_j = VectorXd::Zero(jacobian_row_size);
-  int stack_cntr = 0;
-
-  for (const auto& cam_id : valid_cam_state_ids) {
-
-    Matrix<double, 4, 6> H_xi = Matrix<double, 4, 6>::Zero();
-    Matrix<double, 4, 3> H_fi = Matrix<double, 4, 3>::Zero();
-    Vector4d r_i = Vector4d::Zero();
-    measurementJacobian(cam_id, feature.id, H_xi, H_fi, r_i);
-
-    auto cam_state_iter = state_server.cam_states.find(cam_id);
-    int cam_state_cntr = std::distance(
-        state_server.cam_states.begin(), cam_state_iter);
-
-    // Stack the Jacobians.
-    H_xj.block<4, 6>(stack_cntr, 21+6*cam_state_cntr) = H_xi;
-    H_fj.block<4, 3>(stack_cntr, 0) = H_fi;
-    r_j.segment<4>(stack_cntr) = r_i;
-    stack_cntr += 4;
-  }
-
-  // Project the residual and Jacobians onto the nullspace
-  // of H_fj.
-  JacobiSVD<MatrixXd> svd_helper(H_fj, ComputeFullU | ComputeThinV);
-  MatrixXd A = svd_helper.matrixU().rightCols(
-      jacobian_row_size - 3);
-
-  H_x = A.transpose() * H_xj;
-  r = A.transpose() * r_j;
 
   return;
 }
@@ -1021,7 +1112,7 @@ void MsckfVio::measurementUpdate(
   return;
 }
 
-bool MsckfVio::gatingTest(
+bool MsckfVio::chiSuqaredGatingTest(
     const MatrixXd& H, const VectorXd& r, const int& dof) {
 
   MatrixXd P1 = H * state_server.state_cov * H.transpose();
@@ -1039,144 +1130,6 @@ bool MsckfVio::gatingTest(
     //cout << "failed" << endl;
     return false;
   }
-}
-
-void MsckfVio::removeLostFeatures() {
-
-  // Remove the features that lost track.
-  // BTW, find the size the final Jacobian matrix and residual vector.
-  int jacobian_row_size = 0;
-  vector<FeatureIDType> invalid_feature_ids(0);
-  vector<FeatureIDType> processed_feature_ids(0);
-
-  for (auto iter = map_server.begin();
-      iter != map_server.end(); ++iter) {
-    // Rename the feature to be checked.
-    auto& feature = iter->second;
-
-    // Pass the features that are still being tracked.
-    if (feature.observations.find(state_server.imu_state.id) !=
-        feature.observations.end()) continue;
-    if (feature.observations.size() < 3) {
-      invalid_feature_ids.push_back(feature.id);
-      continue;
-    }
-
-    // Check if the feature can be initialized if it
-    // has not been.
-    if (!feature.is_initialized) {
-      if (!feature.checkMotion(state_server.cam_states)) {
-        invalid_feature_ids.push_back(feature.id);
-        continue;
-      } else {
-        if(!feature.initializePosition(state_server.cam_states)) {
-          invalid_feature_ids.push_back(feature.id);
-          continue;
-        }
-      }
-    }
-
-    jacobian_row_size += 4*feature.observations.size() - 3;
-    processed_feature_ids.push_back(feature.id);
-  }
-
-  //cout << "invalid/processed feature #: " <<
-  //  invalid_feature_ids.size() << "/" <<
-  //  processed_feature_ids.size() << endl;
-  //cout << "jacobian row #: " << jacobian_row_size << endl;
-
-  // Remove the features that do not have enough measurements.
-  for (const auto& feature_id : invalid_feature_ids)
-    map_server.erase(feature_id);
-
-  // Return if there is no lost feature to be processed.
-  if (processed_feature_ids.size() == 0) return;
-
-  MatrixXd H_x = MatrixXd::Zero(jacobian_row_size,
-      21+6*state_server.cam_states.size());
-  VectorXd r = VectorXd::Zero(jacobian_row_size);
-  int stack_cntr = 0;
-
-  // Process the features which lose track.
-  for (const auto& feature_id : processed_feature_ids) {
-    auto& feature = map_server[feature_id];
-
-    vector<StateIDType> cam_state_ids(0);
-    for (const auto& measurement : feature.observations)
-      cam_state_ids.push_back(measurement.first);
-
-    MatrixXd H_xj;
-    VectorXd r_j;
-    featureJacobian(feature.id, cam_state_ids, H_xj, r_j);
-
-    if (gatingTest(H_xj, r_j, cam_state_ids.size()-1)) {
-      H_x.block(stack_cntr, 0, H_xj.rows(), H_xj.cols()) = H_xj;
-      r.segment(stack_cntr, r_j.rows()) = r_j;
-      stack_cntr += H_xj.rows();
-    }
-
-    // Put an upper bound on the row size of measurement Jacobian,
-    // which helps guarantee the executation time.
-    if (stack_cntr > 1500) break;
-  }
-
-  H_x.conservativeResize(stack_cntr, H_x.cols());
-  r.conservativeResize(stack_cntr);
-
-  // Perform the measurement update step.
-  measurementUpdate(H_x, r);
-
-  // Remove all processed features from the map.
-  for (const auto& feature_id : processed_feature_ids)
-    map_server.erase(feature_id);
-
-  return;
-}
-
-void MsckfVio::findRedundantCamStates(
-    vector<StateIDType>& rm_cam_state_ids) {
-
-  // Move the iterator to the key position.
-  auto key_cam_state_iter = state_server.cam_states.end();
-  for (int i = 0; i < 4; ++i)
-    --key_cam_state_iter;
-  auto cam_state_iter = key_cam_state_iter;
-  ++cam_state_iter;
-  auto first_cam_state_iter = state_server.cam_states.begin();
-
-  // Pose of the key camera state.
-  const Vector3d key_position =
-    key_cam_state_iter->second.position;
-  const Matrix3d key_rotation = quaternionToRotation(
-      key_cam_state_iter->second.orientation);
-
-  // Mark the camera states to be removed based on the
-  // motion between states.
-  for (int i = 0; i < 2; ++i) {
-    const Vector3d position =
-      cam_state_iter->second.position;
-    const Matrix3d rotation = quaternionToRotation(
-        cam_state_iter->second.orientation);
-
-    double distance = (position-key_position).norm();
-    double angle = AngleAxisd(
-        rotation*key_rotation.transpose()).angle();
-
-    if (angle < rotation_threshold &&
-        distance < translation_threshold &&
-        tracking_rate > tracking_rate_threshold) {
-      rm_cam_state_ids.push_back(cam_state_iter->first);
-      ++cam_state_iter;
-    } else {
-      rm_cam_state_ids.push_back(first_cam_state_iter->first);
-      ++first_cam_state_iter;
-    }
-  }
-
-  // Sort the elements in the output vector.
-  sort(rm_cam_state_ids.begin(), rm_cam_state_ids.end());
-
-  return;
 }
 
 void MsckfVio::pruneCamStateBuffer() {
@@ -1253,7 +1206,7 @@ void MsckfVio::pruneCamStateBuffer() {
     VectorXd r_j;
     featureJacobian(feature.id, involved_cam_state_ids, H_xj, r_j);
 
-    if (gatingTest(H_xj, r_j, involved_cam_state_ids.size())) {
+    if (chiSuqaredGatingTest(H_xj, r_j, involved_cam_state_ids.size())) {
       H_x.block(stack_cntr, 0, H_xj.rows(), H_xj.cols()) = H_xj;
       r.segment(stack_cntr, r_j.rows()) = r_j;
       stack_cntr += H_xj.rows();
@@ -1306,62 +1259,49 @@ void MsckfVio::pruneCamStateBuffer() {
   return;
 }
 
-void MsckfVio::onlineReset() {
+void MsckfVio::findRedundantCamStates(
+    vector<StateIDType>& rm_cam_state_ids) {
 
-  // Never perform online reset if position std threshold
-  // is non-positive.
-  if (position_std_threshold <= 0) return;
-  static long long int online_reset_counter = 0;
+  // Move the iterator to the key position.
+  auto key_cam_state_iter = state_server.cam_states.end();
+  for (int i = 0; i < 4; ++i)
+    --key_cam_state_iter;
+  auto cam_state_iter = key_cam_state_iter;
+  ++cam_state_iter;
+  auto first_cam_state_iter = state_server.cam_states.begin();
 
-  // Check the uncertainty of positions to determine if
-  // the system can be reset.
-  double position_x_std = std::sqrt(state_server.state_cov(12, 12));
-  double position_y_std = std::sqrt(state_server.state_cov(13, 13));
-  double position_z_std = std::sqrt(state_server.state_cov(14, 14));
+  // Pose of the key camera state.
+  const Vector3d key_position =
+    key_cam_state_iter->second.position;
+  const Matrix3d key_rotation = quaternionToRotation(
+      key_cam_state_iter->second.orientation);
 
-  if (position_x_std < position_std_threshold &&
-      position_y_std < position_std_threshold &&
-      position_z_std < position_std_threshold) return;
+  // Mark the camera states to be removed based on the
+  // motion between states.
+  for (int i = 0; i < 2; ++i) {
+    const Vector3d position =
+      cam_state_iter->second.position;
+    const Matrix3d rotation = quaternionToRotation(
+        cam_state_iter->second.orientation);
 
-  ROS_WARN("Start %lld online reset procedure...",
-      ++online_reset_counter);
-  ROS_INFO("Stardard deviation in xyz: %f, %f, %f",
-      position_x_std, position_y_std, position_z_std);
+    double distance = (position-key_position).norm();
+    double angle = AngleAxisd(
+        rotation*key_rotation.transpose()).angle();
 
-  // Remove all existing camera states.
-  state_server.cam_states.clear();
+    if (angle < rotation_threshold &&
+        distance < translation_threshold &&
+        tracking_rate > tracking_rate_threshold) {
+      rm_cam_state_ids.push_back(cam_state_iter->first);
+      ++cam_state_iter;
+    } else {
+      rm_cam_state_ids.push_back(first_cam_state_iter->first);
+      ++first_cam_state_iter;
+    }
+  }
 
-  // Clear all exsiting features in the map.
-  map_server.clear();
+  // Sort the elements in the output vector.
+  sort(rm_cam_state_ids.begin(), rm_cam_state_ids.end());
 
-  // Reset the state covariance.
-  double gyro_bias_cov, acc_bias_cov, velocity_cov;
-  nh.param<double>("initial_covariance/velocity",
-      velocity_cov, 0.25);
-  nh.param<double>("initial_covariance/gyro_bias",
-      gyro_bias_cov, 1e-4);
-  nh.param<double>("initial_covariance/acc_bias",
-      acc_bias_cov, 1e-2);
-
-  double extrinsic_rotation_cov, extrinsic_translation_cov;
-  nh.param<double>("initial_covariance/extrinsic_rotation_cov",
-      extrinsic_rotation_cov, 3.0462e-4);
-  nh.param<double>("initial_covariance/extrinsic_translation_cov",
-      extrinsic_translation_cov, 1e-4);
-
-  state_server.state_cov = MatrixXd::Zero(21, 21);
-  for (int i = 3; i < 6; ++i)
-    state_server.state_cov(i, i) = gyro_bias_cov;
-  for (int i = 6; i < 9; ++i)
-    state_server.state_cov(i, i) = velocity_cov;
-  for (int i = 9; i < 12; ++i)
-    state_server.state_cov(i, i) = acc_bias_cov;
-  for (int i = 15; i < 18; ++i)
-    state_server.state_cov(i, i) = extrinsic_rotation_cov;
-  for (int i = 18; i < 21; ++i)
-    state_server.state_cov(i, i) = extrinsic_translation_cov;
-
-  ROS_WARN("%lld online reset complete...", online_reset_counter);
   return;
 }
 
@@ -1444,8 +1384,67 @@ void MsckfVio::publish(const ros::Time& time) {
   }
   feature_msg_ptr->width = feature_msg_ptr->points.size();
 
-  feature_pub.publish(feature_msg_ptr);
+  feature_pcl_pub.publish(feature_msg_ptr);
 
+  return;
+}
+
+void MsckfVio::onlineReset() {
+
+  // Never perform online reset if position std threshold
+  // is non-positive.
+  if (position_std_threshold <= 0) return;
+  static long long int online_reset_counter = 0;
+
+  // Check the uncertainty of positions to determine if
+  // the system can be reset.
+  double position_x_std = std::sqrt(state_server.state_cov(12, 12));
+  double position_y_std = std::sqrt(state_server.state_cov(13, 13));
+  double position_z_std = std::sqrt(state_server.state_cov(14, 14));
+
+  if (position_x_std < position_std_threshold &&
+      position_y_std < position_std_threshold &&
+      position_z_std < position_std_threshold) return;
+
+  ROS_WARN("Start %lld online reset procedure...",
+      ++online_reset_counter);
+  ROS_INFO("Stardard deviation in xyz: %f, %f, %f",
+      position_x_std, position_y_std, position_z_std);
+
+  // Remove all existing camera states.
+  state_server.cam_states.clear();
+
+  // Clear all exsiting features in the map.
+  map_server.clear();
+
+  // Reset the state covariance.
+  double gyro_bias_cov, acc_bias_cov, velocity_cov;
+  nh.param<double>("initial_covariance/velocity",
+      velocity_cov, 0.25);
+  nh.param<double>("initial_covariance/gyro_bias",
+      gyro_bias_cov, 1e-4);
+  nh.param<double>("initial_covariance/acc_bias",
+      acc_bias_cov, 1e-2);
+
+  double extrinsic_rotation_cov, extrinsic_translation_cov;
+  nh.param<double>("initial_covariance/extrinsic_rotation_cov",
+      extrinsic_rotation_cov, 3.0462e-4);
+  nh.param<double>("initial_covariance/extrinsic_translation_cov",
+      extrinsic_translation_cov, 1e-4);
+
+  state_server.state_cov = MatrixXd::Zero(21, 21);
+  for (int i = 3; i < 6; ++i)
+    state_server.state_cov(i, i) = gyro_bias_cov;
+  for (int i = 6; i < 9; ++i)
+    state_server.state_cov(i, i) = velocity_cov;
+  for (int i = 9; i < 12; ++i)
+    state_server.state_cov(i, i) = acc_bias_cov;
+  for (int i = 15; i < 18; ++i)
+    state_server.state_cov(i, i) = extrinsic_rotation_cov;
+  for (int i = 18; i < 21; ++i)
+    state_server.state_cov(i, i) = extrinsic_translation_cov;
+
+  ROS_WARN("%lld online reset complete...", online_reset_counter);
   return;
 }
 

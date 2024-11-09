@@ -154,7 +154,7 @@ class MsckfVio {
         Eigen::MatrixXd& H_x, Eigen::VectorXd& r);
     void measurementUpdate(const Eigen::MatrixXd& H,
         const Eigen::VectorXd& r);
-    bool gatingTest(const Eigen::MatrixXd& H,
+    bool chiSuqaredGatingTest(const Eigen::MatrixXd& H,
         const Eigen::VectorXd&r, const int& dof);
     void removeLostFeatures();
     void findRedundantCamStates(
@@ -208,7 +208,7 @@ class MsckfVio {
     ros::Subscriber imu_sub;
     ros::Subscriber feature_sub;
     ros::Publisher odom_pub;
-    ros::Publisher feature_pub;
+    ros::Publisher feature_pcl_pub;
     tf::TransformBroadcaster tf_pub;
     ros::ServiceServer reset_srv;
 
