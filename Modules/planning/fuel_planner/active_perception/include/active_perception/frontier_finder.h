@@ -76,7 +76,7 @@ public:
   void computeFullCostMatrixAmongTopFrontierViewpointsFrom(const Vector3d& cur_pos, const Vector3d& cur_vel, const Vector3d cur_yaw,
                          Eigen::MatrixXd& mat);
   void getPathAllFrontiersFrom_Along(const Vector3d& pos, const vector<int>& frontier_ids, vector<Vector3d>& path);
-
+  int countFrontierCells();
   void setNextFrontier(const int& id);
   bool isThereAFrontierCovered();
   void wrapYaw(double& yaw);
@@ -119,7 +119,8 @@ private:
   list<Frontier> frontiers_, dormant_frontiers_, tmp_frontiers_;
   vector<int> removed_ids_;
   list<Frontier>::iterator first_new_ftr_;
-  Frontier next_frontier_;
+  int last_frontier_size, cur_frontier_size;
+  Frontier next_frontier_info_;
 
   // Params
   int cluster_min_;

@@ -7,6 +7,8 @@
 #include <queue>
 #include <ros/ros.h>
 #include <tuple>
+#include <mutex>
+#include <shared_mutex>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -45,11 +47,13 @@ public:
   bool isInBox(const Eigen::Vector3i& id);
   bool isInBox(const Eigen::Vector3d& pos);
   void boundBox(Eigen::Vector3d& low, Eigen::Vector3d& up);
+  void copyOccupancy();
   int getOccupancy(const Eigen::Vector3d& pos);
   int getOccupancy(const Eigen::Vector3i& id);
-  void setOccupied(const Eigen::Vector3d& pos, const int& occ = 1);
+  void setInflatedMapOccupancy(const Eigen::Vector3d& pos, const int& occ = 1);
   int getInflateOccupancy(const Eigen::Vector3d& pos);
   int getInflateOccupancy(const Eigen::Vector3i& id);
+  void copyDistance();
   double getDistance(const Eigen::Vector3d& pos);
   double getDistance(const Eigen::Vector3i& id);
   double getDistWithGrad(const Eigen::Vector3d& pos, Eigen::Vector3d& grad);
@@ -57,9 +61,11 @@ public:
   void resetBuffer();
   void resetBuffer(const Eigen::Vector3d& min, const Eigen::Vector3d& max);
 
-  void getRegion(Eigen::Vector3d& ori, Eigen::Vector3d& size);
-  void getBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax);
-  void getUpdatedBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax, bool reset = false);
+  void getFullMap(Eigen::Vector3d& ori, Eigen::Vector3d& size);
+  void getFullBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax);
+  void getUpdatedBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax);
+  void getLocalBox(Eigen::Vector3i& bmin, Eigen::Vector3i& bmax);
+  void updateLocalBox(const Eigen::Vector3d& bmin, const Eigen::Vector3d& bmax);
   double getResolution();
   int getVoxelNum();
 
@@ -71,6 +77,8 @@ private:
   template <typename F_get_val, typename F_set_val>
   void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
 
+  std::shared_mutex occ_buffer_mtx, dist_buffer_mtx, box_mtx, local_box_mtx;
+  
   unique_ptr<MapParam> mp_;
   unique_ptr<MapData> md_;
   unique_ptr<MapROS> mr_;
@@ -106,20 +114,17 @@ struct MapParam {
 
 struct MapData {
   // main map data, occupancy of each voxel and Euclidean distance
-  std::vector<double> occupancy_buffer_;
-  std::vector<char> occupancy_buffer_inflate_;
+  std::vector<double> occupancy_buffer_, occupancy_buffer_copy_;
+  std::vector<char> occupancy_buffer_inflate_, occupancy_buffer_inflate_copy_;
   std::vector<double> distance_buffer_neg_;
-  std::vector<double> distance_buffer_;
+  std::vector<double> distance_buffer_, distance_buffer_copy_;
   std::vector<double> tmp_buffer1_;
   std::vector<double> tmp_buffer2_;
   // data for updating
   vector<short> count_hit_, count_miss_, count_hit_and_miss_;
-  vector<char> flag_rayend_, flag_visited_;
-  char raycast_num_;
   queue<int> cache_voxel_;
   Eigen::Vector3i local_bound_min_, local_bound_max_;
   Eigen::Vector3d update_min_, update_max_;
-  bool reset_updated_box_;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -193,75 +198,12 @@ inline void SDFMap::boundBox(Eigen::Vector3d& low, Eigen::Vector3d& up) {
   }
 }
 
-inline int SDFMap::getOccupancy(const Eigen::Vector3i& id) {
-  if (!isInMap(id)) return -1;
-  double occ = md_->occupancy_buffer_[toAddress(id)];
-  if (occ < mp_->clamp_min_log_ - 1e-3) return UNKNOWN;
-  if (occ > mp_->min_occupancy_log_) return OCCUPIED;
-  return FREE;
-}
-
-inline int SDFMap::getOccupancy(const Eigen::Vector3d& pos) {
-  Eigen::Vector3i id;
-  posToIndex(pos, id);
-  return getOccupancy(id);
-}
-
-inline void SDFMap::setOccupied(const Eigen::Vector3d& pos, const int& occ) {
-  if (!isInMap(pos)) return;
-  Eigen::Vector3i id;
-  posToIndex(pos, id);
-  md_->occupancy_buffer_inflate_[toAddress(id)] = occ;
-}
-
-inline int SDFMap::getInflateOccupancy(const Eigen::Vector3i& id) {
-  if (!isInMap(id)) return -1;
-  return int(md_->occupancy_buffer_inflate_[toAddress(id)]);
-}
-
-inline int SDFMap::getInflateOccupancy(const Eigen::Vector3d& pos) {
-  Eigen::Vector3i id;
-  posToIndex(pos, id);
-  return getInflateOccupancy(id);
-}
-
-inline double SDFMap::getDistance(const Eigen::Vector3i& id) {
-  if (!isInMap(id)) return -1;
-  return md_->distance_buffer_[toAddress(id)];
-}
-
-inline double SDFMap::getDistance(const Eigen::Vector3d& pos) {
-  Eigen::Vector3i id;
-  posToIndex(pos, id);
-  return getDistance(id);
-}
-
 inline void SDFMap::inflatePoint(const Eigen::Vector3i& pt, int step, vector<Eigen::Vector3i>& pts) {
-  int num = 0;
-
-  /* ---------- + shape inflate ---------- */
-  // for (int x = -step; x <= step; ++x)
-  // {
-  //   if (x == 0)
-  //     continue;
-  //   pts[num++] = Eigen::Vector3i(pt(0) + x, pt(1), pt(2));
-  // }
-  // for (int y = -step; y <= step; ++y)
-  // {
-  //   if (y == 0)
-  //     continue;
-  //   pts[num++] = Eigen::Vector3i(pt(0), pt(1) + y, pt(2));
-  // }
-  // for (int z = -1; z <= 1; ++z)
-  // {
-  //   pts[num++] = Eigen::Vector3i(pt(0), pt(1), pt(2) + z);
-  // }
-
   /* ---------- all inflate ---------- */
   for (int x = -step; x <= step; ++x)
     for (int y = -step; y <= step; ++y)
       for (int z = -step; z <= step; ++z) {
-        pts[num++] = Eigen::Vector3i(pt(0) + x, pt(1) + y, pt(2) + z);
+        pts.push_back(Eigen::Vector3i(pt(0) + x, pt(1) + y, pt(2) + z));
       }
 }
 }

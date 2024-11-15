@@ -4,15 +4,15 @@
   <!-- topic of your odometry such as VIO or LIO /vins_estimator/odometry  /mavros/local_position/odom  vrpn_client_node/NanoDrone250/pose -->
   <arg name="odom_topic" value="/mavros/local_position/odom" />
   <arg name="sense_range_max" value="4.0"/>
-  <arg name="max_yaw_rate" value="10"/>
-  <arg name="resolution" value="0.1"/>
-  <arg name="obs_inflate" value="0.01"/>
+  <arg name="max_yaw_rate" value="50"/>
+  <arg name="resolution" value="0.2"/>
+  <arg name="obs_inflate" value="0.2"/>
   <arg name="FOV_H" value="69"/> <!-- degree -->
   <arg name="FOV_V" value="52"/> <!-- degree -->
   <!-- depth topic: depth image, 640x480 by default -->
   <!-- cloud topic: point cloud measurement  -->
   <!-- subscribe ONLY TO ONE of the two topics -->
-  <arg name="depth_topic" value="/mav_isir/camera/depth/image_raw"/>
+  <arg name="depth_topic" value="/camera/depth/image_raw"/>
   <arg name="cloud_topic" value="/pcl_render_node/cloud"/>
   <!-- maximum velocity and acceleration the drone will reach -->
   <arg name="max_vel" value="0.3" />
@@ -69,11 +69,11 @@
     <param name="map_ros/show_occ_time"  value="false"/>
     <param name="map_ros/show_esdf_time" value="false"/>
     <param name="map_ros/show_all_map" value="true"/>                             <!-- all in box /sdf_map/occupancy_all-->
-    <param name="map_ros/show_local_map" value="true"/>                           <!-- local in box /sdf_map/occupancy_local, /sdf_map/occupancy_local_inflate-->
-    <param name="map_ros/show_unknow_map" value="true"/>                          <!-- unkonw in local /sdf_map/unknown -->
-    <param name="map_ros/show_esdf_slice" value="true"/>                          <!-- in local /sdf_map/esdf-->
-    <param name="map_ros/show_update_range" value="true"/>                        <!-- in local /sdf_map/update_range-->
-    <param name="map_ros/show_depth_pcl" value="true"/>                           <!-- /sdf_map/depth_cloud-->
+    <param name="map_ros/show_local_map" value="false"/>                           <!-- local in box /sdf_map/occupancy_local, /sdf_map/occupancy_local_inflate-->
+    <param name="map_ros/show_unknow_map" value="false"/>                          <!-- unkonw in local /sdf_map/unknown -->
+    <param name="map_ros/show_esdf_slice" value="false"/>                          <!-- in local /sdf_map/esdf-->
+    <param name="map_ros/show_update_range" value="false"/>                        <!-- in local /sdf_map/update_range-->
+    <param name="map_ros/show_depth_pcl" value="false"/>                           <!-- /sdf_map/depth_cloud-->
     <param name="map_ros/frame_id"      value="world"/>
     <param name="map_ros/log/on"      value="false"/>                             <!-- log time and known volumn by exploration-->
     <param name="map_ros/log/dir"      value=""/>
@@ -81,16 +81,16 @@
     <!-- SDF Map -->
     <param name="sdf_map/resolution"      value="$(arg resolution)" /> 
     <!-- size of occupancy map, change the size in x, y, z-->
-    <param name="sdf_map/map_size_x"   value="10.0" /> 
-    <param name="sdf_map/map_size_y"   value="10.0" /> 
+    <param name="sdf_map/map_size_x"   value="20.0" /> 
+    <param name="sdf_map/map_size_y"   value="20.0" /> 
     <param name="sdf_map/ground_height" value="-1.0"/>            <!-- map origin z (aka ground) -->
     <param name="sdf_map/map_size_z"   value="4.0" />             <!-- height from ground -->
     <param name="sdf_map/obstacles_inflation"     value="$(arg obs_inflate)" />  <!-- for obs -->
     <param name="sdf_map/local_bound_inflate"    value="0.5"/>    <!-- for local update range, less than resolution -->
     <!-- <param name="sdf_map/local_map_margin" value="50"/> -->
-    <param name="sdf_map/default_dist"        value="0.0"/>       <!-- dist to closest obs-->
+    <param name="sdf_map/default_dist"        value="$(arg sense_range_max)"/>       <!-- default dist to closest obs-->
     <param name="sdf_map/optimistic" value="false" type="bool"/>
-    <param name="sdf_map/signed_dist" value="false" type="bool"/> <!-- neg dist-->
+    <param name="sdf_map/signed_dist" value="false" type="bool"/> <!-- neg dist/grad-->
     
     <!-- occupied prob -->
     <!-- auto logit = [](const double& x) { return log(x / (1 - x)); }; -->
@@ -100,16 +100,16 @@
     <param name="sdf_map/p_miss" value="0.35"/>
     <param name="sdf_map/p_min"  value="0.12"/>
     <param name="sdf_map/p_max"  value="0.90"/>
-    <param name="sdf_map/p_occ"  value="0.80"/>
+    <param name="sdf_map/p_occ"  value="0.70"/>
     <!-- <param name="sdf_map/min_ray_length" value="0.5"/> -->
     <param name="sdf_map/max_ray_length" value="$(arg sense_range_max)"/>
     <param name="sdf_map/virtual_ceil_height"   value="-10"/>       <!-- if greater than -0.5 -->
     <!-- preparation for frontier find, exploration space -->
-    <param name="sdf_map/box_min_x" value="-4.0" type="double"/>
-    <param name="sdf_map/box_min_y" value="-4.0" type="double"/>
+    <param name="sdf_map/box_min_x" value="-10.0" type="double"/>
+    <param name="sdf_map/box_min_y" value="-10.0" type="double"/>
     <param name="sdf_map/box_min_z" value="-0.8" type="double"/>
-    <param name="sdf_map/box_max_x" value="4.0" type="double"/>
-    <param name="sdf_map/box_max_y" value="4.0" type="double"/>
+    <param name="sdf_map/box_max_x" value="10.0" type="double"/>
+    <param name="sdf_map/box_max_y" value="10.0" type="double"/>
     <param name="sdf_map/box_max_z" value="2.0" type="double"/>
 
     <!-- Perception Utils -->
@@ -137,7 +137,7 @@
     <param name="fsm/thresh_replan1" value="0.5" type="double"/>                                  <!-- Replan if traj is almost fully executed. 0(s):finished-->
     <param name="fsm/thresh_replan2" value="0.5" type="double"/>                                  <!-- Replan if next frontier to be visited is covered. 0(s):on start-->
     <param name="fsm/thresh_replan3" value="10.0" type="double"/>                                 <!-- Replan anyway after such time seconde-->
-    <param name="fsm/replan_time" value="0.000" type="double"/>                                   <!-- assuming that replan once consume such time-->
+    <param name="fsm/replan_time" value="0.005" type="double"/>                                   <!-- assuming that replan once consume such time-->
 
     <!-- Exploration manager -->
     <param name="exploration/refine_local" value="true" type="bool"/>                          <!-- local refine after global tour search. Get top viewpoints(only need min_candidate_dist_) then global then local-->
@@ -175,7 +175,7 @@
     <param name="manager/control_points_distance" value="0.35" type="double"/>
     <param name="manager/clearance_threshold" value="0.2" type="double"/>       <!-- if topo-->
     <param name="manager/use_geometric_path" value="true" type="bool"/>         <!-- Astar: must be true-->
-    <param name="manager/use_kinodynamic_path" value="true" type="bool"/>       <!-- kinoA*: must be true-->
+    <param name="manager/use_kinodynamic_path" value="false" type="bool"/>       <!-- kinoA*: must be true-->
     <param name="manager/use_topo_path" value="false" type="bool"/>             <!-- topo: nothing use-->
     <param name="manager/use_optimization" value="true" type="bool"/>           <!-- traj opt: must be true-->
     <param name="manager/use_active_perception" value="true" type="bool"/>      <!-- FrontierFinder, HeadingPlanner, VisibilityUtil: must be true-->
@@ -199,7 +199,7 @@
     <param name="astar/lambda_heu" value="10000.0" type="double"/>            <!-- h_score heuristic-->
     <param name="astar/resolution_astar" value="$(eval 2.0 * arg('resolution'))" type="double"/>          <!-- A* searching resolution, >= map_resolution-->
     <param name="astar/allocate_num" value="1000000" type="int"/>             <!-- return NO_PATH if nodes searched too more-->
-    <param name="astar/max_search_time" value="0.001" type="double"/>         <!-- return NO_PATH if overtime-->
+    <param name="astar/max_search_time" value="0.01" type="double"/>         <!-- return NO_PATH if a* searching overtime-->
 
     <!-- Trajectory & Optimization -->
     <param name="optimization/ld_smooth" value="20.0" type="double"/>
@@ -244,6 +244,8 @@
     <!-- <param name="traj_server/init_y" value="$(arg init_y)" type="double"/> -->
     <!-- <param name="traj_server/init_z" value="$(arg init_z)" type="double"/> -->
   </node>
+
+  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find exploration_manager)/config/traj.rviz" />
   
   <!-- use keyboard control -->
   <!-- <node pkg="keyboard_control" name="keyboard_control" type="keyboard_control" output="screen" /> -->

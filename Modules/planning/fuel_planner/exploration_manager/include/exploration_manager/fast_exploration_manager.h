@@ -30,10 +30,11 @@ public:
 
   int planExploreMotion(const Vector3d& pos, const Vector3d& vel, const Vector3d& acc,
                         const Vector3d& yaw);
-
-  // Benchmark method, classic frontier and rapid frontier
-  int classicFrontier(const Vector3d& pos, const double& yaw);
-  int rapidFrontier(const Vector3d& pos, const Vector3d& vel, const double& yaw, bool& classic);
+  void getPath(vector<Vector3d>& path);
+  void getGoal(Vector3d& goal);
+  void getViewpoint(Eigen::Vector4d& next_viewpoint);
+  void getFrontierInfo(Eigen::Vector4d& next_frontier_info);
+  void getFrontier(vector<vector<Vector3d>>& frontier_, vector<vector<Vector3d>>& dead_frontiers_);
 
   shared_ptr<ExplorationData> ed_;
   shared_ptr<ExplorationParam> ep_;

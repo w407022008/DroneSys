@@ -44,7 +44,6 @@ void FastExplorationFSM::init(ros::NodeHandle& nh) {
   visualization_.reset(new PlanningVisualization(nh));
 
   planner_manager_ = expl_manager_->planner_manager_;
-  exploration_data_ = expl_manager_->ed_;
   state_ = EXPL_STATE::INIT;
   fd_->have_odom_ = false;
   fd_->state_str_ = { "INIT", "WAIT_TRIGGER", "PLAN_TRAJ", "PUB_TRAJ", "EXEC_TRAJ", "FINISH" };
@@ -55,8 +54,8 @@ void FastExplorationFSM::init(ros::NodeHandle& nh) {
   keyboard_disable_exploration = true;
   /* Ros sub, pub and timer */
   exec_timer_ = nh.createTimer(ros::Duration(0.01), &FastExplorationFSM::FSMCallback, this);// conduct hierarchical_planning
-  safety_timer_ = nh.createTimer(ros::Duration(0.05), &FastExplorationFSM::safetyCallback, this);
-  frontier_timer_ = nh.createTimer(ros::Duration(0.5), &FastExplorationFSM::frontierCallback, this);
+  safety_timer_ = nh.createTimer(ros::Duration(0.02), &FastExplorationFSM::safetyCallback, this);
+  frontier_timer_ = nh.createTimer(ros::Duration(0.05), &FastExplorationFSM::frontierCallback, this);
 
   trigger_sub_ =
       nh.subscribe("/waypoint_generator/waypoints", 1, &FastExplorationFSM::navPathTriggerCallback, this);
@@ -70,7 +69,7 @@ void FastExplorationFSM::init(ros::NodeHandle& nh) {
 }
 
 void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
-  ROS_INFO_STREAM_THROTTLE(1.0, "[FSM]: state: " << fd_->state_str_[int(state_)]);
+  ROS_INFO_STREAM_THROTTLE(0.1, "[FSM]: state: " << fd_->state_str_[int(state_)]);
 
   switch (state_) {
     case INIT: {
@@ -96,6 +95,8 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
     }
 
     case PLAN_TRAJ: {
+      if(!could_trigger) return;
+
       static bool yaw_replan = false;
       if (!keyboard_disable_exploration){
         ROS_WARN("Keyboard do not allow PUB_TRAJ");
@@ -140,8 +141,9 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
 
       // Inform traj_server the replanning
       replan_pub_.publish(std_msgs::Empty());
+      could_trigger = false;
       int res = callExplorationPlanner();// call the function of hierarchical_planning from fast_exploration_manager.cpp
-      
+      could_trigger = true;
       if(!fd_->newest_traj_.yaw_pts.empty()){
         Eigen::MatrixXd yaw_pts(fd_->newest_traj_.yaw_pts.size(), 1);
         for (int i = 0; i < fd_->newest_traj_.yaw_pts.size(); ++i)
@@ -167,7 +169,7 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
         std::cout << "\n\n" << std::endl;
         std::cout << "============== Finish ==============" << std::endl;
         fd_->static_state_ = true;
-        clearVisMarker();
+        // clearVisMarker();
         yaw_replan = false;
       } else if (res == FAIL) {
         // Still in PLAN_TRAJ state, keep replanning
@@ -213,7 +215,7 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
         return;
       }
       // Replan after some time
-      if (t_cur > fp_->replan_thresh3_ && !classic_) {
+      if (t_cur > fp_->replan_thresh3_) {
         std::cout << "\n\n" << std::endl;
         transitState(PLAN_TRAJ, "FSM");
         ROS_WARN("[FSM]:Replan: periodic call=======================================");
@@ -228,13 +230,6 @@ int FastExplorationFSM::callExplorationPlanner() {
 
   int res = expl_manager_->planExploreMotion(fd_->start_pt_, fd_->start_vel_, fd_->start_acc_,
                                              fd_->start_yaw_);// call hierarchical planning from fast_exploration_manager.cpp
-  classic_ = false;
-
-  // int res = expl_manager_->classicFrontier(fd_->start_pt_, fd_->start_yaw_[0]);
-  // classic_ = true;
-
-  // int res = expl_manager_->rapidFrontier(fd_->start_pt_, fd_->start_vel_, fd_->start_yaw_[0],
-  // classic_);
 
   if (res == SUCCEED) {
     auto info = &planner_manager_->local_data_;
@@ -268,10 +263,11 @@ int FastExplorationFSM::callExplorationPlanner() {
 }
 
 void FastExplorationFSM::safetyCallback(const ros::TimerEvent& e) {
-  if (state_ == EXPL_STATE::EXEC_TRAJ) {
+  if (state_ > EXPL_STATE::PLAN_TRAJ) {
     // Check safety and trigger replan if necessary
     double dist;
     bool safe = planner_manager_->checkTrajCollision(dist);
+    // std::cout<<"safety check dist: "<<dist<<std::endl;
     if (!safe) {
       ROS_WARN("Replan: collision detected==================================");
       transitState(PLAN_TRAJ, "safetyCallback");
@@ -287,12 +283,17 @@ void FastExplorationFSM::frontierCallback(const ros::TimerEvent& e) {
   if (state_ == WAIT_TRIGGER || (state_ == FINISH && pre_finish)) {
     auto ft = expl_manager_->frontier_finder_;
     auto ed = expl_manager_->ed_;
+
+    could_trigger = false;
     ft->updateFrontiers(false); // search new frontier cells in the whole exploration space rather update space
     ft->searchViewpointsOfNewFrontiers();
     ft->updatePathAndCostAmongTopFrontierViewpoints();
+    could_trigger = true;
 
+    if (!ed->frontiers_.empty()) ed->frontiers_.clear();
     ft->getCellsOfEachFrontier(ed->frontiers_);
-    ft->getBoundingBoxOfEachFrontier(ed->frontier_boxes_);
+    // if (!ed->frontier_boxes_.empty()) ed->frontier_boxes_.clear();
+    // ft->getBoundingBoxOfEachFrontier(ed->frontier_boxes_);
 
     if(state_ == FINISH)
       if(ed->frontiers_.size()){
@@ -309,11 +310,9 @@ void FastExplorationFSM::frontierCallback(const ros::TimerEvent& e) {
       visualization_->drawCubes(ed->frontiers_[i], 0.1,
                                 visualization_->getColor(double(i) / ed->frontiers_.size(), 0.4),
                                 "frontier", i, 4);
-      // visualization_->drawBox(ed->frontier_boxes_[i].first, ed->frontier_boxes_[i].second, Vector4d(0.5, 0, 1, 0.3), "frontier_boxes", i, 4);
     }
     for (int i = ed->frontiers_.size(); i < last_ftr_num; ++i) {
       visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
-      // visualization_->drawBox(Vector3d(0, 0, 0), Vector3d(0, 0, 0), Vector4d(1, 0, 0, 0.3), "frontier_boxes", i, 4);
     }
     last_ftr_num = ed->frontiers_.size();
   }
@@ -384,71 +383,75 @@ void FastExplorationFSM::odometryCallback(const nav_msgs::OdometryConstPtr& msg)
 }
 
 void FastExplorationFSM::visualize() {
-  auto info = &planner_manager_->local_data_;
-  auto plan_data = &planner_manager_->plan_data_;
-  auto ed_ptr = expl_manager_->ed_;
+  if(state_ == EXPL_STATE::PLAN_TRAJ) return;
 
-  // Draw updated box
-  // Vector3d bmin, bmax;
-  // planner_manager_->edt_environment_->sdf_map_->getUpdatedBox(bmin, bmax);
-  // visualization_->drawBox((bmin + bmax) / 2.0, bmax - bmin, Vector4d(0, 1, 0, 0.3), "updated_box", 0,
-  // 4);
-
-  // Draw frontier
-  static int last_ftr_num = 0;
-  for (int i = 0; i < ed_ptr->frontiers_.size(); ++i) {
-    visualization_->drawCubes(ed_ptr->frontiers_[i], 0.1,
-                              visualization_->getColor(double(i) / ed_ptr->frontiers_.size(), 0.4),
-                              "frontier", i, 4);
-    // visualization_->drawBox(ed_ptr->frontier_boxes_[i].first, ed_ptr->frontier_boxes_[i].second,
-    //                         Vector4d(0.5, 0, 1, 0.3), "frontier_boxes", i, 4);
-  }
-  for (int i = ed_ptr->frontiers_.size(); i < last_ftr_num; ++i) {
-    visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
-    // visualization_->drawBox(Vector3d(0, 0, 0), Vector3d(0, 0, 0), Vector4d(1, 0, 0, 0.3),
-    // "frontier_boxes", i, 4);
-  }
-  last_ftr_num = ed_ptr->frontiers_.size();
-  // for (int i = 0; i < ed_ptr->dead_frontiers_.size(); ++i)
-  //   visualization_->drawCubes(ed_ptr->dead_frontiers_[i], 0.1, Vector4d(0, 0, 0, 0.5), "dead_frontier",
-  //                             i, 4);
-  // for (int i = ed_ptr->dead_frontiers_.size(); i < 5; ++i)
-  //   visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 0.5), "dead_frontier", i, 4);
-
-  // Draw global top viewpoints info
-  // visualization_->drawSpheres(ed_ptr->points_, 0.2, Vector4d(0, 0.5, 0, 1), "points", 0, 6);
-  // visualization_->drawLines(ed_ptr->global_tour_, 0.07, Vector4d(0, 0.5, 0, 1), "global_tour", 0, 6);
-  // visualization_->drawLines(ed_ptr->points_, ed_ptr->views_, 0.05, Vector4d(0, 1, 0.5, 1), "view", 0, 6);
-  // visualization_->drawLines(ed_ptr->points_, ed_ptr->averages_, 0.03, Vector4d(1, 0, 0, 1),
-  // "point-average", 0, 6);
-
-  // Draw local refined viewpoints info
-  // visualization_->drawSpheres(ed_ptr->refined_points_, 0.2, Vector4d(0, 0, 1, 1), "refined_pts", 0, 6);
-  // visualization_->drawLines(ed_ptr->refined_points_, ed_ptr->refined_views_, 0.05,
-  //                           Vector4d(0.5, 0, 1, 1), "refined_view", 0, 6);
-  // visualization_->drawLines(ed_ptr->refined_tour_, 0.07, Vector4d(0, 0, 1, 1), "refined_tour", 0, 6);
-  // visualization_->drawLines(ed_ptr->refined_views1_, ed_ptr->refined_views2_, 0.04, Vector4d(0, 0, 0,
-  // 1),
-  //                           "refined_view", 0, 6);
-  // visualization_->drawLines(ed_ptr->refined_points_, ed_ptr->unrefined_points_, 0.05, Vector4d(1, 1,
-  // 0, 1),
-  //                           "refine_pair", 0, 6);
-  // for (int i = 0; i < ed_ptr->n_points_.size(); ++i)
-  //   visualization_->drawSpheres(ed_ptr->n_points_[i], 0.1,
-  //                               visualization_->getColor(double(ed_ptr->refined_ids_[i]) /
-  //                               ed_ptr->frontiers_.size()),
-  //                               "n_points", i, 6);
-  // for (int i = ed_ptr->n_points_.size(); i < 15; ++i)
-  //   visualization_->drawSpheres({}, 0.1, Vector4d(0, 0, 0, 1), "n_points", i, 6);
+  vector<Vector3d> path_to_goal_;
+  expl_manager_->getPath(path_to_goal_);
+  Vector3d next_goal_;
+  expl_manager_->getGoal(next_goal_);
+  // Vector4d next_viewpoint_;
+  // expl_manager_->getViewpoint(next_viewpoint_);
+  Vector4d next_frontier_info_;
+  expl_manager_->getFrontierInfo(next_frontier_info_);
+  vector<vector<Vector3d>> frontiers_;
+  vector<vector<Vector3d>> dead_frontiers_;
+  expl_manager_->getFrontier(frontiers_, dead_frontiers_);
 
   // Draw trajectory
-  // visualization_->drawSpheres({ ed_ptr->next_goal_ }, 0.3, Vector4d(0, 1, 1, 1), "next_goal", 0, 6);
-  visualization_->drawBspline(info->position_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15,
-                              Vector4d(1, 1, 0, 1));
-  // visualization_->drawSpheres(plan_data->kino_path_, 0.1, Vector4d(1, 0, 1, 1), "kino_path", 0, 0);
-  // visualization_->drawLines(ed_ptr->path_next_goal_, 0.05, Vector4d(0, 1, 1, 1), "next_goal", 1, 6);
-  // visualization_->drawArrow(ed_ptr->next_viewpoint_, 0.25, {1, 0, 0, 1,}, "next_viewpoint", 0, 6);
-  visualization_->drawArrow(ed_ptr->next_frontier_, 0.25, {0, 0, 0, 1,}, "next_frontier", 0, 7);
+  auto info = &planner_manager_->local_data_;
+  auto plan_data = &planner_manager_->plan_data_;
+  visualization_->drawBspline(info->position_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15, Vector4d(1, 1, 0, 1),0);
+  // visualization_->drawSpheres(plan_data->kino_path_, 0.1, Vector4d(1, 0, 1, 1), "kino_path", 0, 1);
+
+  visualization_->drawLines(path_to_goal_, 0.05, Vector4d(0, 1, 1, 1), "a*_path", 1, 1);
+  visualization_->drawSpheres({ next_goal_ }, 0.3, Vector4d(0, 1, 1, 1), "next_goal", 0, 6);
+  // visualization_->drawArrow(next_viewpoint_, 0.2, {1, 0, 0, 1,}, "next_viewpoint", 0, 6); // same as
+  visualization_->drawArrow(next_frontier_info_, 0.5, {0, 0, 0, 1,}, "next_frontier", 0, 7);
+
+  // Draw updated box & frontier
+  // Vector3d bmin, bmax;
+  // planner_manager_->edt_environment_->sdf_map_->getUpdatedBox(bmin, bmax);
+  // visualization_->drawBox((bmin + bmax) / 2.0, bmax - bmin, Vector4d(0, 1, 0, 0.3), "updated_box", 0, 4);
+  static int last_ftr_num = 0;
+  int frontier_size = frontiers_.size();
+  for (int i = 0; i < frontier_size; ++i) {
+    visualization_->drawCubes(frontiers_[i], 0.1,
+                              visualization_->getColor(double(i) / frontier_size, 0.4),
+                              "frontier", i, 4);
+  }
+  for (int i = frontier_size; i < last_ftr_num; ++i) {
+    visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
+  }
+  last_ftr_num = frontier_size;
+  // static int last_dead_ftr_num = 0;
+  // frontier_size = dead_frontiers_.size();
+  // for (int i = 0; i < frontier_size; ++i)
+  //   visualization_->drawCubes(dead_frontiers_[i], 0.1, Vector4d(0, 0, 0, 0.5), "dead_frontier", i, 4);
+  // for (int i = frontier_size; i < last_dead_ftr_num; ++i)
+  //   visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 0.5), "dead_frontier", i, 4);
+  // last_dead_ftr_num = frontier_size;
+
+  // auto ed_ = expl_manager_->ed_;
+
+  // Draw global top viewpoints info
+  // visualization_->drawSpheres(ed_->points_, 0.2, Vector4d(0, 0.5, 0, 1), "points", 0, 6);
+  // visualization_->drawLines(ed_->global_tour_, 0.07, Vector4d(0, 0.5, 0, 1), "global_tour", 0, 6);
+  // visualization_->drawLines(ed_->points_, ed_->views_, 0.05, Vector4d(0, 1, 0.5, 1), "view", 0, 6);
+  // visualization_->drawLines(ed_->points_, ed_->averages_, 0.03, Vector4d(1, 0, 0, 1), "point-average", 0, 6);
+
+  // Draw local refined viewpoints info
+  // visualization_->drawSpheres(ed_->refined_points_, 0.2, Vector4d(0, 0, 1, 1), "refined_pts", 0, 6);
+  // visualization_->drawLines(ed_->refined_points_, ed_->refined_views_, 0.05, Vector4d(0.5, 0, 1, 1), "refined_view", 0, 6);
+  // visualization_->drawLines(ed_->refined_tour_, 0.07, Vector4d(0, 0, 1, 1), "refined_tour", 0, 6);
+  // visualization_->drawLines(ed_->refined_views1_, ed_->refined_views2_, 0.04, Vector4d(0, 0, 0, 1), "refined_view", 0, 6);
+  // visualization_->drawLines(ed_->refined_points_, ed_->unrefined_points_, 0.05, Vector4d(1, 1, 0, 1), "refine_pair", 0, 6);
+  // for (int i = 0; i < ed_->n_points_.size(); ++i)
+  //   visualization_->drawSpheres(ed_->n_points_[i], 0.1,
+  //                               visualization_->getColor(double(ed_->refined_ids_[i]) /
+  //                               ed_->frontiers_.size()),
+  //                               "n_points", i, 6);
+  // for (int i = ed_->n_points_.size(); i < 15; ++i)
+  //   visualization_->drawSpheres({}, 0.1, Vector4d(0, 0, 0, 1), "n_points", i, 6);
 }
 
 void FastExplorationFSM::clearVisMarker() {

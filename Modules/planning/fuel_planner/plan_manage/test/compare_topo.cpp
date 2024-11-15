@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
         obs_pt(0) = pt.x;
         obs_pt(1) = pt.y;
         obs_pt(2) = pt.z;
-        sdf_map->setOccupied(obs_pt);
+        sdf_map->setInflatedMapOccupancy(obs_pt);
       }
       sdf_map->updateESDF3d();
     }

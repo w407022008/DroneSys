@@ -60,18 +60,17 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   // Initialize data buffer of map
   int buffer_size = mp_->map_voxel_num_(0) * mp_->map_voxel_num_(1) * mp_->map_voxel_num_(2);
   md_->occupancy_buffer_ = vector<double>(buffer_size, mp_->clamp_min_log_ - mp_->unknown_flag_);
+  md_->occupancy_buffer_copy_ = vector<double>(buffer_size, mp_->clamp_min_log_ - mp_->unknown_flag_);
   md_->occupancy_buffer_inflate_ = vector<char>(buffer_size, 0);
+  md_->occupancy_buffer_inflate_copy_ = vector<char>(buffer_size, 0);
   if (mp_->signed_dist_)  md_->distance_buffer_neg_ = vector<double>(buffer_size, mp_->default_dist_);
   md_->distance_buffer_ = vector<double>(buffer_size, mp_->default_dist_);
+  md_->distance_buffer_copy_ = vector<double>(buffer_size, mp_->default_dist_);
   md_->count_hit_and_miss_ = vector<short>(buffer_size, 0);
   md_->count_hit_ = vector<short>(buffer_size, 0);
   md_->count_miss_ = vector<short>(buffer_size, 0);
-  md_->flag_rayend_ = vector<char>(buffer_size, -1);
-  md_->flag_visited_ = vector<char>(buffer_size, -1);
   md_->tmp_buffer1_ = vector<double>(buffer_size, 0);
   md_->tmp_buffer2_ = vector<double>(buffer_size, 0);
-  md_->raycast_num_ = 0;
-  md_->reset_updated_box_ = true;
   md_->update_min_ = md_->update_max_ = Eigen::Vector3d(0, 0, 0);
 
   // Try retriving bounding box of map, set box to map size if not specified
@@ -105,9 +104,9 @@ void SDFMap::resetBuffer(const Eigen::Vector3d& min_pos, const Eigen::Vector3d& 
   boundIndex(min_id);
   boundIndex(max_id);
 
-  for (int x = min_id(0); x <= max_id(0); ++x)
-    for (int y = min_id(1); y <= max_id(1); ++y)
-      for (int z = min_id(2); z <= max_id(2); ++z) {
+  for (int x = min_id[0]; x <= max_id[0]; ++x)
+    for (int y = min_id[1]; y <= max_id[1]; ++y)
+      for (int z = min_id[2]; z <= max_id[2]; ++z) {
         md_->occupancy_buffer_inflate_[toAddress(x, y, z)] = 0;
         md_->distance_buffer_[toAddress(x, y, z)] = mp_->default_dist_;
       }
@@ -150,89 +149,86 @@ void SDFMap::fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int e
 }
 
 void SDFMap::updateESDF3d() {
-  Eigen::Vector3i min_esdf = md_->local_bound_min_;
-  Eigen::Vector3i max_esdf = md_->local_bound_max_;
+  Eigen::Vector3i local_bound_min, local_bound_max;
+  getLocalBox(local_bound_min, local_bound_max);
 
   if (mp_->optimistic_) {
-    for (int x = min_esdf[0]; x <= max_esdf[0]; x++)
-      for (int y = min_esdf[1]; y <= max_esdf[1]; y++) {
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; x++)
+      for (int y = local_bound_min[1]; y <= local_bound_max[1]; y++) {
         fillESDF(
             [&](int z) {
-              return md_->occupancy_buffer_inflate_[toAddress(x, y, z)] == 1 ?
+              return getInflateOccupancy(Eigen::Vector3i(x, y, z)) == 1 ?
                   0 :
                   std::numeric_limits<double>::max();
             },
-            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, min_esdf[2],
-            max_esdf[2], 2);
+            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, local_bound_min[2],
+            local_bound_max[2], 2);
       }
   } else {
-    for (int x = min_esdf[0]; x <= max_esdf[0]; x++)
-      for (int y = min_esdf[1]; y <= max_esdf[1]; y++) {
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; x++)
+      for (int y = local_bound_min[1]; y <= local_bound_max[1]; y++) {
         fillESDF(
             [&](int z) {
-              int adr = toAddress(x, y, z);
-              return (md_->occupancy_buffer_inflate_[adr] == 1 ||
-                      md_->occupancy_buffer_[adr] < mp_->clamp_min_log_ - 1e-3) ?
+              return (getInflateOccupancy(Eigen::Vector3i(x, y, z)) == 1 ||
+                      getOccupancy(Eigen::Vector3i(x, y, z)) == UNKNOWN) ?
                   0 :
                   std::numeric_limits<double>::max();
             },
-            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, min_esdf[2],
-            max_esdf[2], 2);
+            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, local_bound_min[2],
+            local_bound_max[2], 2);
       }
   }
 
-  for (int x = min_esdf[0]; x <= max_esdf[0]; x++)
-    for (int z = min_esdf[2]; z <= max_esdf[2]; z++) {
+  for (int x = local_bound_min[0]; x <= local_bound_max[0]; x++)
+    for (int z = local_bound_min[2]; z <= local_bound_max[2]; z++) {
       fillESDF(
           [&](int y) { return md_->tmp_buffer1_[toAddress(x, y, z)]; },
-          [&](int y, double val) { md_->tmp_buffer2_[toAddress(x, y, z)] = val; }, min_esdf[1],
-          max_esdf[1], 1);
+          [&](int y, double val) { md_->tmp_buffer2_[toAddress(x, y, z)] = val; }, local_bound_min[1],
+          local_bound_max[1], 1);
     }
-  for (int y = min_esdf[1]; y <= max_esdf[1]; y++)
-    for (int z = min_esdf[2]; z <= max_esdf[2]; z++) {
+  for (int y = local_bound_min[1]; y <= local_bound_max[1]; y++)
+    for (int z = local_bound_min[2]; z <= local_bound_max[2]; z++) {
       fillESDF(
           [&](int x) { return md_->tmp_buffer2_[toAddress(x, y, z)]; },
           [&](int x, double val) {
             md_->distance_buffer_[toAddress(x, y, z)] = mp_->resolution_ * std::sqrt(val);
           },
-          min_esdf[0], max_esdf[0], 0);
+          local_bound_min[0], local_bound_max[0], 0);
     }
 
   if (mp_->signed_dist_) {
     // Compute negative distance
-    for (int x = min_esdf[0]; x <= max_esdf[0]; x++)
-      for (int y = min_esdf[1]; y <= max_esdf[1]; y++) {
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; x++)
+      for (int y = local_bound_min[1]; y <= local_bound_max[1]; y++) {
         fillESDF(
             [&](int z) {
-              return md_->occupancy_buffer_inflate_
-                          [x * mp_->map_voxel_num_(1) * mp_->map_voxel_num_(2) +
-                           y * mp_->map_voxel_num_(2) + z] == 0 ?
+              return getInflateOccupancy(Eigen::Vector3i(x, y, z)) == 0 ?
                   0 :
                   std::numeric_limits<double>::max();
             },
-            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, min_esdf[2],
-            max_esdf[2], 2);
+            [&](int z, double val) { md_->tmp_buffer1_[toAddress(x, y, z)] = val; }, local_bound_min[2],
+            local_bound_max[2], 2);
       }
-    for (int x = min_esdf[0]; x <= max_esdf[0]; x++)
-      for (int z = min_esdf[2]; z <= max_esdf[2]; z++) {
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; x++)
+      for (int z = local_bound_min[2]; z <= local_bound_max[2]; z++) {
         fillESDF(
             [&](int y) { return md_->tmp_buffer1_[toAddress(x, y, z)]; },
-            [&](int y, double val) { md_->tmp_buffer2_[toAddress(x, y, z)] = val; }, min_esdf[1],
-            max_esdf[1], 1);
+            [&](int y, double val) { md_->tmp_buffer2_[toAddress(x, y, z)] = val; }, local_bound_min[1],
+            local_bound_max[1], 1);
       }
-    for (int y = min_esdf[1]; y <= max_esdf[1]; y++)
-      for (int z = min_esdf[2]; z <= max_esdf[2]; z++) {
+    for (int y = local_bound_min[1]; y <= local_bound_max[1]; y++)
+      for (int z = local_bound_min[2]; z <= local_bound_max[2]; z++) {
         fillESDF(
             [&](int x) { return md_->tmp_buffer2_[toAddress(x, y, z)]; },
             [&](int x, double val) {
               md_->distance_buffer_neg_[toAddress(x, y, z)] = mp_->resolution_ * std::sqrt(val);
             },
-            min_esdf[0], max_esdf[0], 0);
+            local_bound_min[0], local_bound_max[0], 0);
       }
     // Merge negative distance with positive
-    for (int x = min_esdf(0); x <= max_esdf(0); ++x)
-      for (int y = min_esdf(1); y <= max_esdf(1); ++y)
-        for (int z = min_esdf(2); z <= max_esdf(2); ++z) {
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; ++x)
+      for (int y = local_bound_min[1]; y <= local_bound_max[1]; ++y)
+        for (int z = local_bound_min[2]; z <= local_bound_max[2]; ++z) {
           int idx = toAddress(x, y, z);
           if (md_->distance_buffer_neg_[idx] > 0.0)
             md_->distance_buffer_[idx] += (-md_->distance_buffer_neg_[idx] + mp_->resolution_);
@@ -260,15 +256,9 @@ void SDFMap::inputPointCloud(
     const pcl::PointCloud<pcl::PointXYZ>& points, const int& point_num,
     const Eigen::Vector3d& camera_pos) {
   if (point_num == 0) return;
-  md_->raycast_num_ += 1;
 
   Eigen::Vector3d update_min = camera_pos;
   Eigen::Vector3d update_max = camera_pos;
-  if (md_->reset_updated_box_) {
-    md_->update_min_ = camera_pos;
-    md_->update_max_ = camera_pos;
-    md_->reset_updated_box_ = false;
-  }
 
   Eigen::Vector3d pt_w, tmp;
   Eigen::Vector3i idx;
@@ -304,11 +294,6 @@ void SDFMap::inputPointCloud(
       update_min[k] = min(update_min[k], pt_w[k]);
       update_max[k] = max(update_max[k], pt_w[k]);
     }
-    // Raycasting between camera center and point
-    if (md_->flag_rayend_[vox_adr] == md_->raycast_num_)
-      continue;
-    else
-      md_->flag_rayend_[vox_adr] = md_->raycast_num_;
 
     caster_->input(pt_w, camera_pos);
     caster_->nextId(idx);
@@ -317,18 +302,17 @@ void SDFMap::inputPointCloud(
   }
 
   Eigen::Vector3d bound_inf(mp_->local_bound_inflate_, mp_->local_bound_inflate_, 0);
-  posToIndex(update_max + bound_inf, md_->local_bound_max_);
-  posToIndex(update_min - bound_inf, md_->local_bound_min_);
-  boundIndex(md_->local_bound_min_);
-  boundIndex(md_->local_bound_max_);
-  mr_->local_updated_ = true;
+  updateLocalBox((update_min - bound_inf), (update_max + bound_inf));
+  Eigen::Vector3i local_bound_min, local_bound_max;
+  getLocalBox(local_bound_min, local_bound_max);
 
   // Bounding box for subsequent updating
-  for (int k = 0; k < 3; ++k) {
-    md_->update_min_[k] = min(update_min[k], md_->update_min_[k]);
-    md_->update_max_[k] = max(update_max[k], md_->update_max_[k]);
-  }
-
+{
+std::unique_lock<std::shared_mutex> lock(box_mtx);
+  md_->update_min_ = md_->update_min_.array().min(update_min.array()).matrix();
+  md_->update_max_ = md_->update_max_.array().min(update_max.array()).matrix();
+}
+  // update occupied prob
   while (!md_->cache_voxel_.empty()) {
     int adr = md_->cache_voxel_.front();
     md_->cache_voxel_.pop();
@@ -341,6 +325,43 @@ void SDFMap::inputPointCloud(
     md_->occupancy_buffer_[adr] = std::min(
         std::max(md_->occupancy_buffer_[adr] + log_odds_update, mp_->clamp_min_log_),
         mp_->clamp_max_log_);
+  }
+
+  // clean local space
+  for (int x = local_bound_min[0]; x <= local_bound_max[0]; ++x)
+    for (int y = local_bound_min[1]; y <= local_bound_max[1]; ++y)
+      for (int z = local_bound_min[2]; z <= local_bound_max[2]; ++z) {
+        md_->occupancy_buffer_inflate_[toAddress(x, y, z)] = 0;
+      }
+
+  // inflate local occupied cells
+  for (int x = local_bound_min[0]; x <= local_bound_max[0]; ++x)
+    for (int y = local_bound_min[1]; y <= local_bound_max[1]; ++y)
+      for (int z = local_bound_min[2]; z <= local_bound_max[2]; ++z) {
+        int id1 = toAddress(x, y, z);
+        if (md_->occupancy_buffer_[id1] > mp_->min_occupancy_log_) {
+          vector<Eigen::Vector3i> inf_pts;
+          int inf_step = ceil(mp_->obstacles_inflation_ / mp_->resolution_);
+          inflatePoint(Eigen::Vector3i(x, y, z), inf_step, inf_pts);
+          for (auto inf_pt : inf_pts) {
+            int idx_inf = toAddress(inf_pt);
+            if (idx_inf >= 0 &&
+                idx_inf <
+                    mp_->map_voxel_num_(0) * mp_->map_voxel_num_(1) * mp_->map_voxel_num_(2)) {
+              md_->occupancy_buffer_inflate_[idx_inf] = 1;
+            }
+          }
+        }
+      }
+
+  // add virtual ceiling to limit flight height
+  if (mp_->virtual_ceil_height_ > -0.5) {
+    int ceil_id = floor((mp_->virtual_ceil_height_ - mp_->map_origin_[2]) * mp_->resolution_inv_);
+    for (int x = local_bound_min[0]; x <= local_bound_max[0]; ++x)
+      for (int y = local_bound_min[1]; y <= local_bound_max[1]; ++y) {
+        // md_->occupancy_buffer_inflate_[toAddress(x, y, ceil_id)] = 1;
+        md_->occupancy_buffer_[toAddress(x, y, ceil_id)] = mp_->clamp_max_log_;
+      }
   }
 }
 
@@ -362,113 +383,10 @@ SDFMap::closetPointOnMapBoundary(const Eigen::Vector3d& pt, const Eigen::Vector3
 }
 
 void SDFMap::clearAndInflateLocalMap() {
-  // /*clear outside local*/
-  // const int vec_margin = 5;
-
-  // Eigen::Vector3i min_cut = md_->local_bound_min_ -
-  //     Eigen::Vector3i(mp_->local_map_margin_, mp_->local_map_margin_,
-  //     mp_->local_map_margin_);
-  // Eigen::Vector3i max_cut = md_->local_bound_max_ +
-  //     Eigen::Vector3i(mp_->local_map_margin_, mp_->local_map_margin_,
-  //     mp_->local_map_margin_);
-  // boundIndex(min_cut);
-  // boundIndex(max_cut);
-
-  // Eigen::Vector3i min_cut_m = min_cut - Eigen::Vector3i(vec_margin, vec_margin,
-  // vec_margin); Eigen::Vector3i max_cut_m = max_cut + Eigen::Vector3i(vec_margin,
-  // vec_margin, vec_margin); boundIndex(min_cut_m); boundIndex(max_cut_m);
-
-  // // clear data outside the local range
-
-  // for (int x = min_cut_m(0); x <= max_cut_m(0); ++x)
-  //   for (int y = min_cut_m(1); y <= max_cut_m(1); ++y) {
-
-  //     for (int z = min_cut_m(2); z < min_cut(2); ++z) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-
-  //     for (int z = max_cut(2) + 1; z <= max_cut_m(2); ++z) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-  //   }
-
-  // for (int z = min_cut_m(2); z <= max_cut_m(2); ++z)
-  //   for (int x = min_cut_m(0); x <= max_cut_m(0); ++x) {
-
-  //     for (int y = min_cut_m(1); y < min_cut(1); ++y) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-
-  //     for (int y = max_cut(1) + 1; y <= max_cut_m(1); ++y) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-  //   }
-
-  // for (int y = min_cut_m(1); y <= max_cut_m(1); ++y)
-  //   for (int z = min_cut_m(2); z <= max_cut_m(2); ++z) {
-
-  //     for (int x = min_cut_m(0); x < min_cut(0); ++x) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-
-  //     for (int x = max_cut(0) + 1; x <= max_cut_m(0); ++x) {
-  //       int idx                       = toAddress(x, y, z);
-  //       md_->occupancy_buffer_[idx]    = mp_->clamp_min_log_ - mp_->unknown_flag_;
-  //       md_->distance_buffer_all_[idx] = 10000;
-  //     }
-  //   }
-
-  // update inflated occupied cells
-  // clean outdated occupancy
-
-  int inf_step = ceil(mp_->obstacles_inflation_ / mp_->resolution_);
-  vector<Eigen::Vector3i> inf_pts(pow(2 * inf_step + 1, 3));
+  // int inf_step = ceil(mp_->obstacles_inflation_ / mp_->resolution_);
+  // vector<Eigen::Vector3i> inf_pts(pow(2 * inf_step + 1, 3));
   // inf_pts.resize(4 * inf_step + 3);
 
-  for (int x = md_->local_bound_min_(0); x <= md_->local_bound_max_(0); ++x)
-    for (int y = md_->local_bound_min_(1); y <= md_->local_bound_max_(1); ++y)
-      for (int z = md_->local_bound_min_(2); z <= md_->local_bound_max_(2); ++z) {
-        md_->occupancy_buffer_inflate_[toAddress(x, y, z)] = 0;
-      }
-
-  // inflate newest occpuied cells
-  for (int x = md_->local_bound_min_(0); x <= md_->local_bound_max_(0); ++x)
-    for (int y = md_->local_bound_min_(1); y <= md_->local_bound_max_(1); ++y)
-      for (int z = md_->local_bound_min_(2); z <= md_->local_bound_max_(2); ++z) {
-        int id1 = toAddress(x, y, z);
-        if (md_->occupancy_buffer_[id1] > mp_->min_occupancy_log_) {
-          inflatePoint(Eigen::Vector3i(x, y, z), inf_step, inf_pts);
-
-          for (auto inf_pt : inf_pts) {
-            int idx_inf = toAddress(inf_pt);
-            if (idx_inf >= 0 &&
-                idx_inf <
-                    mp_->map_voxel_num_(0) * mp_->map_voxel_num_(1) * mp_->map_voxel_num_(2)) {
-              md_->occupancy_buffer_inflate_[idx_inf] = 1;
-            }
-          }
-        }
-      }
-
-  // add virtual ceiling to limit flight height
-  if (mp_->virtual_ceil_height_ > -0.5) {
-    int ceil_id = floor((mp_->virtual_ceil_height_ - mp_->map_origin_(2)) * mp_->resolution_inv_);
-    for (int x = md_->local_bound_min_(0); x <= md_->local_bound_max_(0); ++x)
-      for (int y = md_->local_bound_min_(1); y <= md_->local_bound_max_(1); ++y) {
-        // md_->occupancy_buffer_inflate_[toAddress(x, y, ceil_id)] = 1;
-        md_->occupancy_buffer_[toAddress(x, y, ceil_id)] = mp_->clamp_max_log_;
-      }
-  }
 }
 
 double SDFMap::getResolution() {
@@ -479,19 +397,96 @@ int SDFMap::getVoxelNum() {
   return mp_->map_voxel_num_[0] * mp_->map_voxel_num_[1] * mp_->map_voxel_num_[2];
 }
 
-void SDFMap::getRegion(Eigen::Vector3d& ori, Eigen::Vector3d& size) {
+void SDFMap::getFullMap(Eigen::Vector3d& ori, Eigen::Vector3d& size) {
   ori = mp_->map_origin_, size = mp_->map_size_;
 }
 
-void SDFMap::getBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax) {
+void SDFMap::getFullBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax) {
   bmin = mp_->box_mind_;
   bmax = mp_->box_maxd_;
 }
 
-void SDFMap::getUpdatedBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax, bool reset) {
+void SDFMap::getUpdatedBox(Eigen::Vector3d& bmin, Eigen::Vector3d& bmax) {
+std::shared_lock<std::shared_mutex> lock(box_mtx);
   bmin = md_->update_min_;
   bmax = md_->update_max_;
-  if (reset) md_->reset_updated_box_ = true;
+}
+
+void SDFMap::updateLocalBox(const Eigen::Vector3d& bmin, const Eigen::Vector3d& bmax){
+std::unique_lock<std::shared_mutex> lock(local_box_mtx);
+  posToIndex(bmax, md_->local_bound_max_);
+  posToIndex(bmin, md_->local_bound_min_);
+  boundIndex(md_->local_bound_min_);
+  boundIndex(md_->local_bound_max_);
+}
+
+void SDFMap::getLocalBox(Eigen::Vector3i& bmin, Eigen::Vector3i& bmax){
+std::shared_lock<std::shared_mutex> lock(local_box_mtx);
+  bmin = md_->local_bound_min_;
+  bmax = md_->local_bound_max_;
+}
+
+void SDFMap::copyOccupancy() {
+std::unique_lock<std::shared_mutex> lock(occ_buffer_mtx);
+  // std::copy(md_->occupancy_buffer_.begin(),md_->occupancy_buffer_.end(),md_->occupancy_buffer_copy_.begin());
+  // std::copy(md_->occupancy_buffer_inflate_.begin(),md_->occupancy_buffer_inflate_.end(),md_->occupancy_buffer_inflate_copy_.begin());
+  md_->occupancy_buffer_copy_ = md_->occupancy_buffer_;
+  md_->occupancy_buffer_inflate_copy_ = md_->occupancy_buffer_inflate_;
+}
+
+int SDFMap::getOccupancy(const Eigen::Vector3i& id) {
+  if (!isInMap(id)) return -1;
+std::shared_lock<std::shared_mutex> lock(occ_buffer_mtx);
+  double occ = md_->occupancy_buffer_copy_[toAddress(id)];
+  if (occ < mp_->clamp_min_log_ - 1e-3) return UNKNOWN;
+  if (occ > mp_->min_occupancy_log_) return OCCUPIED;
+  return FREE;
+}
+
+int SDFMap::getOccupancy(const Eigen::Vector3d& pos) {
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+  return getOccupancy(id);
+}
+
+void SDFMap::setInflatedMapOccupancy(const Eigen::Vector3d& pos, const int& occ) {
+  assert(isInMap(pos));
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+  md_->occupancy_buffer_inflate_[toAddress(id)] = occ;
+}
+
+int SDFMap::getInflateOccupancy(const Eigen::Vector3i& id) {
+  if (!isInMap(id)) return -1;
+std::shared_lock<std::shared_mutex> lock(occ_buffer_mtx);
+  int occ = md_->occupancy_buffer_inflate_copy_[toAddress(id)];
+  return occ;
+}
+
+int SDFMap::getInflateOccupancy(const Eigen::Vector3d& pos) {
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+  return getInflateOccupancy(id);
+}
+
+
+void SDFMap::copyDistance() {
+std::unique_lock<std::shared_mutex> lock(occ_buffer_mtx);
+  // std::copy(md_->distance_buffer_.begin(),md_->distance_buffer_.end(),md_->distance_buffer_copy_.begin());
+  md_->distance_buffer_copy_ = md_->distance_buffer_;
+}
+
+double SDFMap::getDistance(const Eigen::Vector3i& id) {
+  assert(isInMap(id));
+std::shared_lock<std::shared_mutex> lock(dist_buffer_mtx);
+  double dist = md_->distance_buffer_copy_[toAddress(id)];
+  return dist;
+}
+
+double SDFMap::getDistance(const Eigen::Vector3d& pos) {
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+  return getDistance(id);
 }
 
 double SDFMap::getDistWithGrad(const Eigen::Vector3d& pos, Eigen::Vector3d& grad) {
@@ -509,11 +504,17 @@ double SDFMap::getDistWithGrad(const Eigen::Vector3d& pos, Eigen::Vector3d& grad
   diff = (pos - idx_pos) * mp_->resolution_inv_;
 
   double values[2][2][2];
+  double last = 0.0;
   for (int x = 0; x < 2; x++)
     for (int y = 0; y < 2; y++)
       for (int z = 0; z < 2; z++) {
         Eigen::Vector3i current_idx = idx + Eigen::Vector3i(x, y, z);
+        if (!isInMap(current_idx)){
+          values[x][y][z] = last;
+          continue;
+        }
         values[x][y][z] = getDistance(current_idx);
+        last = values[x][y][z];
       }
 
   double v00 = (1 - diff[0]) * values[0][0][0] + diff[0] * values[1][0][0];

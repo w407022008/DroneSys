@@ -9,7 +9,6 @@ void FastPlannerManager::planYawActMap(const Eigen::Vector3d& start_yaw) {
   auto t1 = ros::Time::now();
   auto t2 = ros::Time::now();
 
-  double t_traj = local_data_.duration_;
   // search subsequent yaws
   const int seg_num = 12;
   double dt_yaw = local_data_.duration_ / seg_num;  // time of B-spline segment
@@ -28,7 +27,6 @@ void FastPlannerManager::planYawActMap(const Eigen::Vector3d& start_yaw) {
   const double forward_t = 4.0 / pp_.max_vel_;
   vector<Eigen::Vector3d> pts;  // subsampled waypoints
   vector<double> spyaw;         // subsampled yaws
-  bool unmapped = false;
   vector<Eigen::Vector3d> waypts;
   vector<int> waypt_idx;
 
@@ -117,13 +115,6 @@ void FastPlannerManager::searchFrontier(const Eigen::Vector3d& p) {
   frontier_finder_->updateFrontiers();
 }
 
-void FastPlannerManager::test() {
-  auto t1 = ros::Time::now();
-  std::cout << "test-------------------" << std::endl;
-
-  Graph graph_yaw;
-  int vid = 0;
-}
 
 bool FastPlannerManager::localExplore(Eigen::Vector3d start, Eigen::Vector3d start_vel,
                                       Eigen::Vector3d start_acc, Eigen::Vector3d goal) {
@@ -257,7 +248,6 @@ bool FastPlannerManager::localExplore(Eigen::Vector3d start, Eigen::Vector3d sta
   auto path = path_finder_->getPath();
   double len = topo_prm_->pathLength(path);
   int seg_num = len / pp_.ctrl_pt_dist * 1.2;
-  int ctrl_pt_num = seg_num + 3;
   double dt = (len / pp_.max_vel_) / seg_num;
   vector<Eigen::Vector3d> pts;
   topo_prm_->pathToGuidePts(path, seg_num + 1, pts);  // Ctrl points of Bspline

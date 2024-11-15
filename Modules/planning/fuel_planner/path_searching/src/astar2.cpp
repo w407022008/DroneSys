@@ -26,7 +26,7 @@ void Astar::init(ros::NodeHandle& nh, const EDTEnvironment::Ptr& env) {
 
   /* ---------- map params ---------- */
   this->inv_resolution_ = 1.0 / resolution_;
-  edt_env_->sdf_map_->getRegion(origin_, map_size_3d_);
+  edt_env_->sdf_map_->getFullMap(origin_, map_size_3d_);
   cout << "origin_: " << origin_.transpose() << endl;
   cout << "map size: " << map_size_3d_.transpose() << endl;
 
@@ -200,7 +200,7 @@ double Astar::getDiagHeu(const Eigen::Vector3d& x1, const Eigen::Vector3d& x2) {
   double dx = fabs(x1(0) - x2(0));
   double dy = fabs(x1(1) - x2(1));
   double dz = fabs(x1(2) - x2(2));
-  double h;
+  double h = 0.0;
   double diag = min(min(dx, dy), dz);
   dx -= diag;
   dy -= diag;

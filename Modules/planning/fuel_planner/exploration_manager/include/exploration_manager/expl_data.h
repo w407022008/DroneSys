@@ -50,12 +50,12 @@ struct ExplorationData {
   vector<Vector3d> refined_tour_;
 
   Vector3d next_goal_;
-  vector<Vector3d> path_next_goal_;
+  vector<Vector3d> path_to_goal_;
 
   // viewpoint planning
   // vector<Vector4d> views_;
   Vector4d next_viewpoint_;
-  Vector4d next_frontier_;
+  Vector4d next_frontier_info_;
   vector<Vector3d> views_vis1_, views_vis2_;
   vector<Vector3d> centers_, scales_;
 };

@@ -6,7 +6,7 @@
 #include <visualization_msgs/Marker.h>
 
 #include <fstream>
-
+#define DEBUG
 namespace fast_planner {
 MapROS::MapROS() {
 }
@@ -51,12 +51,13 @@ void MapROS::init() {
   node_.param("map_ros/use_sensors_inSim", use_sensors_inSim_, false);
 
   // proj_points_.resize(640 * 480 / (skip_pixel_ * skip_pixel_));
-  point_cloud_.points.resize(640 * 480 / (skip_pixel_ * skip_pixel_));
+  cur_point_cloud_.points.resize(640 * 480 / (skip_pixel_ * skip_pixel_));
   // proj_points_.reserve(640 * 480 / map_->mp_->skip_pixel_ / map_->mp_->skip_pixel_);
-  proj_points_cnt = 0;
+  cur_points_cnt = 0;
 
-  local_updated_ = false;
-  esdf_need_update_ = false;
+  grid_need_update_ = false;
+  grid_update_count = 0;
+  esdf_update_count = 0;
   fuse_time_ = 0.0;
   esdf_time_ = 0.0;
   max_fuse_time_ = 0.0;
@@ -70,8 +71,9 @@ void MapROS::init() {
   eng_ = default_random_engine(rd());
 
   // Timer
-  esdf_timer_ = node_.createTimer(ros::Duration(0.05), &MapROS::updateESDFCallback, this);
-  vis_timer_ = node_.createTimer(ros::Duration(0.05), &MapROS::visCallback, this);
+  esdf_timer_ = node_.createTimer(ros::Duration(0.01), &MapROS::updateESDFCallback, this);
+  // occ_timer_ = node_.createTimer(ros::Duration(0.01), &MapROS::updateGridCallback, this);
+  vis_timer_ = node_.createTimer(ros::Duration(0.1), &MapROS::visCallback, this);
 
   // Puber
   map_all_pub_ = node_.advertise<sensor_msgs::PointCloud2>("/sdf_map/occupancy_all", 10);
@@ -121,19 +123,30 @@ void MapROS::visCallback(const ros::TimerEvent& e) {
 }
 
 void MapROS::updateESDFCallback(const ros::TimerEvent& /*event*/) {
-  if (!esdf_need_update_) return;
+  if (grid_need_update_ || esdf_update_count>=grid_update_count) return;
+
+esdf_update_count++;
+// if(esdf_update_count>100){
+//   esdf_update_count-=100;
+//   grid_update_count-=100;
+// }
   auto t1 = ros::Time::now();
-
   map_->updateESDF3d();
-  esdf_need_update_ = false;
-
   auto t2 = ros::Time::now();
-  esdf_time_ += (t2 - t1).toSec();
-  max_esdf_time_ = max(max_esdf_time_, (t2 - t1).toSec());
-  esdf_num_++;
-  if (show_esdf_time_)
+  map_->copyDistance();
+// #ifdef DEBUG
+//   std::cout<<"distance buffer:"<<std::endl;
+//   for(auto elem:map_->md_->distance_buffer_copy_)
+//     std::cout<<elem<<", ";
+//   std::cout<<std::endl;
+// #endif
+  if (show_esdf_time_){
+    esdf_time_ += (t2 - t1).toSec();
+    max_esdf_time_ = max(max_esdf_time_, (t2 - t1).toSec());
+    esdf_num_++;
     ROS_WARN("ESDF t: cur: %lf, avg: %lf, max: %lf", (t2 - t1).toSec(), esdf_time_ / esdf_num_,
              max_esdf_time_);
+  }
 }
 
 void MapROS::depthPoseCallback(const sensor_msgs::ImageConstPtr& img,
@@ -145,32 +158,39 @@ void MapROS::depthPoseCallback(const sensor_msgs::ImageConstPtr& img,
     ROS_WARN("Current pos exceed mapped region!");
     return;
   }
-
-  camera_q_ = Eigen::Quaterniond(pose->pose.pose.orientation.w, pose->pose.pose.orientation.x,
+  
+  Eigen::Quaterniond q_;
+  q_ = Eigen::Quaterniond(pose->pose.pose.orientation.w, pose->pose.pose.orientation.x,
                                  pose->pose.pose.orientation.y, pose->pose.pose.orientation.z);
+
   cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
   if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
     (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, k_depth_scaling_factor_);
   cv_ptr->image.copyTo(*depth_image_);
-
-  auto t1 = ros::Time::now();
-
   // generate point cloud, update map
-  proessDepthImage();
-  map_->inputPointCloud(point_cloud_, proj_points_cnt, camera_pos_);
-  if (local_updated_) {
-    map_->clearAndInflateLocalMap();
-    esdf_need_update_ = true;
-    local_updated_ = false;
-  }
+  proessDepthImage(camera_pos_, q_);
 
+  grid_need_update_ = true;
+  grid_update_count++;
+  auto t1 = ros::Time::now();
+  map_->inputPointCloud(cur_point_cloud_, cur_points_cnt, camera_pos_);
   auto t2 = ros::Time::now();
-  fuse_time_ += (t2 - t1).toSec();
-  max_fuse_time_ = max(max_fuse_time_, (t2 - t1).toSec());
-  fuse_num_ += 1;
-  if (show_occ_time_)
+  grid_need_update_ = false;
+
+  map_->copyOccupancy();
+
+  if (show_occ_time_){
+    fuse_time_ += (t2 - t1).toSec();
+    max_fuse_time_ = max(max_fuse_time_, (t2 - t1).toSec());
+    fuse_num_ += 1;
     ROS_WARN("Fusion t: cur: %lf, avg: %lf, max: %lf", (t2 - t1).toSec(), fuse_time_ / fuse_num_,
              max_fuse_time_);
+  }
+
+#ifdef DEBUG
+  static int cnt=1;
+  std::cout<<"[DEBUG]:receive image: "<<cnt++<<", grid update: "<<grid_update_count<<", esdf update: "<<esdf_update_count<<std::endl;
+#endif
 }
 
 void MapROS::cloudPoseCallback(const sensor_msgs::PointCloud2ConstPtr& msg,
@@ -178,29 +198,39 @@ void MapROS::cloudPoseCallback(const sensor_msgs::PointCloud2ConstPtr& msg,
   camera_pos_(0) = pose->pose.pose.position.x;
   camera_pos_(1) = pose->pose.pose.position.y;
   camera_pos_(2) = pose->pose.pose.position.z;
-  camera_q_ = Eigen::Quaterniond(pose->pose.pose.orientation.w, pose->pose.pose.orientation.x,
+  Eigen::Quaterniond q_;
+  q_ = Eigen::Quaterniond(pose->pose.pose.orientation.w, pose->pose.pose.orientation.x,
                                  pose->pose.pose.orientation.y, pose->pose.pose.orientation.z);
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(*msg, cloud);
-  int num = cloud.points.size();
 
-  map_->inputPointCloud(cloud, num, camera_pos_);
+  pcl::fromROSMsg(*msg, cur_point_cloud_); // original in ned
+  grid_need_update_ = true;
 
-  if (local_updated_) {
-    map_->clearAndInflateLocalMap();
-    esdf_need_update_ = true;
-    local_updated_ = false;
+  grid_update_count++;
+  auto t1 = ros::Time::now();
+  map_->inputPointCloud(cur_point_cloud_, cur_point_cloud_.points.size(), camera_pos_);
+  auto t2 = ros::Time::now();
+  grid_need_update_ = false;
+
+  map_->copyOccupancy();
+
+  if (show_occ_time_){
+    fuse_time_ += (t2 - t1).toSec();
+    max_fuse_time_ = max(max_fuse_time_, (t2 - t1).toSec());
+    fuse_num_ += 1;
+    ROS_WARN("Fusion t: cur: %lf, avg: %lf, max: %lf", (t2 - t1).toSec(), fuse_time_ / fuse_num_,
+             max_fuse_time_);
   }
+
 }
 
-void MapROS::proessDepthImage() {
-  proj_points_cnt = 0;
+void MapROS::proessDepthImage(const Eigen::Vector3d& camera_pos, const Eigen::Quaterniond& camera_q) {
+  cur_points_cnt = 0;
 
   uint16_t* row_ptr;
   int cols = depth_image_->cols;
   int rows = depth_image_->rows;
   double depth;
-  Eigen::Matrix3d camera_r = camera_q_.toRotationMatrix();
+  Eigen::Matrix3d camera_r = camera_q.toRotationMatrix();
   Eigen::Vector3d pt_cur, pt_world;
   const double inv_factor = 1.0 / k_depth_scaling_factor_;
 
@@ -247,8 +277,8 @@ void MapROS::proessDepthImage() {
         // ROS_WARN("begin transform for fpga mavros or sim");
       }  
 
-      pt_world = camera_r * pt_cur + camera_pos_;
-      auto& pt = point_cloud_.points[proj_points_cnt++];
+      pt_world = camera_r * pt_cur + camera_pos;
+      auto& pt = cur_point_cloud_.points[cur_points_cnt++];
       pt.x = pt_world[0];
       pt.y = pt_world[1];
       pt.z = pt_world[2];
@@ -264,7 +294,7 @@ void MapROS::publishMapAll() {
   for (int x = map_->mp_->box_min_(0) /* + 1 */; x < map_->mp_->box_max_(0); ++x)
     for (int y = map_->mp_->box_min_(1) /* + 1 */; y < map_->mp_->box_max_(1); ++y)
       for (int z = map_->mp_->box_min_(2) /* + 1 */; z < map_->mp_->box_max_(2); ++z) {
-        if (map_->md_->occupancy_buffer_[map_->toAddress(x, y, z)] > map_->mp_->min_occupancy_log_) {
+        if (map_->getOccupancy(Eigen::Vector3i(x, y, z)) == map_->OCCUPIED) {
           Eigen::Vector3d pos;
           map_->indexToPos(Eigen::Vector3i(x, y, z), pos);
           if (pos(2) > visualization_truncate_height_) continue;
@@ -291,7 +321,7 @@ void MapROS::publishMapAll() {
     for (int x = map_->mp_->box_min_(0) /* + 1 */; x < map_->mp_->box_max_(0); ++x)
       for (int y = map_->mp_->box_min_(1) /* + 1 */; y < map_->mp_->box_max_(1); ++y)
         for (int z = map_->mp_->box_min_(2) /* + 1 */; z < map_->mp_->box_max_(2); ++z) {
-          if (map_->md_->occupancy_buffer_[map_->toAddress(x, y, z)] > map_->mp_->clamp_min_log_ - 1e-3)
+          if (map_->getOccupancy(Eigen::Vector3i(x, y, z)) > map_->UNKNOWN)
             known_volumn += 0.1 * 0.1 * 0.1;
         }
 
@@ -304,8 +334,8 @@ void MapROS::publishMapLocal() {
   pcl::PointXYZ pt;
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::PointCloud<pcl::PointXYZ> cloud2;
-  Eigen::Vector3i min_cut = map_->md_->local_bound_min_;
-  Eigen::Vector3i max_cut = map_->md_->local_bound_max_;
+  Eigen::Vector3i min_cut, max_cut;
+  map_->getLocalBox(min_cut, max_cut);
   map_->boundIndex(min_cut);
   map_->boundIndex(max_cut);
 
@@ -313,7 +343,7 @@ void MapROS::publishMapLocal() {
   for (int x = min_cut(0); x <= max_cut(0); ++x)
     for (int y = min_cut(1); y <= max_cut(1); ++y)
       for (int z = map_->mp_->box_min_(2); z < map_->mp_->box_max_(2); ++z) {
-        if (map_->md_->occupancy_buffer_[map_->toAddress(x, y, z)] > map_->mp_->min_occupancy_log_) {
+        if (map_->getOccupancy(Eigen::Vector3i(x, y, z)) == map_->OCCUPIED) {
           // Occupied cells
           Eigen::Vector3d pos;
           map_->indexToPos(Eigen::Vector3i(x, y, z), pos);
@@ -325,21 +355,21 @@ void MapROS::publishMapLocal() {
           pt.z = pos(2);
           cloud.push_back(pt);
         }
-        // else if (map_->md_->occupancy_buffer_inflate_[map_->toAddress(x, y, z)] == 1)
-        // {
-        //   // Inflated occupied cells
-        //   Eigen::Vector3d pos;
-        //   map_->indexToPos(Eigen::Vector3i(x, y, z), pos);
-        //   if (pos(2) > visualization_truncate_height_)
-        //     continue;
-        //   if (pos(2) < visualization_truncate_low_)
-        //     continue;
+        else if (map_->getInflateOccupancy(Eigen::Vector3i(x, y, z)) == 1)
+        {
+          // Inflated occupied cells
+          Eigen::Vector3d pos;
+          map_->indexToPos(Eigen::Vector3i(x, y, z), pos);
+          if (pos(2) > visualization_truncate_height_)
+            continue;
+          if (pos(2) < visualization_truncate_low_)
+            continue;
 
-        //   pt.x = pos(0);
-        //   pt.y = pos(1);
-        //   pt.z = pos(2);
-        //   cloud2.push_back(pt);
-        // }
+          pt.x = pos(0);
+          pt.y = pos(1);
+          pt.z = pos(2);
+          cloud2.push_back(pt);
+        }
       }
 
   cloud.width = cloud.points.size();
@@ -361,15 +391,15 @@ void MapROS::publishMapLocal() {
 void MapROS::publishUnknown() {
   pcl::PointXYZ pt;
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  Eigen::Vector3i min_cut = map_->md_->local_bound_min_;
-  Eigen::Vector3i max_cut = map_->md_->local_bound_max_;
+  Eigen::Vector3i min_cut, max_cut;
+  map_->getLocalBox(min_cut, max_cut);
   map_->boundIndex(max_cut);
   map_->boundIndex(min_cut);
 
   for (int x = min_cut(0); x <= max_cut(0); ++x)
     for (int y = min_cut(1); y <= max_cut(1); ++y)
       for (int z = min_cut(2); z <= max_cut(2); ++z) {
-        if (map_->md_->occupancy_buffer_[map_->toAddress(x, y, z)] < map_->mp_->clamp_min_log_ - 1e-3) {
+        if (map_->getOccupancy(Eigen::Vector3i(x, y, z)) == map_->UNKNOWN) {
           Eigen::Vector3d pos;
           map_->indexToPos(Eigen::Vector3i(x, y, z), pos);
           if (pos(2) > visualization_truncate_height_) continue;
@@ -390,25 +420,22 @@ void MapROS::publishUnknown() {
 }
 
 void MapROS::publishDepth() {
-  pcl::PointXYZ pt;
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  for (int i = 0; i < proj_points_cnt; ++i) {
-    cloud.push_back(point_cloud_.points[i]);
-  }
-  cloud.width = cloud.points.size();
-  cloud.height = 1;
-  cloud.is_dense = true;
-  cloud.header.frame_id = frame_id_;
+  cur_point_cloud_.width = cur_points_cnt;
+  cur_point_cloud_.height = 1;
+  cur_point_cloud_.is_dense = true;
+  cur_point_cloud_.header.frame_id = frame_id_;
   sensor_msgs::PointCloud2 cloud_msg;
-  pcl::toROSMsg(cloud, cloud_msg);
+  pcl::toROSMsg(cur_point_cloud_, cloud_msg);
   depth_pub_.publish(cloud_msg);
 }
 
 void MapROS::publishUpdateRange() {
   Eigen::Vector3d esdf_min_pos, esdf_max_pos, cube_pos, cube_scale;
   visualization_msgs::Marker mk;
-  map_->indexToPos(map_->md_->local_bound_min_, esdf_min_pos);
-  map_->indexToPos(map_->md_->local_bound_max_, esdf_max_pos);
+  Eigen::Vector3i min_cut, max_cut;
+  map_->getLocalBox(min_cut, max_cut);
+  map_->indexToPos(min_cut, esdf_min_pos);
+  map_->indexToPos(max_cut, esdf_max_pos);
 
   cube_pos = 0.5 * (esdf_min_pos + esdf_max_pos);
   cube_scale = esdf_max_pos - esdf_min_pos;
@@ -442,13 +469,15 @@ void MapROS::publishESDFSlice() {
 
   const double min_dist = 0.0;
   const double max_dist = 3.0;
+  Eigen::Vector3i min_cut, max_cut;
+  map_->getLocalBox(min_cut, max_cut);
 
-  Eigen::Vector3i min_cut = map_->md_->local_bound_min_ - Eigen::Vector3i(map_->mp_->local_map_margin_,
-                                                                          map_->mp_->local_map_margin_,
-                                                                          map_->mp_->local_map_margin_);
-  Eigen::Vector3i max_cut = map_->md_->local_bound_max_ + Eigen::Vector3i(map_->mp_->local_map_margin_,
-                                                                          map_->mp_->local_map_margin_,
-                                                                          map_->mp_->local_map_margin_);
+  min_cut -= Eigen::Vector3i(map_->mp_->local_map_margin_,
+                            map_->mp_->local_map_margin_,
+                            map_->mp_->local_map_margin_);
+  max_cut += Eigen::Vector3i(map_->mp_->local_map_margin_,
+                            map_->mp_->local_map_margin_,
+                            map_->mp_->local_map_margin_);
   map_->boundIndex(min_cut);
   map_->boundIndex(max_cut);
 

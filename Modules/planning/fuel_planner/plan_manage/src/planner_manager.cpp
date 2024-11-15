@@ -73,8 +73,9 @@ void FastPlannerManager::initPlanModules(ros::NodeHandle& nh) {
   }
 
   if (use_optimization) {
-    bspline_optimizers_.resize(10);
-    for (int i = 0; i < 10; ++i) {
+    int optimizer = 2;
+    bspline_optimizers_.resize(optimizer);
+    for (int i = 0; i < optimizer; ++i) {
       bspline_optimizers_[i].reset(new BsplineOptimizer);
       bspline_optimizers_[i]->setParam(nh);
       bspline_optimizers_[i]->setEnvironment(edt_environment_);
@@ -89,11 +90,11 @@ void FastPlannerManager::initPlanModules(ros::NodeHandle& nh) {
 
   if (use_active_perception) {
     frontier_finder_.reset(new FrontierFinder(edt_environment_, nh));
-    heading_planner_.reset(new HeadingPlanner(nh));
-    heading_planner_->setMap(sdf_map_);
-    visib_util_.reset(new VisibilityUtil(nh));
-    visib_util_->setEDTEnvironment(edt_environment_);
-    plan_data_.view_cons_.idx_ = -1;
+    // heading_planner_.reset(new HeadingPlanner(nh)); // nothing used here
+    // heading_planner_->setMap(sdf_map_);
+    // visib_util_.reset(new VisibilityUtil(nh)); // used in topo_fsm for visibility cons in opt
+    // visib_util_->setEDTEnvironment(edt_environment_);
+    // plan_data_.view_cons_.idx_ = -1;
   }
 }
 
@@ -112,9 +113,9 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
 
   while (radius < 6.0 && t_now + fut_t < local_data_.duration_) {
     fut_pt = local_data_.position_traj_.evaluateDeBoorT(t_now + fut_t);
-    // double dist = edt_environment_->sdf_map_->getDistance(fut_pt);
+    double dist = edt_environment_->sdf_map_->getDistance(fut_pt);
     if (sdf_map_->getInflateOccupancy(fut_pt) == 1) {
-      distance = radius;
+      distance = dist;
       // std::cout << "collision at: " << fut_pt.transpose() << ", dist: " << dist << std::endl;
       std::cout << "collision at: " << fut_pt.transpose() << std::endl;
       return false;
@@ -129,7 +130,7 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
 // reparam bspline to bspline according to dt & lengthen_ratio
 void FastPlannerManager::reparamBspline(NonUniformBspline& bspline, double ratio,
     Eigen::MatrixXd& ctrl_pts, double& dt, double& time_inc) {
-  int prev_num = bspline.getControlPoint().rows();
+  // int prev_num = bspline.getControlPoint().rows();
   double time_origin = bspline.getTimeSum();
 
   int seg_num = bspline.getControlPoint().rows() - pp_.bspline_degree_;
@@ -174,9 +175,9 @@ bool FastPlannerManager::kinodynamicReplanFromTo(const Eigen::Vector3d& start_pt
     return false;
   }
 
-  Eigen::Vector3d init_pos = start_pt;
-  Eigen::Vector3d init_vel = start_vel;
-  Eigen::Vector3d init_acc = start_acc;
+  // Eigen::Vector3d init_pos = start_pt;
+  // Eigen::Vector3d init_vel = start_vel;
+  // Eigen::Vector3d init_acc = start_acc;
 
   // Kinodynamic path searching
 
@@ -327,10 +328,10 @@ void FastPlannerManager::waypointsReplanAlongTour(const vector<Eigen::Vector3d>&
   int seg_num = init_traj.getLength() / pp_.ctrl_pt_dist;
   seg_num = max(8, seg_num);
   double dt = duration / double(seg_num);
-
+#ifdef DEBUG
   std::cout << "[trajPlan]:duration: " << duration <<
          ", seg_num: " << seg_num << ", dt: " << dt << std::endl;
-
+#endif
   for (double ts = 0.0; ts <= duration + 1e-4; ts += dt)
     points.push_back(init_traj.evaluate(ts, 0));
   boundary_deri.push_back(init_traj.evaluate(0.0, 1));
@@ -352,9 +353,17 @@ void FastPlannerManager::waypointsReplanAlongTour(const vector<Eigen::Vector3d>&
   if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
 
   bspline_optimizers_[0]->optimize(ctrl_pts, dt, cost_func, 1, 1);
+#ifdef DEBUG
+  std::cout<<"optimization finished, ctrl pts: "<< ctrl_pts.rows() <<std::endl;
+#endif
   local_data_.position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
-
+#ifdef DEBUG
+  std::cout<<"get traj"<<std::endl;
+#endif
   updateTrajInfo();
+#ifdef DEBUG
+  std::cout<<"get traj info"<<std::endl;
+#endif
 }
 
 // !SECTION
@@ -524,7 +533,7 @@ void FastPlannerManager::selectBestTraj(NonUniformBspline& traj) {
 }
 
 void FastPlannerManager::refineTraj(NonUniformBspline& best_traj) {
-  ros::Time t1 = ros::Time::now();
+  // ros::Time t1 = ros::Time::now();
   plan_data_.no_visib_traj_ = best_traj;
 
   int cost_function = BsplineOptimizer::NORMAL_PHASE;
@@ -589,7 +598,7 @@ void FastPlannerManager::optimizeTopoBspline(
 
   // std::cout << "guide pt num: " << guide_pt.size() << std::endl;
 
-  double tm1 = (ros::Time::now() - t1).toSec();
+  // double tm1 = (ros::Time::now() - t1).toSec();
   t1 = ros::Time::now();
 
   // First phase, path-guided optimization
@@ -598,7 +607,7 @@ void FastPlannerManager::optimizeTopoBspline(
   bspline_optimizers_[traj_id]->optimize(ctrl_pts, dt, BsplineOptimizer::GUIDE_PHASE, 0, 1);
   plan_data_.topo_traj_pos1_[traj_id] = NonUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
 
-  double tm2 = (ros::Time::now() - t1).toSec();
+  // double tm2 = (ros::Time::now() - t1).toSec();
   t1 = ros::Time::now();
 
   // Second phase, smooth+safety+feasibility
@@ -609,7 +618,7 @@ void FastPlannerManager::optimizeTopoBspline(
   bspline_optimizers_[traj_id]->optimize(ctrl_pts, dt, cost_func, 1, 1);
   plan_data_.topo_traj_pos2_[traj_id] = NonUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
 
-  double tm3 = (ros::Time::now() - t1).toSec();
+  // double tm3 = (ros::Time::now() - t1).toSec();
   // ROS_INFO("optimization %d cost %lf, %lf, %lf seconds.", traj_id, tm1, tm2, tm3);
 }
 
@@ -1026,7 +1035,7 @@ void FastPlannerManager::planYawFromToWith(const Eigen::Vector3d& start_yaw, con
 #endif
     for (int i = 1; i < seg_num; ++i)
     {
-      double tc = i * dt_yaw;
+      // double tc = i * dt_yaw;
       Eigen::Vector3d waypt = (1 - double(i) / seg_num) * start_yaw3d + double(i) / seg_num *
       end_yaw3d;
       calcNextYaw(last_yaw, waypt(0));

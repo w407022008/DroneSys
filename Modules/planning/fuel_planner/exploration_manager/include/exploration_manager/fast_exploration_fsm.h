@@ -31,7 +31,7 @@ struct FSMParam;
 struct FSMData;
 struct ExplorationData;
 
-enum EXPL_STATE { INIT, WAIT_TRIGGER, PLAN_TRAJ, PUB_TRAJ, EXEC_TRAJ, FINISH };
+enum EXPL_STATE { INIT, WAIT_TRIGGER, FINISH, PLAN_TRAJ, PUB_TRAJ, EXEC_TRAJ };
 
 class FastExplorationFSM {
 private:
@@ -42,10 +42,9 @@ private:
 
   shared_ptr<FSMParam> fp_;
   shared_ptr<FSMData> fd_;
-  shared_ptr<ExplorationData> exploration_data_;
   EXPL_STATE state_;
 
-  bool classic_;
+  bool could_trigger;
   // control PUB_TRAJ by keyboard inputting
   bool keyboard_disable_exploration;
 

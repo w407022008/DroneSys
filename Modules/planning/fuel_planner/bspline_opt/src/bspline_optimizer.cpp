@@ -173,7 +173,7 @@ void BsplineOptimizer::optimize() {
 
   // Set axis aligned bounding box for optimization
   Eigen::Vector3d bmin, bmax;
-  edt_environment_->sdf_map_->getBox(bmin, bmax);
+  edt_environment_->sdf_map_->getFullBox(bmin, bmax);
   for (int k = 0; k < 3; ++k) {
     bmin[k] += 0.1;
     bmax[k] -= 0.1;
@@ -291,7 +291,8 @@ void BsplineOptimizer::calcDistanceCost(const vector<Eigen::Vector3d>& q, double
   Eigen::Vector3d dist_grad, g_zero(0, 0, 0);
   for (int i = 0; i < q.size(); i++) {
     if (!dynamic_) {
-      edt_environment_->evaluateEDTWithGrad(q[i], -1.0, dist, dist_grad);
+      // edt_environment_->evaluateEDTWithGrad(q[i], -1.0, dist, dist_grad);
+      dist = edt_environment_->sdf_map_->getDistWithGrad(q[i], dist_grad);
       if (dist_grad.norm() > 1e-4) dist_grad.normalize();
     } else {
       double time = double(i + 2 - order_) * knot_span_ + start_time_;

@@ -381,7 +381,7 @@ void cmdCallback(const ros::TimerEvent& e) {
   double t_cur = (time_now - start_time_).toSec();
   Eigen::Vector3d pos, vel, acc, jer;
   double yaw, yawdot;
-static Eigen::Vector3d last_pos = Eigen::Vector3d::Zero();
+static Eigen::Vector3d last_pos = traj_real_.back();
   if (t_cur < traj_duration_ && t_cur >= 0.0) {
     // Current time within range of planned traj
     pos = traj_[0].evaluateDeBoorT(t_cur);
@@ -425,7 +425,7 @@ static Eigen::Vector3d last_pos = Eigen::Vector3d::Zero();
     yaw_dir = R_loop.transpose() * yaw_dir;
     yaw = atan2(yaw_dir[1], yaw_dir[0]);
   }
-if((pos-last_pos).norm()>0.1){
+if((pos-last_pos).norm()>0.2){
   ROS_ERROR("@@@@@@@@@@@@@@@@@@@@@");
   std::cout<<"last: "<<last_pos.transpose()<<", now: "<<pos.transpose()<<", time_delta: ";
   std::cout<<time_delta.toSec()<<std::endl;

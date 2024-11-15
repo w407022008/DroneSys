@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <random>
+#include <deque>
 
 using std::shared_ptr;
 using std::normal_distribution;
@@ -36,6 +37,7 @@ private:
   void cloudPoseCallback(const sensor_msgs::PointCloud2ConstPtr& msg,
                          const nav_msgs::OdometryConstPtr& pose);
   void updateESDFCallback(const ros::TimerEvent& /*event*/);
+  // void updateGridCallback(const ros::TimerEvent& /*event*/);
   void visCallback(const ros::TimerEvent& /*event*/);
 
   void publishMapAll();
@@ -45,7 +47,7 @@ private:
   void publishUnknown();
   void publishDepth();
 
-  void proessDepthImage();
+  void proessDepthImage(const Eigen::Vector3d& camera_pos, const Eigen::Quaterniond& camera_q);
 
   SDFMap* map_;
   // may use ExactTime?
@@ -66,7 +68,7 @@ private:
 
   ros::Publisher map_local_pub_, map_local_inflate_pub_, esdf_pub_, map_all_pub_, unknown_pub_,
       update_range_pub_, depth_pub_;
-  ros::Timer esdf_timer_, vis_timer_;
+  ros::Timer esdf_timer_, occ_timer_, vis_timer_;
 
   // params, depth projection
   double cx_, cy_, fx_, fy_;
@@ -85,23 +87,23 @@ private:
 
   // data
   // flags of map state
-  bool local_updated_, esdf_need_update_;
+  bool grid_need_update_;
+  uint64_t grid_update_count, esdf_update_count;
   // input
   Eigen::Vector3d camera_pos_;
-  Eigen::Quaterniond camera_q_;
+  pcl::PointCloud<pcl::PointXYZ> cur_point_cloud_;
+  int cur_points_cnt;
   unique_ptr<cv::Mat> depth_image_;
   vector<Eigen::Vector3d> proj_points_;
-  int proj_points_cnt;
   double fuse_time_, esdf_time_, max_fuse_time_, max_esdf_time_;
   int fuse_num_, esdf_num_;
-  pcl::PointCloud<pcl::PointXYZ> point_cloud_;
 
   normal_distribution<double> rand_noise_;
   default_random_engine eng_;
 
   ros::Time map_start_time_;
 
-  friend SDFMap;
+  friend class SDFMap; // to use mr_
 
   const char* home_dir_;
   string file_path_;

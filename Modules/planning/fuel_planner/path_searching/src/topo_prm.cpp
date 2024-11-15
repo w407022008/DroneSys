@@ -31,7 +31,7 @@ void TopologyPRM::init(ros::NodeHandle& nh) {
   nh.param("topo_prm/parallel_shortcut", parallel_shortcut_, false);
   resolution_ = edt_environment_->sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
-  edt_environment_->sdf_map_->getRegion(origin, size);
+  edt_environment_->sdf_map_->getFullMap(origin, size);
   offset_ = Eigen::Vector3d(0.5, 0.5, 0.5) - origin / resolution_;
 
   casters_.resize(max_raw_path_);
@@ -217,7 +217,6 @@ bool TopologyPRM::needConnection(GraphNode::Ptr g1, GraphNode::Ptr g2, Eigen::Ve
   path2[2] = g2->pos_;
 
   vector<Eigen::Vector3d> connect_pts;
-  bool has_connect = false;
   for (int i = 0; i < g1->neighbors_.size(); ++i) {
     for (int j = 0; j < g2->neighbors_.size(); ++j) {
       if (g1->neighbors_[i]->id_ == g2->neighbors_[j]->id_) {

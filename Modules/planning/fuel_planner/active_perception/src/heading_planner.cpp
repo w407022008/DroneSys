@@ -174,11 +174,10 @@ void HeadingPlanner::searchPathOfYaw(const vector<Eigen::Vector3d>& pts, const v
   yaw_graph.setParams(w_, max_yaw_rate_, dt);
   int gid = 0;
   vector<YawVertex::Ptr> layer, last_layer;
-  Eigen::Vector3d cur_pos = pts[0];
 
   for (int i = 0; i < yaws.size(); ++i) {
     // add one layer of vertice representing discretized yaws at one waypoint
-    auto t1 = ros::Time::now();
+    // auto t1 = ros::Time::now();
     bool start_end = (i == 0 || i == yaws.size() - 1);
     if (start_end) {  // start and end vertice
       YawVertex::Ptr vert(new YawVertex(yaws[i], 0, gid++));
@@ -258,7 +257,7 @@ double HeadingPlanner::calcInformationGain(const Eigen::Vector3d& pt, const doub
   Eigen::Vector3d check_pt, ray_pt;
   double resolution = sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
-  sdf_map_->getRegion(origin, size);
+  sdf_map_->getFullMap(origin, size);
   Eigen::Vector3d offset = Eigen::Vector3d(0.5, 0.5, 0.5) - origin / resolution;
   pcl::PointCloud<pcl::PointXYZ> gain_pts;
   pair<double, double> dist12;
@@ -345,7 +344,7 @@ double HeadingPlanner::calcInfoGain(const Eigen::Vector3d& pt, const double& yaw
   Eigen::Vector3d check_pt, ray_pt;
   double resolution = sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
-  sdf_map_->getRegion(origin, size);
+  sdf_map_->getFullMap(origin, size);
   Eigen::Vector3d offset = Eigen::Vector3d(0.5, 0.5, 0.5) - origin / resolution;
   pcl::PointCloud<pcl::PointXYZ> gain_pts;
   pair<double, double> dist12;

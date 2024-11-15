@@ -9,15 +9,13 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   traj_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/trajectory", 100);// publish successfully
   pubs_.push_back(traj_pub_);
 
-  topo_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/topo_path", 100);
+  topo_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/path", 100);
   pubs_.push_back(topo_pub_);
 
   predict_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/prediction", 100);
   pubs_.push_back(predict_pub_);
 
-  visib_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/"
-                                                          "visib_constraint",
-                                                          100);
+  visib_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/visib_constraint",100);
   pubs_.push_back(visib_pub_);
 
   frontier_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/frontier", 10000);// publish successfully
@@ -234,7 +232,7 @@ void PlanningVisualization::drawArrow(const Eigen::Vector4d& list, const double&
                                        const int& id, const int& pub_id) {
   // Clean old marker
   visualization_msgs::Marker mk;
-  fillBasicInfo(mk, Eigen::Vector3d(scale, scale, scale), color, ns, 0,
+  fillBasicInfo(mk, Eigen::Vector3d(scale/2, scale/3, scale*2), color, ns, 0,
                 visualization_msgs::Marker::ARROW);
   mk.action = visualization_msgs::Marker::DELETEALL;
   pubs_[pub_id].publish(mk);

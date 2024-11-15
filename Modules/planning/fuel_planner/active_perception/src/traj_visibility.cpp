@@ -25,7 +25,7 @@ void VisibilityUtil::setEDTEnvironment(const EDTEnvironment::Ptr& edt) {
   edt_env_ = edt;
   resolution_ = edt_env_->sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
-  edt_env_->sdf_map_->getRegion(origin, size);
+  edt_env_->sdf_map_->getFullMap(origin, size);
   offset_ = Eigen::Vector3d(0.5, 0.5, 0.5) - origin / resolution_;
 }
 
@@ -121,7 +121,6 @@ bool VisibilityUtil::lineVisib(const Eigen::Vector3d& p1, const Eigen::Vector3d&
 }
 
 void VisibilityUtil::findVisibPairs(const vector<Eigen::Vector3d>& pts, vector<VisiblePair>& pairs) {
-  int know_num = 0;
   pairs.clear();
   int cur_j, prev_j = -1;
   for (int i = 0; i < pts.size() - visible_num_; ++i) {
@@ -317,7 +316,7 @@ vector<Eigen::Vector3d> VisibilityUtil::precomputeForVisibility(const vector<Eig
   int unknwon_num = 0;
   double res = edt_env_->sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
-  edt_env_->sdf_map_->getRegion(origin, size);
+  edt_env_->sdf_map_->getFullMap(origin, size);
 
   Eigen::Vector3d offset = Eigen::Vector3d(0.5, 0.5, 0.5) - origin / res;
 
