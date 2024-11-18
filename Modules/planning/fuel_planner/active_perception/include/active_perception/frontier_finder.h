@@ -58,8 +58,7 @@ public:
   void updateFrontiers(bool inLocalSpace = true);
   void searchViewpointsOfNewFrontiers();
 
-  void getCellsOfEachFrontier(vector<vector<Vector3d>>& clusters);
-  void getCellsOfEachDormantFrontier(vector<vector<Vector3d>>& clusters);
+  void getCellsOfEachFrontier(vector<vector<Vector3d>>& clusters_frontier, vector<vector<Vector3d>>& clusters_dormant_frontier);
   void getBoundingBoxOfEachFrontier(vector<pair<Vector3d, Vector3d>>& boxes);
   // Get viewpoint with highest coverage for each frontier
   void getFarEnoughTopViewpointOfEachFrontierFrom(const Vector3d& cur_pos, vector<Vector3d>& points, vector<double>& yaws,
@@ -115,14 +114,14 @@ private:
   void findViewpoints(const Vector3d& sample, const Vector3d& ftr_avg, vector<Viewpoint>& vps);
 
   // Data
-  vector<char> cell_is_on_frontier_;
   list<Frontier> frontiers_, dormant_frontiers_, tmp_frontiers_;
+  vector<char> cell_is_on_frontier_;
   vector<int> removed_ids_;
   list<Frontier>::iterator first_new_ftr_;
   int last_frontier_size, cur_frontier_size;
-  Frontier next_frontier_info_;
 
   // Params
+  bool covered_checking_forced_;
   int cluster_min_;
   double cluster_size_xy_, cluster_size_z_;
   double candidate_rmax_, candidate_rmin_, candidate_dphi_, near_unknow_clearance_;

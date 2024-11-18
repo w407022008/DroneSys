@@ -32,7 +32,7 @@ struct FSMParam {
 };
 
 struct ExplorationData {
-  vector<vector<Vector3d>> frontiers_;
+  vector<vector<Vector3d>> frontiers_cells_;
   vector<vector<Vector3d>> dead_frontiers_;
   vector<pair<Vector3d, Vector3d>> frontier_boxes_;
   vector<Vector3d> points_;
@@ -54,8 +54,8 @@ struct ExplorationData {
 
   // viewpoint planning
   // vector<Vector4d> views_;
-  Vector4d next_viewpoint_;
-  Vector4d next_frontier_info_;
+  Vector4d next_viewpoint_to_visit;
+  Vector4d next_frontier_average;
   vector<Vector3d> views_vis1_, views_vis2_;
   vector<Vector3d> centers_, scales_;
 };

@@ -11,7 +11,7 @@ double ViewNode::yd_;
 double ViewNode::ydd_;
 double ViewNode::w_dir_;
 shared_ptr<Astar> ViewNode::astar_;
-shared_ptr<RayCaster> ViewNode::caster_;
+shared_ptr<RayCaster> ViewNode::raycaster_;
 shared_ptr<SDFMap> ViewNode::map_;
 
 // Graph node for viewpoints planning
@@ -34,8 +34,8 @@ double ViewNode::searchPath(const Vector3d& p1, const Vector3d& p2, vector<Vecto
   // Try connect two points with straight line
   bool safe = true;
   Vector3i idx;
-  caster_->input(p1, p2);
-  while (caster_->nextId(idx)) {
+  raycaster_->setInput(p1, p2);
+  while (raycaster_->nextId(idx)) {
     if (map_->getInflateOccupancy(idx) == 1 || map_->getOccupancy(idx) == SDFMap::UNKNOWN ||
         !map_->isInBox(idx)) {
       safe = false;

@@ -72,7 +72,6 @@ void MapROS::init() {
 
   // Timer
   esdf_timer_ = node_.createTimer(ros::Duration(0.01), &MapROS::updateESDFCallback, this);
-  // occ_timer_ = node_.createTimer(ros::Duration(0.01), &MapROS::updateGridCallback, this);
   vis_timer_ = node_.createTimer(ros::Duration(0.1), &MapROS::visCallback, this);
 
   // Puber
@@ -103,6 +102,7 @@ void MapROS::init() {
   map_start_time_ = ros::Time::now();
 }
 
+// visualization
 void MapROS::visCallback(const ros::TimerEvent& e) {
   if(show_local_map_) publishMapLocal();  // publish local(current pcl frame) range occupied map
   if (show_all_map_) {
@@ -122,24 +122,15 @@ void MapROS::visCallback(const ros::TimerEvent& e) {
   if(show_depth_pcl_) publishDepth();   // publish depth to points
 }
 
+// esdf map update
 void MapROS::updateESDFCallback(const ros::TimerEvent& /*event*/) {
   if (grid_need_update_ || esdf_update_count>=grid_update_count) return;
 
 esdf_update_count++;
-// if(esdf_update_count>100){
-//   esdf_update_count-=100;
-//   grid_update_count-=100;
-// }
   auto t1 = ros::Time::now();
   map_->updateESDF3d();
   auto t2 = ros::Time::now();
   map_->copyDistance();
-// #ifdef DEBUG
-//   std::cout<<"distance buffer:"<<std::endl;
-//   for(auto elem:map_->md_->distance_buffer_copy_)
-//     std::cout<<elem<<", ";
-//   std::cout<<std::endl;
-// #endif
   if (show_esdf_time_){
     esdf_time_ += (t2 - t1).toSec();
     max_esdf_time_ = max(max_esdf_time_, (t2 - t1).toSec());
@@ -149,6 +140,7 @@ esdf_update_count++;
   }
 }
 
+// data callback
 void MapROS::depthPoseCallback(const sensor_msgs::ImageConstPtr& img,
                                const nav_msgs::OdometryConstPtr& pose) {
   camera_pos_(0) = pose->pose.pose.position.x;

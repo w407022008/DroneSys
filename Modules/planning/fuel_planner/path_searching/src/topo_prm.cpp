@@ -140,9 +140,7 @@ list<GraphNode::Ptr> TopologyPRM::createGraph(Eigen::Vector3d start, Eigen::Vect
     pt = getSample();
     ++sample_num;
     double dist;
-    Eigen::Vector3d grad;
-    // edt_environment_->evaluateEDTWithGrad(pt, -1.0, dist, grad);
-    dist = edt_environment_->evaluateCoarseEDT(pt, -1.0);
+    dist = edt_environment_->sdf_map_->getDistance(pt);
     if (dist <= clearance_) {
       sample_time += (ros::Time::now() - t1).toSec();
       continue;
@@ -254,7 +252,7 @@ bool TopologyPRM::lineVisib(const Eigen::Vector3d& p1, const Eigen::Vector3d& p2
   Eigen::Vector3i pt_id;
   double dist;
 
-  casters_[caster_id]->setInput(p1 / resolution_, p2 / resolution_);
+  casters_[caster_id]->setInput(p1, p2, resolution_);
   while (casters_[caster_id]->step(ray_pt)) {
     pt_id(0) = ray_pt(0) + offset_(0);
     pt_id(1) = ray_pt(1) + offset_(1);

@@ -305,6 +305,10 @@ bool FastPlannerManager::kinodynamicReplanFromTo(const Eigen::Vector3d& start_pt
   return true;
 }
 
+// !SECTION
+
+// SECTION waypoints replanning
+
 void FastPlannerManager::waypointsReplanAlongTour(const vector<Eigen::Vector3d>& tour,
     const Eigen::Vector3d& cur_vel, const Eigen::Vector3d& cur_acc, const double& time_lb) {
   if (tour.empty()) ROS_ERROR("Empty path to traj planner");
@@ -665,7 +669,7 @@ void FastPlannerManager::findCollisionRange(vector<Eigen::Vector3d>& colli_start
   double t_s = -1.0, t_e;
   for (double tc = t_m; tc <= t_mp + 1e-4; tc += 0.05) {
     Eigen::Vector3d ptc = initial_traj->evaluateDeBoor(tc);
-    safe = edt_environment_->evaluateCoarseEDT(ptc, -1.0) < topo_prm_->clearance_ ? false : true;
+    safe = sdf_map_->getDistance(ptc) < topo_prm_->clearance_ ? false : true;
 
     if (last_safe && !safe) {
       colli_start.push_back(initial_traj->evaluateDeBoor(tc - 0.05));
@@ -793,7 +797,7 @@ void FastPlannerManager::planYawToward(const Eigen::Vector3d& start_yaw,
                       const Eigen::Vector3d& target, const double& relax_time){
   const int seg_num = 12;
   double dt_yaw = local_data_.duration_ / seg_num;  // time of B-spline segment
-  const int relax_num = max(3,min(int(relax_time / dt_yaw), seg_num));
+  const int relax_num = max(1,min(int(relax_time / dt_yaw), seg_num));
   double last_yaw = wrapYaw(start_yaw[0]);
   Eigen::Vector3d start_yaw3d = start_yaw;
   start_yaw3d[0] = last_yaw;
@@ -827,7 +831,7 @@ void FastPlannerManager::planYawToward(const Eigen::Vector3d& start_yaw,
       first_end3d[0] = atan2(pd(1), pd(0));
       calcNextYaw(last_yaw, first_end3d[0]);
       double diff = fabs(last_yaw - first_end3d[0]);
-      first_step = diff / pp_.max_yawdot_;
+      first_step = diff / pp_.max_yawdot_/dt_yaw;
       if (first_step > relax_num){
         first_step = ceil(0.66*relax_num);
         ROS_WARN("[yawPlan]:yaw change violate at begin");

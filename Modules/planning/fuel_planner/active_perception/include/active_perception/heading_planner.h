@@ -6,7 +6,6 @@
 #include <queue>
 #include <list>
 #include <memory>
-#include <mutex>
 
 #include <ros/ros.h>
 

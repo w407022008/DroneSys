@@ -207,7 +207,7 @@ void KinoReplanFSM::checkCollisionCallback(const ros::TimerEvent& e) {
 
     double dist = planner_manager_->pp_.dynamic_ ?
         edt_env->evaluateCoarseEDT(end_pt_, /* time to program start + */ info->duration_) :
-        edt_env->evaluateCoarseEDT(end_pt_, -1.0);
+        edt_env->evaluateCoarseEDT(end_pt_);
 
     if (dist <= 0.3) {
       /* try to find a max distance goal around */
@@ -227,7 +227,7 @@ void KinoReplanFSM::checkCollisionCallback(const ros::TimerEvent& e) {
             dist = planner_manager_->pp_.dynamic_ ?
                 edt_env->evaluateCoarseEDT(new_pt,
                                            /* time to program start+ */ info->duration_) :
-                edt_env->evaluateCoarseEDT(new_pt, -1.0);
+                edt_env->evaluateCoarseEDT(new_pt);
 
             if (dist > max_dist) {
               /* reset end_pt_ */

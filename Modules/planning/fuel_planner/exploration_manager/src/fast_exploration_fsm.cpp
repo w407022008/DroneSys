@@ -69,7 +69,7 @@ void FastExplorationFSM::init(ros::NodeHandle& nh) {
 }
 
 void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
-  ROS_INFO_STREAM_THROTTLE(0.1, "[FSM]: state: " << fd_->state_str_[int(state_)]);
+  ROS_INFO_STREAM_THROTTLE(0.1, "[FSM]: current state: " << fd_->state_str_[int(state_)]);
 
   switch (state_) {
     case INIT: {
@@ -156,6 +156,7 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
           if(delt_yaw > M_PI/2) {
             yaw_replan = true;
             ROS_WARN("[FSM]: Yaw tracking replan");
+            std::cout<<"[FSM]: current yaw: "<<fd_->start_yaw_(0)<<" setpoint yaw: "<<wrapYaw(yaw_traj.evaluateDeBoorT(0)[0])<<std::endl;
             break;
           }
         }
@@ -182,14 +183,13 @@ void FastExplorationFSM::FSMCallback(const ros::TimerEvent& e) {
 
     case PUB_TRAJ: {
       // publish infomation
+      thread vis_thread(&FastExplorationFSM::visualize, this);
+      vis_thread.detach();
       double dt = (ros::Time::now() - fd_->newest_traj_.start_time).toSec();
       if (dt > 0) {
         bspline_pub_.publish(fd_->newest_traj_);// fd_->newest_traj_ = bspline(it is obtained in callExplorationPlanner());
         fd_->static_state_ = false;
         transitState(EXEC_TRAJ, "FSM");
-
-        thread vis_thread(&FastExplorationFSM::visualize, this);
-        vis_thread.detach();
       }
       break;
     }
@@ -282,7 +282,7 @@ void FastExplorationFSM::frontierCallback(const ros::TimerEvent& e) {
   static bool pre_finish = true;
   if (state_ == WAIT_TRIGGER || (state_ == FINISH && pre_finish)) {
     auto ft = expl_manager_->frontier_finder_;
-    auto ed = expl_manager_->ed_;
+    auto ed_ = expl_manager_->ed_;
 
     could_trigger = false;
     ft->updateFrontiers(false); // search new frontier cells in the whole exploration space rather update space
@@ -290,15 +290,16 @@ void FastExplorationFSM::frontierCallback(const ros::TimerEvent& e) {
     ft->updatePathAndCostAmongTopFrontierViewpoints();
     could_trigger = true;
 
-    if (!ed->frontiers_.empty()) ed->frontiers_.clear();
-    ft->getCellsOfEachFrontier(ed->frontiers_);
-    // if (!ed->frontier_boxes_.empty()) ed->frontier_boxes_.clear();
-    // ft->getBoundingBoxOfEachFrontier(ed->frontier_boxes_);
+    if (!ed_->frontiers_cells_.empty()) ed_->frontiers_cells_.clear();
+    if (!ed_->dead_frontiers_.empty()) ed_->dead_frontiers_.clear();
+    ft->getCellsOfEachFrontier(ed_->frontiers_cells_, ed_->dead_frontiers_);
+    // if (!ed_->frontier_boxes_.empty()) ed_->frontier_boxes_.clear();
+    // ft->getBoundingBoxOfEachFrontier(ed_->frontier_boxes_);
 
     if(state_ == FINISH)
-      if(ed->frontiers_.size()){
+      if(ed_->frontiers_cells_.size()){
         std::cout << "\n\n" << std::endl;
-        ROS_WARN("[frontierCallback]: Stop but frontier num now is: %d. Re-triggered!", ed->frontiers_.size());
+        ROS_WARN("[frontierCallback]: Stop but frontier num now is: %d. Re-triggered!", ed_->frontiers_cells_.size());
         fd_->trigger_ = true;
         transitState(PLAN_TRAJ, "navPathTriggerCallback");
       }else{
@@ -306,15 +307,18 @@ void FastExplorationFSM::frontierCallback(const ros::TimerEvent& e) {
       }
     // Draw frontier and bounding box
     static int last_ftr_num = 0;
-    for (int i = 0; i < ed->frontiers_.size(); ++i) {
-      visualization_->drawCubes(ed->frontiers_[i], 0.1,
-                                visualization_->getColor(double(i) / ed->frontiers_.size(), 0.4),
+    for (int i = 0; i < ed_->frontiers_cells_.size(); ++i) {
+      visualization_->drawCubes(ed_->frontiers_cells_[i], 0.1,
+                                visualization_->getColor(double(i) / ed_->frontiers_cells_.size(), 0.4),
                                 "frontier", i, 4);
+      // visualization_->drawBox(ed_->frontier_boxes_[i].first, ed_->frontier_boxes_[i].second, Vector4d(0.5, 0, 1, 0.3), "frontier_boxes", i, 4);
     }
-    for (int i = ed->frontiers_.size(); i < last_ftr_num; ++i) {
+    // Clear outdate frontier and bounding box
+    for (int i = ed_->frontiers_cells_.size(); i < last_ftr_num; ++i) {
       visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
+      // visualization_->drawBox(Vector3d(0, 0, 0), Vector3d(0, 0, 0), Vector4d(1, 0, 0, 0.3), "frontier_boxes", i, 4);
     }
-    last_ftr_num = ed->frontiers_.size();
+    last_ftr_num = ed_->frontiers_cells_.size();
   }
 
   // if (!fd_->static_state_)
@@ -387,12 +391,12 @@ void FastExplorationFSM::visualize() {
 
   vector<Vector3d> path_to_goal_;
   expl_manager_->getPath(path_to_goal_);
-  Vector3d next_goal_;
-  expl_manager_->getGoal(next_goal_);
-  // Vector4d next_viewpoint_;
-  // expl_manager_->getViewpoint(next_viewpoint_);
-  Vector4d next_frontier_info_;
-  expl_manager_->getFrontierInfo(next_frontier_info_);
+  Vector3d cur_goal_;
+  expl_manager_->getGoal(cur_goal_);
+  Vector4d next_viewpoint_to_visit;
+  expl_manager_->getViewpoint(next_viewpoint_to_visit);
+  Vector4d next_frontier_average;
+  expl_manager_->getFrontierInfo(next_frontier_average);
   vector<vector<Vector3d>> frontiers_;
   vector<vector<Vector3d>> dead_frontiers_;
   expl_manager_->getFrontier(frontiers_, dead_frontiers_);
@@ -402,11 +406,11 @@ void FastExplorationFSM::visualize() {
   auto plan_data = &planner_manager_->plan_data_;
   visualization_->drawBspline(info->position_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15, Vector4d(1, 1, 0, 1),0);
   // visualization_->drawSpheres(plan_data->kino_path_, 0.1, Vector4d(1, 0, 1, 1), "kino_path", 0, 1);
-
   visualization_->drawLines(path_to_goal_, 0.05, Vector4d(0, 1, 1, 1), "a*_path", 1, 1);
-  visualization_->drawSpheres({ next_goal_ }, 0.3, Vector4d(0, 1, 1, 1), "next_goal", 0, 6);
-  // visualization_->drawArrow(next_viewpoint_, 0.2, {1, 0, 0, 1,}, "next_viewpoint", 0, 6); // same as
-  visualization_->drawArrow(next_frontier_info_, 0.5, {0, 0, 0, 1,}, "next_frontier", 0, 7);
+
+  visualization_->drawSpheres({ cur_goal_ }, 0.3, Vector4d(0, 1, 1, 1), "next_goal", 0, 6);
+  visualization_->drawArrow(next_viewpoint_to_visit, 0.3, {1, 0, 0, 1,}, "next_viewpoint", 0, 6); // global goal if not truncated
+  visualization_->drawArrow(next_frontier_average, 0.5, {0, 0, 0, 1,}, "next_frontier", 0, 7);
 
   // Draw updated box & frontier
   // Vector3d bmin, bmax;
@@ -448,7 +452,7 @@ void FastExplorationFSM::visualize() {
   // for (int i = 0; i < ed_->n_points_.size(); ++i)
   //   visualization_->drawSpheres(ed_->n_points_[i], 0.1,
   //                               visualization_->getColor(double(ed_->refined_ids_[i]) /
-  //                               ed_->frontiers_.size()),
+  //                               ed_->frontiers_cells_.size()),
   //                               "n_points", i, 6);
   // for (int i = ed_->n_points_.size(); i < 15; ++i)
   //   visualization_->drawSpheres({}, 0.1, Vector4d(0, 0, 0, 1), "n_points", i, 6);

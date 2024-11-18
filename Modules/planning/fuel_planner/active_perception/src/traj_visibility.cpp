@@ -15,7 +15,7 @@ VisibilityUtil::VisibilityUtil(const ros::NodeHandle& nh) {
   nh.param("visibility/r0", r0_, -1.0);
   nh.param("optimization/wnl", wnl_, -1.0);
   nh.param("visibility/forward", forward_, -1.0);
-  caster_.reset(new RayCaster);
+  raycaster_.reset(new RayCaster);
 }
 
 VisibilityUtil::~VisibilityUtil() {
@@ -35,9 +35,9 @@ Eigen::Vector3d VisibilityUtil::getMinDistVoxel(const Eigen::Vector3d& q1, const
   Eigen::Vector3i pt_id, min_id;
   double min_dist = 1000000, dist;
 
-  caster_->setInput(q1 / res, q2 / res);
+  raycaster_->setInput(q1, q2, res);
 
-  while (caster_->step(qk)) {
+  while (raycaster_->step(qk)) {
     pt_id(0) = qk(0) + offset(0);
     pt_id(1) = qk(1) + offset(1);
     pt_id(2) = qk(2) + offset(2);
@@ -67,8 +67,8 @@ Eigen::Vector3d VisibilityUtil::getMinDistVoxelOnLine(const Eigen::Vector3d& q1,
   double norm = (q2 - q1).norm();
   state = 0;
 
-  caster_->setInput(q1 / res, q2 / res);
-  while (caster_->step(tmp)) {
+  raycaster_->setInput(q1, q2, res);
+  while (raycaster_->step(tmp)) {
     pt_id(0) = tmp(0) + offset(0);
     pt_id(1) = tmp(1) + offset(1);
     pt_id(2) = tmp(2) + offset(2);
@@ -82,7 +82,8 @@ Eigen::Vector3d VisibilityUtil::getMinDistVoxelOnLine(const Eigen::Vector3d& q1,
         state = -1;
       } else if (dist < 1.2) {
         // projection on the line?
-        edt_env_->evaluateEDTWithGrad(tmp, -1, dist, grad);
+        dist = edt_env_->sdf_map_->getDistWithGrad(tmp, grad);
+        // edt_env_->evaluateEDTWithGrad(tmp, -1, dist, grad);
         if (grad.norm() > 1e-3) {
           qb = tmp - grad.normalized() * dist;
           double proj = (qb - q1).dot(dir) / norm;
@@ -105,13 +106,14 @@ bool VisibilityUtil::lineVisib(const Eigen::Vector3d& p1, const Eigen::Vector3d&
   Eigen::Vector3i pt_id;
   double dist;
 
-  caster_->setInput(p1 / resolution_, p2 / resolution_);
-  while (caster_->step(ray_pt)) {
+  raycaster_->setInput(p1, p2, resolution_);
+  while (raycaster_->step(ray_pt)) {
     pt_id(0) = ray_pt(0) + offset_(0);
     pt_id(1) = ray_pt(1) + offset_(1);
     pt_id(2) = ray_pt(2) + offset_(2);
     edt_env_->sdf_map_->indexToPos(pt_id, pt);
-    edt_env_->evaluateEDTWithGrad(pt, -1, dist, grad);
+    dist = edt_env_->sdf_map_->getDistWithGrad(pt, grad);
+    // edt_env_->evaluateEDTWithGrad(pt, -1, dist, grad);
     if (dist <= min_visib_) {
       edt_env_->sdf_map_->indexToPos(pt_id, pc);
       return false;
@@ -142,7 +144,8 @@ void VisibilityUtil::findVisibPairs(const vector<Eigen::Vector3d>& pts, vector<V
     vpair.to_ = cur_j;
     Eigen::Vector3d grad;
     double dist;
-    edt_env_->evaluateEDTWithGrad(qb, -1, dist, grad);
+    dist = edt_env_->sdf_map_->getDistWithGrad(qb, grad);
+    // edt_env_->evaluateEDTWithGrad(qb, -1, dist, grad);
     if (grad.norm() > 1e-3) {
       grad.normalize();
       Eigen::Vector3d dir = (qj - qi).normalized();
@@ -157,6 +160,7 @@ void VisibilityUtil::findVisibPairs(const vector<Eigen::Vector3d>& pts, vector<V
   }
 }
 
+// find the first occupancy-unknown point along traj, return its forward point and time at traj
 bool VisibilityUtil::findUnknownPoint(NonUniformBspline& traj, Eigen::Vector3d& point, double& time) {
   Eigen::Vector3d pt = traj.evaluateDeBoorT(0.0);
   if (edt_env_->sdf_map_->getOccupancy(pt) == SDFMap::UNKNOWN) {  // no initialization of map
@@ -192,6 +196,7 @@ bool VisibilityUtil::findUnknownPoint(NonUniformBspline& traj, Eigen::Vector3d& 
   return true;
 }
 
+// find the first unvisitable point [pt] to the unknown point
 bool VisibilityUtil::findCriticalPoint(NonUniformBspline& traj, const Eigen::Vector3d& unknown_pt,
                                        const double& unknown_t, Eigen::Vector3d& pc, double& tc) {
   Eigen::Vector3d pt, pb;

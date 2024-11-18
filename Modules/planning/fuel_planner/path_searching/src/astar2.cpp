@@ -27,8 +27,8 @@ void Astar::init(ros::NodeHandle& nh, const EDTEnvironment::Ptr& env) {
   /* ---------- map params ---------- */
   this->inv_resolution_ = 1.0 / resolution_;
   edt_env_->sdf_map_->getFullMap(origin_, map_size_3d_);
-  cout << "origin_: " << origin_.transpose() << endl;
-  cout << "map size: " << map_size_3d_.transpose() << endl;
+  cout << "[a*]: origin_: " << origin_.transpose() << endl;
+  cout << "[a*]: map size: " << map_size_3d_.transpose() << endl;
 
   path_node_pool_.resize(allocate_num_);
   for (int i = 0; i < allocate_num_; i++) {
@@ -39,11 +39,26 @@ void Astar::init(ros::NodeHandle& nh, const EDTEnvironment::Ptr& env) {
   early_terminate_cost_ = 0.0;
 }
 
+void Astar::reset() {
+  open_set_map_.clear();
+  close_set_map_.clear();
+  path_nodes_.clear();
+
+  std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator0> empty_queue;
+  open_set_.swap(empty_queue);
+  for (int i = 0; i < use_node_num_; i++) {
+    path_node_pool_[i]->parent = NULL;
+  }
+  use_node_num_ = 0;
+  iter_num_ = 0;
+}
+
 void Astar::setResolution(const double& res) {
   resolution_ = res;
   this->inv_resolution_ = 1.0 / resolution_;
 }
 
+// searching
 int Astar::search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt) {
   NodePtr cur_node = path_node_pool_[0];
   cur_node->parent = NULL;
@@ -71,9 +86,10 @@ int Astar::search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt
       return REACH_END;
     }
 
-    // Early termination if time up
-    if ((ros::Time::now() - t1).toSec() > max_search_time_) {
-      std::cout << "a* searching over time" << std::endl;
+    // Early termination if overtime
+    double searching_time = (ros::Time::now() - t1).toSec();
+    if (searching_time > max_search_time_) {
+      std::cout << "[a*]: searching over time:"<<searching_time<<">"<< max_search_time_ << std::endl;
       early_terminate_cost_ = cur_node->g_score + getDiagHeu(cur_node->position, end_pt);
       return NO_PATH;
     }
@@ -131,7 +147,7 @@ int Astar::search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt
             neighbor = path_node_pool_[use_node_num_];
             use_node_num_ += 1;
             if (use_node_num_ == allocate_num_) {
-              cout << "a* searching out of node pool." << endl;
+              cout << "[a*]: searching out of node pool." << endl;
               return NO_PATH;
             }
             neighbor->index = nbr_idx;
@@ -149,36 +165,11 @@ int Astar::search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt
           open_set_map_[nbr_idx] = neighbor;
         }
   }
-  cout << "open set empty, no path!" << endl;
-  cout << "use node num: " << use_node_num_ << endl;
-  cout << "iter num: " << iter_num_ << endl;
+
+  cout << "[a*]:open set empty, no path!" << endl;
+  cout << "[a*]:use node num: " << use_node_num_ << endl;
+  cout << "[a*]:iter num: " << iter_num_ << endl;
   return NO_PATH;
-}
-
-double Astar::getEarlyTerminateCost() {
-  return early_terminate_cost_;
-}
-
-void Astar::reset() {
-  open_set_map_.clear();
-  close_set_map_.clear();
-  path_nodes_.clear();
-
-  std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator0> empty_queue;
-  open_set_.swap(empty_queue);
-  for (int i = 0; i < use_node_num_; i++) {
-    path_node_pool_[i]->parent = NULL;
-  }
-  use_node_num_ = 0;
-  iter_num_ = 0;
-}
-
-double Astar::pathLength(const vector<Eigen::Vector3d>& path) {
-  double length = 0.0;
-  if (path.size() < 2) return length;
-  for (int i = 0; i < path.size() - 1; ++i)
-    length += (path[i + 1] - path[i]).norm();
-  return length;
 }
 
 void Astar::backtrack(const NodePtr& end_node, const Eigen::Vector3d& end) {
@@ -190,6 +181,19 @@ void Astar::backtrack(const NodePtr& end_node, const Eigen::Vector3d& end) {
     path_nodes_.push_back(cur_node->position);
   }
   reverse(path_nodes_.begin(), path_nodes_.end());
+}
+
+// helper function
+double Astar::getEarlyTerminateCost() {
+  return early_terminate_cost_;
+}
+
+double Astar::pathLength(const vector<Eigen::Vector3d>& path) {
+  double length = 0.0;
+  if (path.size() < 2) return length;
+  for (int i = 0; i < path.size() - 1; ++i)
+    length += (path[i + 1] - path[i]).norm();
+  return length;
 }
 
 std::vector<Eigen::Vector3d> Astar::getPath() {

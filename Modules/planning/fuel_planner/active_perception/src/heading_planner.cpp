@@ -286,7 +286,7 @@ double HeadingPlanner::calcInformationGain(const Eigen::Vector3d& pt, const doub
           }
         } else if (flag == 0) {  // unvisited cell, should raycast
           char result = 1;
-          casters_[task_id]->setInput(check_pt / resolution, pt / resolution);
+          casters_[task_id]->setInput(check_pt, pt, resolution);
           while (casters_[task_id]->step(ray_pt)) {
             ray_id(0) = ray_pt(0) + offset(0);
             ray_id(1) = ray_pt(1) + offset(1);
@@ -363,7 +363,7 @@ double HeadingPlanner::calcInfoGain(const Eigen::Vector3d& pt, const double& yaw
         if (!insideFoV(check_pt, pt, normals)) continue;
 
         bool visible = 1;
-        casters_[task_id]->setInput(check_pt / resolution, pt / resolution);
+        casters_[task_id]->setInput(check_pt, pt, resolution);
         while (casters_[task_id]->step(ray_pt)) {
           ray_id(0) = ray_pt(0) + offset(0);
           ray_id(1) = ray_pt(1) + offset(1);

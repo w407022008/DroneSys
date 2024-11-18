@@ -28,7 +28,7 @@ private:
   /* data */
   int visible_num_;  // initial idx difference between visible pairs
   double min_visib_;
-  unique_ptr<RayCaster> caster_;
+  unique_ptr<RayCaster> raycaster_;
   EDTEnvironment::Ptr edt_env_;
   double resolution_;
   Eigen::Vector3d offset_;

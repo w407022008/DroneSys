@@ -141,7 +141,7 @@
 
     <!-- Exploration manager -->
     <param name="exploration/refine_local" value="true" type="bool"/>                          <!-- local refine after global tour search. Get top viewpoints(only need min_candidate_dist_) then global then local-->
-    <param name="exploration/min_candidate_dist" value="1.50" type="double"/>                        <!-- Get rank top viewpoints far enough to current-->
+    <param name="exploration/min_candidate_dist" value="1.0" type="double"/>                        <!-- Get rank top viewpoints far enough to current-->
     <param name="exploration/refined_num" value="7" type="int"/>                               <!-- local path refine max num of pathpoints-->
     <param name="exploration/refined_radius" value="5.0" type="double"/>                       <!-- local range around current pos-->
     <!-- Get several(top_view_num at least) top viewpoints(max_decay as rate) that are far enough(min_candidate_dist_) -->

@@ -58,13 +58,12 @@ public:
   }
 
   void setParams(const double& res, const Eigen::Vector3d& origin);
-  bool input(const Eigen::Vector3d& start, const Eigen::Vector3d& end);
+  bool setInput(const Eigen::Vector3d& start, const Eigen::Vector3d& end);
   bool nextId(Eigen::Vector3i& idx);
   bool nextPos(Eigen::Vector3d& pos);
 
   // deprecated
-  bool setInput(const Eigen::Vector3d& start, const Eigen::Vector3d& end /* , const Eigen::Vector3d& min,
-                const Eigen::Vector3d& max */);
+  bool setInput(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const double resolution);
   bool step(Eigen::Vector3d& ray_pt);
 };
 

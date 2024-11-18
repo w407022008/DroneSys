@@ -87,8 +87,8 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   mr_->node_ = nh;
   mr_->init();
 
-  caster_.reset(new RayCaster);
-  caster_->setParams(mp_->resolution_, mp_->map_origin_);
+  raycaster_.reset(new RayCaster);
+  raycaster_->setParams(mp_->resolution_, mp_->map_origin_);
 }
 
 void SDFMap::resetBuffer() {
@@ -252,6 +252,7 @@ void SDFMap::setCacheOccupancy(const int& adr, const int& occ) {
   //   md_->cache_voxel_.push(adr);
 }
 
+// input point cloud from map_ros wrapper
 void SDFMap::inputPointCloud(
     const pcl::PointCloud<pcl::PointXYZ>& points, const int& point_num,
     const Eigen::Vector3d& camera_pos) {
@@ -295,9 +296,9 @@ void SDFMap::inputPointCloud(
       update_max[k] = max(update_max[k], pt_w[k]);
     }
 
-    caster_->input(pt_w, camera_pos);
-    caster_->nextId(idx);
-    while (caster_->nextId(idx))
+    raycaster_->setInput(pt_w, camera_pos);
+    raycaster_->nextId(idx);
+    while (raycaster_->nextId(idx))
       setCacheOccupancy(toAddress(idx), 0);
   }
 
@@ -389,6 +390,7 @@ void SDFMap::clearAndInflateLocalMap() {
 
 }
 
+// Helper function
 double SDFMap::getResolution() {
   return mp_->resolution_;
 }

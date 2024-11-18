@@ -49,7 +49,7 @@ public:
 
   PlanParameters pp_;
   LocalTrajData local_data_;
-  GlobalTrajData global_data_;
+  GlobalTrajData global_data_; //topological replanning
   MidPlanData plan_data_;
   EDTEnvironment::Ptr edt_environment_;
   unique_ptr<Astar> path_finder_;
@@ -94,8 +94,8 @@ public:
 
 private:
   unique_ptr<FrontierFinder> frontier_finder_;
-  unique_ptr<HeadingPlanner> heading_planner_;
-  unique_ptr<VisibilityUtil> visib_util_;
+  unique_ptr<HeadingPlanner> heading_planner_; // nothing used here
+  unique_ptr<VisibilityUtil> visib_util_; // used in topo_fsm for visibility cons in opt
 
   // Benchmark method, local exploration
 public:

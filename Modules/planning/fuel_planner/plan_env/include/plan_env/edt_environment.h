@@ -40,7 +40,7 @@ public:
   void setObjPrediction(ObjPrediction prediction);
   void setObjScale(ObjScale scale);
   void evaluateEDTWithGrad(const Eigen::Vector3d& pos, double time, double& dist, Eigen::Vector3d& grad);
-  double evaluateCoarseEDT(Eigen::Vector3d& pos, double time);
+  double evaluateCoarseEDT(Eigen::Vector3d& pos, double time = -1.0);
 
   // deprecated
   void getSurroundDistance(Eigen::Vector3d pts[2][2][2], double dists[2][2][2]);

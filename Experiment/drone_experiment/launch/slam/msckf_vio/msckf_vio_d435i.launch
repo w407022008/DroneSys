@@ -47,16 +47,16 @@
 
       <param name="rotation_threshold" value="0.2618"/>
       <param name="translation_threshold" value="0.4"/>
-      <param name="tracking_rate_threshold" value="0.5"/>
+      <param name="tracking_rate_threshold" value="0.5"/> <!-- how percentage of features are tracked-->
 
       <!-- Feature optimization config -->
       <param name="feature/config/translation_threshold" value="-1.0"/>
 
       <!-- These values should be standard deviation -->
-      <param name="noise/gyro" value="0.05"/>
-      <param name="noise/acc" value="0.5"/>
-      <param name="noise/gyro_bias" value="0.001"/>
-      <param name="noise/acc_bias" value="0.01"/>
+      <param name="noise/gyro" value="3.8229804500281247e-03"/>
+      <param name="noise/acc" value="2.2027853337335857e-02"/>
+      <param name="noise/gyro_bias" value="1.1553978573632866e-04"/>
+      <param name="noise/acc_bias" value="7.8339321235721803e-04"/>
       <param name="noise/feature" value="0.035"/>
 
       <param name="initial_state/velocity/x" value="0.0"/>
@@ -65,8 +65,8 @@
 
       <!-- These values should be covariance -->
       <param name="initial_covariance/velocity" value="0.25"/>
-      <param name="initial_covariance/gyro_bias" value="0.01"/>
-      <param name="initial_covariance/acc_bias" value="0.01"/>
+      <param name="initial_covariance/gyro_bias" value="1.1553978573632866e-04"/>
+      <param name="initial_covariance/acc_bias" value="7.8339321235721803e-04"/>
       <param name="initial_covariance/extrinsic_rotation_cov" value="3.0462e-4"/>
       <param name="initial_covariance/extrinsic_translation_cov" value="2.5e-5"/>
 

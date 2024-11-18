@@ -38,6 +38,7 @@ FrontierFinder::FrontierFinder(const EDTEnvironment::Ptr& edt, ros::NodeHandle& 
   nh.param("frontier/cluster_min", cluster_min_, -1);
   nh.param("frontier/cluster_size_xy", cluster_size_xy_, -1.0);// 2
   nh.param("frontier/cluster_size_z", cluster_size_z_, -1.0);
+  nh.param("frontier/covered_checking_forced", covered_checking_forced_, true);
   // nh.param("frontier/min_candidate_dist", min_candidate_dist_, -1.0);
   nh.param("frontier/near_unknow_clearance", near_unknow_clearance_, -1.0);
   nh.param("frontier/candidate_dphi", candidate_dphi_, -1.0);
@@ -60,11 +61,10 @@ FrontierFinder::FrontierFinder(const EDTEnvironment::Ptr& edt, ros::NodeHandle& 
 FrontierFinder::~FrontierFinder() {
 }
 
-// =========================================
 // Step 1: update frontiers
+// =========================================
 // Main programme to remove observed frontiers and to search new frontiers
 void FrontierFinder::updateFrontiers(bool inLocalSpace) {
-  ros::Time t1 = ros::Time::now();
   tmp_frontiers_.clear();
 
   // Bounding box of local updated region
@@ -87,7 +87,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
 #ifdef DEBUG
   std::cout<<"[DEBUG]: frontiers_ removed ids: "<<std::endl;
 #endif
-  if(true){
+  if(!covered_checking_forced_){
     // code below works since isThereAFrontierCovered() triggers to replan 
     // and then haveOverlap() be true
     // if replan_thresh2_ enough long, covered frontiers may be missed
@@ -96,9 +96,6 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
           isFrontierChanged(*iter)) {
         resetFlag(iter, frontiers_);
         removed_ids_.push_back(rmv_idx);
-#ifdef DEBUG
-        // std::cout<<rmv_idx<<", ";
-#endif
       } else {
         ++rmv_idx;
         ++iter;
@@ -116,9 +113,6 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
       if (isFrontierAlmostFullyCovered(*iter)) {
         resetFlag(iter, frontiers_);
         removed_ids_.push_back(rmv_idx);
-#ifdef DEBUG
-        // std::cout<<rmv_idx<<", ";
-#endif
       } else {
         ++rmv_idx;
         ++iter;
@@ -131,9 +125,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
         ++iter;
     }
   }
-#ifdef DEBUG
-  std::cout<<std::endl;;
-#endif
+
   std::cout << "[frontierFind]:After remove: " << frontiers_.size() << std::endl;
 
   // Search new frontier cells within
@@ -162,6 +154,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
       for (int z = min_id(2); z <= max_id(2); ++z) {
         // Scanning the updated region to find seeds of frontiers
         Eigen::Vector3i cur(x, y, z);
+        if(!inmap(cur)) continue;
         if (cell_is_on_frontier_[Index3DToAddress1D(cur)] == 0 && knownfree(cur) && hasUnknownNeighbor(cur)) {
           // Expand from the seed cell to find a complete frontier cluster
           expandFrontier(cur);
@@ -170,8 +163,6 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
   std::cout << "[frontierFind]:expanded " << std::endl;
   splitLargeFrontiers(tmp_frontiers_);
   std::cout << "[frontierFind]:splitted " << std::endl;
-
-  ROS_WARN_THROTTLE(5.0, "[frontierFind]:Frontier update time: %lf", (ros::Time::now() - t1).toSec());
 }
 
 void FrontierFinder::expandFrontier(
@@ -194,6 +185,7 @@ void FrontierFinder::expandFrontier(
     auto nbrs = allNeighbors(cur);
     for (auto nbr : nbrs) {
       // Qualified cell should be inside bounding box and frontier cell not clustered
+      if(!inmap(nbr)) continue;
       int adr = Index3DToAddress1D(nbr);
       if (cell_is_on_frontier_[adr] == 1 || !edt_env_->sdf_map_->isInBox(nbr) ||
           !(knownfree(nbr) && hasUnknownNeighbor(nbr)))
@@ -357,8 +349,8 @@ void FrontierFinder::downsample(
     cluster_out.emplace_back(pt.x, pt.y, pt.z);
 }
 
-// =========================================
 // Step 2: search corresponding viewpoints of new frontiers
+// =========================================
 //  search new viewpoints, after searching new frontier(tmp_frontiers_) cells
 void FrontierFinder::searchViewpointsOfNewFrontiers() {
   first_new_ftr_ = frontiers_.end();
@@ -455,7 +447,7 @@ int FrontierFinder::countVisibleCells(
     if (!percep_utils_->insideFOV(cell)) continue;
 
     // Check if frontier cell is visible (not occulded by obstacles)
-    raycaster_->input(cell, pos);
+    raycaster_->setInput(cell, pos);
     bool visib = true;
     while (raycaster_->nextId(idx)) {
       if (edt_env_->sdf_map_->getInflateOccupancy(idx) == 1 ||
@@ -469,8 +461,8 @@ int FrontierFinder::countVisibleCells(
   return visib_num;
 }
 
-// =========================================
 // Step 3: couple all frontiers to find a path to each other and then compute co-cost
+// =========================================
 // path a frontier to a frontier, and compute their co- cost matrix
 void FrontierFinder::updatePathAndCostAmongTopFrontierViewpoints() {
 #ifdef DEBUG
@@ -653,6 +645,7 @@ void FrontierFinder::computeFullCostMatrixAmongTopFrontierViewpointsFrom(
 }
 
 // Helper functions
+// =========================================
 bool FrontierFinder::isThereAFrontierCovered() {
   // get the last pcl frame updating box
   Vector3d update_min, update_max;
@@ -660,13 +653,15 @@ bool FrontierFinder::isThereAFrontierCovered() {
 
   for (auto frt : frontiers_) {
     if (!haveOverlap(frt.box_min_, frt.box_max_, update_min, update_max)) continue;
-    // if(isFrontierAlmostFullyCovered(frt)) return true;
-    if(isFrontierChanged(frt)) return true;
+    if(covered_checking_forced_)
+      if(isFrontierAlmostFullyCovered(frt)) return true;
+    else 
+      if(isFrontierChanged(frt)) return true;
   }
 
   // for (auto frt : dormant_frontiers_) {
   //   if (!haveOverlap(frt.box_min_, frt.box_max_, update_min, update_max)) continue;
-  //   if(isFrontierAlmostFullyCovered(frt)) return true;
+  //   if(isFrontierChanged(frt)) return true;
   // }
 
   return false;
@@ -842,21 +837,20 @@ void FrontierFinder::getTopViewpointsOf_From(
   }
 }
 
-void FrontierFinder::getCellsOfEachFrontier(vector<vector<Eigen::Vector3d>>& clusters) {
-  clusters.clear();
+void FrontierFinder::getCellsOfEachFrontier(vector<vector<Eigen::Vector3d>>& clusters_frontier,
+                                            vector<vector<Eigen::Vector3d>>& clusters_dormant_frontier) {
+  assert(clusters_frontier.empty() && clusters_dormant_frontier.empty() && "getCellsOfEachFrontier input not empty");
+  std::cout<<"getting frontiers cells"<<std::endl;
   for (auto frontier : frontiers_)
-    clusters.push_back(frontier.cells_);
-  // clusters.push_back(frontier.filtered_cells_);
-}
-
-void FrontierFinder::getCellsOfEachDormantFrontier(vector<vector<Vector3d>>& clusters) {
-  clusters.clear();
-  for (auto ft : dormant_frontiers_)
-    clusters.push_back(ft.cells_);
+    clusters_frontier.push_back(frontier.cells_);
+  // clusters_frontier.push_back(frontier.filtered_cells_);
+  std::cout<<"getting dormant frontiers cells"<<std::endl;
+  for (auto frontier : dormant_frontiers_)
+    clusters_dormant_frontier.push_back(frontier.cells_);
 }
 
 void FrontierFinder::getBoundingBoxOfEachFrontier(vector<pair<Eigen::Vector3d, Eigen::Vector3d>>& boxes) {
-  boxes.clear();
+  assert(boxes.empty());
   for (auto frontier : frontiers_) {
     Vector3d center = (frontier.box_max_ + frontier.box_min_) * 0.5;
     Vector3d side_length = frontier.box_max_ - frontier.box_min_;

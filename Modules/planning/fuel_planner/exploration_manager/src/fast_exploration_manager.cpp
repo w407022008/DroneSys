@@ -31,7 +31,7 @@ FastExplorationManager::FastExplorationManager() {
 
 FastExplorationManager::~FastExplorationManager() {
   ViewNode::astar_.reset();
-  ViewNode::caster_.reset();
+  ViewNode::raycaster_.reset();
   ViewNode::map_.reset();
 }
 
@@ -68,12 +68,9 @@ void FastExplorationManager::initialize(ros::NodeHandle& nh) {
   double resolution_ = sdf_map_->getResolution();
   Eigen::Vector3d origin, size;
   sdf_map_->getFullMap(origin, size);
-  ViewNode::caster_.reset(new RayCaster);
-  ViewNode::caster_->setParams(resolution_, origin);
+  ViewNode::raycaster_.reset(new RayCaster);
+  ViewNode::raycaster_->setParams(resolution_, origin);
 
-  // planner_manager_->path_finder_->lambda_heu_ = 1.0;
-  // planner_manager_->path_finder_->max_search_time_ = 0.05;
-  // planner_manager_->path_finder_->max_search_time_ = 1.0;
 
   // Initialize TSP par file
   ofstream par_file(ep_->tsp_dir_ + "/single.par");
@@ -100,8 +97,8 @@ int FastExplorationManager::planExploreMotion(
   auto t2 = t1;
   ed_->views_.clear();
 
-  std::cout << "start pos: " << pos.transpose() << ", vel: " << vel.transpose()
-            << ", acc: " << acc.transpose() << ", yaw: " << yaw.transpose() << std::endl;
+  std::cout << "start pos: " << pos.transpose() << "\nvel: " << vel.transpose()
+            << "\nacc: " << acc.transpose() << "\nyaw: " << yaw.transpose() << std::endl;
 
   // Step1: Update frontier
   // ===================================================================
@@ -109,10 +106,10 @@ int FastExplorationManager::planExploreMotion(
   t1 = ros::Time::now();
   if (updateFrontier(pos) == NO_FRONTIER)
     return NO_FRONTIER;
-  double frontier_searching_time = (ros::Time::now() - t1).toSec();
+  double frontier_searching_time = 1000.0*(ros::Time::now() - t1).toSec();
   ROS_WARN(
-      "[exploreManager]:total frontier to visit: %d, viewpoint: %d, searching time: %lf", 
-      ed_->frontiers_.size(), ed_->points_.size(), frontier_searching_time);
+      "[exploreManager]:total frontier to visit: %d, viewpoint: %d, searching time(ms): %lf", 
+      ed_->frontiers_cells_.size(), ed_->points_.size(), frontier_searching_time);
   
   // Step2: Explore a tour
   // ===================================================================
@@ -120,8 +117,8 @@ int FastExplorationManager::planExploreMotion(
   t1 = ros::Time::now();
   exploreTour(pos, vel, acc, yaw);
   if((next_viewpoint_to_visit-pos).norm()<0.1 && ed_->points_.size() == 1) return FAIL;
-  double local_time = (ros::Time::now() - t1).toSec();
-  ROS_WARN("[exploreManager]:Exploration tour searching & refining time: %lf", local_time);
+  double local_time = 1000.0*(ros::Time::now() - t1).toSec();
+  ROS_WARN("[exploreManager]:Exploration tour searching & refining time(ms): %lf", local_time);
 
   // Step3: Plan bspline trajectory to the next viewpoint with astar initialization
   // ===================================================================
@@ -129,15 +126,15 @@ int FastExplorationManager::planExploreMotion(
   if (planTrajectory(pos, vel, acc, yaw) == FAIL)
     return FAIL;
 
-  double total = (ros::Time::now() - t2).toSec();
-  ROS_WARN("[exploreManager]:Total time: %lf", total);
+  double total = 1000.0*(ros::Time::now() - t2).toSec();
+  ROS_WARN("[exploreManager]:Total time(ms): %lf", total);
   ROS_ERROR_COND(total > 0.1, "[exploreManager]:Total time too long!!!");
 
   return SUCCEED;
 }
 
-// =========================================
 // Step 1: update frontiers
+// =========================================
 int FastExplorationManager::updateFrontier(const Vector3d& pos){
   // Search new frontier cells and allocate it as new frontiers
   frontier_finder_->updateFrontiers();
@@ -145,10 +142,9 @@ int FastExplorationManager::updateFrontier(const Vector3d& pos){
   frontier_finder_->searchViewpointsOfNewFrontiers();
 
   // get visible ones' info
-  if (!ed_->frontiers_.empty()) ed_->frontiers_.clear();
+  if (!ed_->frontiers_cells_.empty()) ed_->frontiers_cells_.clear();
   if (!ed_->dead_frontiers_.empty()) ed_->dead_frontiers_.clear();
-  frontier_finder_->getCellsOfEachFrontier(ed_->frontiers_);
-  frontier_finder_->getCellsOfEachDormantFrontier(ed_->dead_frontiers_);
+  frontier_finder_->getCellsOfEachFrontier(ed_->frontiers_cells_, ed_->dead_frontiers_);
 #ifdef DEBUG
   std::cout<<"[DEBUG]:get frontiers"<<std::endl;
 #endif
@@ -157,10 +153,13 @@ int FastExplorationManager::updateFrontier(const Vector3d& pos){
 // #ifdef DEBUG
 //   std::cout<<"[DEBUG]:get frontier box"<<std::endl;
 // #endif
-  if (ed_->frontiers_.empty()) {
+  if (ed_->frontiers_cells_.empty()) {
     ROS_WARN("No coverable frontier.");
     return NO_FRONTIER;
   }
+
+  // Now we got the new points_, yaws_, average_, frontiers_ 
+  // Publish them
   if (!ed_->points_.empty()) ed_->points_.clear();
   if (!ed_->yaws_.empty()) ed_->yaws_.clear();
   if (!ed_->averages_.empty()) ed_->averages_.clear();
@@ -174,8 +173,8 @@ int FastExplorationManager::updateFrontier(const Vector3d& pos){
   // publish points_, yaws_, average_, frontiers_ 
 }
 
-// =========================================
 // Step 2: explore a global tour to visit all top viewpoints of frontier
+// =========================================
 void FastExplorationManager::exploreTour(
     const Vector3d& pos, const Vector3d& vel, const Vector3d& acc, const Vector3d& yaw){
   // search global and local tour and retrieve the next viewpoint
@@ -226,7 +225,7 @@ void FastExplorationManager::exploreTour(
 #endif
       next_viewpoint_to_visit = ed_->refined_points_[0];
       next_yaw = refined_yaws[0];
-      next_frontier_average = n_averages[0];
+      next_frontier_average = refined_averages[0];
 
       // Get marker for view visualization
       ed_->refined_views1_.clear();
@@ -302,10 +301,11 @@ void FastExplorationManager::exploreTour(
 
   std::cout << "[exploreTour]:Next to visit: " << next_viewpoint_to_visit.transpose() << ", yaw: " << next_yaw << std::endl;
 
-  Vector4d next_viewpoint(next_viewpoint_to_visit[0], next_viewpoint_to_visit[1], next_viewpoint_to_visit[2], next_yaw);
-  ed_->next_viewpoint_ = next_viewpoint; 
-  Vector4d next_frontier_info(next_frontier_average[0], next_frontier_average[1], next_frontier_average[2], next_yaw);
-  ed_->next_frontier_info_ = next_frontier_info; 
+  ed_->next_viewpoint_to_visit = 
+      Vector4d(next_viewpoint_to_visit[0], next_viewpoint_to_visit[1], next_viewpoint_to_visit[2], next_yaw);
+ 
+  ed_->next_frontier_average = 
+      Vector4d(next_frontier_average[0], next_frontier_average[1], next_frontier_average[2], next_yaw);
 
   // publish next_viewpoint, next_yaw
 }
@@ -323,7 +323,7 @@ void FastExplorationManager::findGlobalTour(
   frontier_finder_->computeFullCostMatrixAmongTopFrontierViewpointsFrom(cur_pos, cur_vel, cur_yaw, cost_mat);
   const int dimension = cost_mat.rows();
 
-  double mat_time = (ros::Time::now() - t1).toSec();
+  double mat_time = 1000.0*(ros::Time::now() - t1).toSec();
   t1 = ros::Time::now();
 #ifdef DEBUG
     std::cout << "tsp start " << std::endl;
@@ -415,8 +415,8 @@ void FastExplorationManager::findGlobalTour(
   // ed_->global_tour_.clear();
   // frontier_finder_->getPathAllFrontiersFrom_Along(cur_pos, indices, ed_->global_tour_);
 
-  double tsp_time = (ros::Time::now() - t1).toSec();
-  ROS_WARN("[globalTour]:Mat time: %lf, TSP time: %lf", mat_time, tsp_time);
+  double tsp_time = 1000.0*(ros::Time::now() - t1).toSec();
+  ROS_WARN("[globalTour]:Mat time(ms): %lf, TSP time(ms): %lf", mat_time, tsp_time);
 }
 
 // if need, after global tour, refine a local tour according to the N top viewpoints from the next K frontiers
@@ -484,13 +484,16 @@ void FastExplorationManager::refineLocalTour(
     // if (dir3d.norm() < ep_->min_candidate_dist_) continue; // skip too close
     double dir_diff = fabs(atan2(dir3d(1), dir3d(0))-cur_yaw[0]);
     dir_diff = dir_diff > M_PI ? 2*M_PI-dir_diff : dir_diff;
+    // std::cout<<"cur_yaw: "<<cur_yaw[0]<<
+    //           " , target yaw: "<<atan2(dir3d(1), dir3d(0))<<
+    //           ", diff: "<<dir_diff<<std::endl;
     if(dir_diff>M_PI/2) continue;
     refined_pts.push_back(path[i]->pos_);
     refined_yaws.push_back(path[i]->yaw_);
     refined_averages.push_back(path[i]->average_);
   }
   if(refined_pts.empty()){
-    ROS_ERROR("======= all viewpoint to visit too close =========");
+    ROS_WARN("======= all viewpoint to visit too close =========");
     refined_pts.push_back(path[1]->pos_);
     refined_yaws.push_back(path[1]->yaw_);
     refined_averages.push_back(path[1]->average_);
@@ -514,8 +517,8 @@ void FastExplorationManager::refineLocalTour(
   // ROS_WARN("create: %lf, search: %lf, parse: %lf", create_time, search_time, parse_time);
 }
 
-// =========================================
 // Step 3: plan a trajectory to arrive the next viewpoint on the tour
+// =========================================
 int FastExplorationManager::planTrajectory(
     const Vector3d& pos, const Vector3d& vel, const Vector3d& acc, const Vector3d& yaw){
   ros::Time tic = ros::Time::now();
@@ -606,9 +609,9 @@ void FastExplorationManager::shortenPath(vector<Vector3d>& path) {
       short_tour.push_back(path[i]);
     else {
       // Add path[i] if collision occur when direct to next
-      ViewNode::caster_->input(short_tour.back(), path[i + 1]);
+      ViewNode::raycaster_->setInput(short_tour.back(), path[i + 1]);
       Eigen::Vector3i idx;
-      while (ViewNode::caster_->nextId(idx) && ros::ok()) {
+      while (ViewNode::raycaster_->nextId(idx) && ros::ok()) {
         if (edt_environment_->sdf_map_->getInflateOccupancy(idx) == 1 ||
             edt_environment_->sdf_map_->getOccupancy(idx) == SDFMap::UNKNOWN) {
           short_tour.push_back(path[i]);
@@ -641,15 +644,15 @@ void FastExplorationManager::getGoal(Eigen::Vector3d& goal){
 }
 
 void FastExplorationManager::getViewpoint(Eigen::Vector4d& next_viewpoint){
-  next_viewpoint = ed_->next_viewpoint_;
+  next_viewpoint = ed_->next_viewpoint_to_visit;
 }
 
 void FastExplorationManager::getFrontierInfo(Eigen::Vector4d& next_frontier_info){
-  next_frontier_info = ed_->next_frontier_info_;
+  next_frontier_info = ed_->next_frontier_average;
 }
 
 void FastExplorationManager::getFrontier(vector<vector<Vector3d>>& frontier_, vector<vector<Vector3d>>& dead_frontiers_){
-  frontier_ = ed_->frontiers_;
+  frontier_ = ed_->frontiers_cells_;
   dead_frontiers_ = ed_->dead_frontiers_;
 }
 

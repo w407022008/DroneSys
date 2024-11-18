@@ -29,7 +29,7 @@
 #define IRED1_CAMERA_TOPIC "infrared"
 #define IRED2_CAMERA_TOPIC "infrared2"
 
-#define DEPTH_NEAR_CLIP_M 0.3
+#define DEPTH_NEAR_CLIP_M 0.1
 #define DEPTH_FAR_CLIP_M 10.0
 #define DEPTH_SCALE_M 0.001
 

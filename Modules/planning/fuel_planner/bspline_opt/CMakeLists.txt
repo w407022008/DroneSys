@@ -28,14 +28,13 @@ catkin_package(
  CATKIN_DEPENDS plan_env active_perception
 )
 
-
 include_directories( 
     SYSTEM 
     include 
     ${catkin_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
-    ${NLOPT_INCLUDE_DIR}  
+    ${NLOPT_INCLUDE_DIR}
 )
 
 add_library( bspline_opt 

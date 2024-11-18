@@ -232,7 +232,7 @@ void PlanningVisualization::drawArrow(const Eigen::Vector4d& list, const double&
                                        const int& id, const int& pub_id) {
   // Clean old marker
   visualization_msgs::Marker mk;
-  fillBasicInfo(mk, Eigen::Vector3d(scale/2, scale/3, scale*2), color, ns, 0,
+  fillBasicInfo(mk, Eigen::Vector3d(scale*0.1, scale*0.1, scale*2), color, ns, 0,
                 visualization_msgs::Marker::ARROW);
   mk.action = visualization_msgs::Marker::DELETEALL;
   pubs_[pub_id].publish(mk);
