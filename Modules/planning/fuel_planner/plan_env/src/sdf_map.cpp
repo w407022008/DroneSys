@@ -309,8 +309,8 @@ void SDFMap::inputPointCloud(
   // Bounding box for subsequent updating
 {
 std::unique_lock<std::shared_mutex> lock(box_mtx);
-  md_->update_min_ = md_->update_min_.array().min(update_min.array()).matrix();
-  md_->update_max_ = md_->update_max_.array().min(update_max.array()).matrix();
+  md_->update_min_ = update_min;//md_->update_min_.array().min(update_min.array()).matrix();
+  md_->update_max_ = update_max;//md_->update_max_.array().min(update_max.array()).matrix();
 }
   // update occupied prob
   while (!md_->cache_voxel_.empty()) {

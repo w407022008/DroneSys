@@ -19,7 +19,7 @@
 
 #include <Eigen/Eigenvalues>
 
-#define DEBUG
+// #define DEBUG
 
 namespace fast_planner {
 void FrontierFinder::wrapYaw(double& yaw) {
@@ -87,7 +87,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
 #ifdef DEBUG
   std::cout<<"[DEBUG]: frontiers_ removed ids: "<<std::endl;
 #endif
-  if(false){
+  if(true){
     // code below works since isThereAFrontierCovered() triggers to replan 
     // and then haveOverlap() be true
     // if replan_thresh2_ enough long, covered frontiers may be missed
@@ -97,7 +97,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
         resetFlag(iter, frontiers_);
         removed_ids_.push_back(rmv_idx);
 #ifdef DEBUG
-        std::cout<<rmv_idx<<", ";
+        // std::cout<<rmv_idx<<", ";
 #endif
       } else {
         ++rmv_idx;
@@ -117,7 +117,7 @@ void FrontierFinder::updateFrontiers(bool inLocalSpace) {
         resetFlag(iter, frontiers_);
         removed_ids_.push_back(rmv_idx);
 #ifdef DEBUG
-        std::cout<<rmv_idx<<", ";
+        // std::cout<<rmv_idx<<", ";
 #endif
       } else {
         ++rmv_idx;
@@ -660,7 +660,8 @@ bool FrontierFinder::isThereAFrontierCovered() {
 
   for (auto frt : frontiers_) {
     if (!haveOverlap(frt.box_min_, frt.box_max_, update_min, update_max)) continue;
-    if(isFrontierAlmostFullyCovered(frt)) return true;
+    // if(isFrontierAlmostFullyCovered(frt)) return true;
+    if(isFrontierChanged(frt)) return true;
   }
 
   // for (auto frt : dormant_frontiers_) {

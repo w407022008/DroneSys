@@ -116,8 +116,8 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
     double dist = edt_environment_->sdf_map_->getDistance(fut_pt);
     if (sdf_map_->getInflateOccupancy(fut_pt) == 1) {
       distance = dist;
-      // std::cout << "collision at: " << fut_pt.transpose() << ", dist: " << dist << std::endl;
-      std::cout << "collision at: " << fut_pt.transpose() << std::endl;
+      std::cout << "collision at: " << fut_pt.transpose() << ", dist: " << dist << std::endl;
+      // std::cout << "collision at: " << fut_pt.transpose() << std::endl;
       return false;
     }
     radius = (fut_pt - cur_pt).norm();

@@ -46,3 +46,5 @@ Modules/slam/orb_slam3/library/ORB_SLAM3/Vocabulary/ORBvoc.txt.tar.gz
 *.bag
 temp/
 device.yaml
+Modules/planning/fuel_planner/utils/lkh_tsp_solver/resource/single.tsp
+Modules/planning/fuel_planner/utils/lkh_tsp_solver/resource/single.txt

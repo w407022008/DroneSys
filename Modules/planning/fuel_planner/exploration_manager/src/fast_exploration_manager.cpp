@@ -19,7 +19,7 @@
 #include <pcl/point_types.h>
 #include <visualization_msgs/Marker.h>
 
-#define DEBUG
+// #define DEBUG
 
 using namespace Eigen;
 

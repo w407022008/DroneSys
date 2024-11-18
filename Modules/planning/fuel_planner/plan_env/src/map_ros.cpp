@@ -6,7 +6,7 @@
 #include <visualization_msgs/Marker.h>
 
 #include <fstream>
-#define DEBUG
+// #define DEBUG
 namespace fast_planner {
 MapROS::MapROS() {
 }

@@ -46,7 +46,7 @@ void FastExplorationFSM::init(ros::NodeHandle& nh) {
   planner_manager_ = expl_manager_->planner_manager_;
   state_ = EXPL_STATE::INIT;
   fd_->have_odom_ = false;
-  fd_->state_str_ = { "INIT", "WAIT_TRIGGER", "PLAN_TRAJ", "PUB_TRAJ", "EXEC_TRAJ", "FINISH" };
+  fd_->state_str_ = { "INIT", "WAIT_TRIGGER", "FINISH" , "PLAN_TRAJ", "PUB_TRAJ", "EXEC_TRAJ"};
   fd_->static_state_ = true;
   fd_->trigger_ = false;
 
