@@ -1,0 +1,126 @@
+<launch>
+  <arg name="d435i_vins" value="false"/>
+  <arg name="d435i_mavros" value="false"/>
+  <arg name="fpga_vins" value="true"/>
+  <arg name="fpga_mavros" value="false"/>
+  <arg name="sensors_inSim" value="false"/>
+  <!-- size of map, change the size in x, y, z according to your application -0.4 1.2 0.9-->
+  <arg name="map_size_x" value="50.0"/>
+  <arg name="map_size_y" value="50.0"/>
+  <arg name="map_size_z" value=" 10.0"/>
+
+  <arg name="init_x" value="0.0"/>
+  <arg name="init_y" value="0.0"/>
+  <arg name="init_z" value="0.0"/> 
+  <!-- intrinsic params of the depth camera for 2.5inch_d435 -->
+    <!--arg name="cx" default="80.91056823730469"/>
+    <arg name="cy" default="59.920318603515625"/>
+    <arg name="fx" default="95.87460327148438"/>
+    <arg name="fy" default="95.87460327148438"/-->
+
+  <!-- intrinsic params of the depth camera for 5inch_fpga -->
+    <arg name="cx" default="86.50833511352539"/>
+    <arg name="cy" default="63.15933036804199"/>
+    <arg name="fx" default="113.88280846176902"/>
+    <arg name="fy" default="113.88280846176902"/>
+
+    <!-- intrinsic params of the depth camera in simulation -->
+    <!--arg name="cx" value="321.04638671875"/>
+    <arg name="cy" value="243.44969177246094"/>
+    <arg name="fx" value="387.229248046875"/>
+    <arg name="fy" value="387.229248046875"/-->
+
+  <!-- topic of your odometry such as VIO or LIO /vins_estimator/odometry  /mavros/local_position/odom  vrpn_client_node/NanoDrone250/pose -->
+  <arg name="odom_topic" value="/odom" />
+
+  <!-- main algorithm params -->
+  <include file="$(find exploration_manager)/launch/algorithm.xml">
+
+    <arg name="map_size_x_" value="$(arg map_size_x)"/>
+    <arg name="map_size_y_" value="$(arg map_size_y)"/>
+    <arg name="map_size_z_" value="$(arg map_size_z)"/>
+
+    <arg name="box_min_x" value="-4.0"/>
+    <arg name="box_min_y" value="-8.0"/>
+    <arg name="box_min_z" value=" -0.8"/>
+    <arg name="box_max_x" value="4.0"/>
+    <arg name="box_max_y" value="1.0"/>
+    <arg name="box_max_z" value=" 1.8"/>
+
+    <arg name="odometry_topic" value="$(arg odom_topic)"/>
+    <!-- sensor pose: transform of camera frame in the world frame -->
+    <arg name="sensor_pose_topic" value="$(arg odom_topic)"/>
+    <!-- depth topic: depth image, 640x480 by default -->
+    <!-- cloud topic: point cloud measurement  -->
+    <!-- subscribe ONLY TO ONE of the two topics -->
+    <arg name="depth_topic" value="/depth/depth_16bit/repub"/>
+    <arg name="cloud_topic" value="/pcl_render_node/cloud"/>
+
+    <!-- intrinsic params of the depth camera for 2.5inch_d435 -->
+    <arg name="cx" value="$(arg cx)"/>
+    <arg name="cy" value="$(arg cy)"/>
+    <arg name="fx" value="$(arg fx)"/>
+    <arg name="fy" value="$(arg fx)"/>
+
+    <arg name="use_d435i_vins" value="$(arg d435i_vins)"/>
+    <arg name="use_d435i_mavros" value="$(arg d435i_mavros)"/>
+    <arg name="use_fpga_vins" value="$(arg fpga_vins)"/>
+    <arg name="use_fpga_mavros" value="$(arg fpga_mavros)"/>
+    <arg name="use_sensors_inSim" value="$(arg sensors_inSim)"/>
+
+    <!-- maximum velocity and acceleration the drone will reach -->
+    <arg name="max_vel" value="0.3" />
+    <arg name="max_acc" value="0.3" />
+  </include>
+
+  <!-- trajectory server -->
+  <node pkg="plan_manage" name="traj_server" type="traj_server" output="screen">
+    <remap from="/position_cmd" to="planning/pos_cmd"/>
+
+    <remap from="/odom_world" to="$(arg odom_topic)"/>
+    <param name="traj_server/time_forward" value="1.5" type="double"/>
+    <param name="traj_server/pub_traj_id" value="4" type="int"/>
+    <param name="traj_server/init_x" value="$(arg init_x)" type="double"/>
+    <param name="traj_server/init_y" value="$(arg init_y)" type="double"/>
+    <param name="traj_server/init_z" value="$(arg init_z)" type="double"/>
+
+    <param name="perception_utils/top_angle" value="0.56125" type="double"/>
+    <param name="perception_utils/left_angle" value="0.69222" type="double"/>
+    <param name="perception_utils/right_angle" value="0.68901" type="double"/>
+    <param name="perception_utils/max_dist" value="4.0" type="double"/>
+    <param name="perception_utils/vis_dist" value="1.0" type="double"/>
+  </node>
+
+  <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+    <remap from="~odom" to="$(arg odom_topic)"/>        
+    <remap from="~goal" to="/move_base_simple/goal"/>
+    <remap from="~traj_start_trigger" to="/traj_start_trigger" />
+    <param name="waypoint_type" value="point"/>    
+  </node>
+  
+  <!-- use keyboard control -->
+  <node pkg="keyboard_control" name="keyboard_control" type="keyboard_control" output="screen" />
+
+  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find plan_manage)/config/traj_fpga_vins.rviz" />
+  <node pkg="tf" type="static_transform_publisher" name="tf_53" args="0 0 0 0 0 0 world navigation 100" />
+
+  <!-- use simulator -->
+  <!--group if="$(arg use_sensors_inSim)">
+    <node name="pcl_depth_pub" pkg="exploration_manager" type="pcl_depth_pub.py" output="screen"/>
+
+    <include file="$(find exploration_manager)/launch/simulator.xml">
+      <arg name="map_size_x_" value="$(arg map_size_x)"/>
+      <arg name="map_size_y_" value="$(arg map_size_y)"/>
+      <arg name="map_size_z_" value="$(arg map_size_z)"/>
+
+      <arg name="init_x" value="$(arg init_x)"/>
+      <arg name="init_y" value="$(arg init_y)"/>
+      <arg name="init_z" value="$(arg init_z)"/>
+
+      <arg name="odometry_topic" value="$(arg odom_topic)" />
+      <arg name="c_num" value="0"/>
+      <arg name="p_num" value="130"/>
+    </include>
+  </group-->
+
+</launch>

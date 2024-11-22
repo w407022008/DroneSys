@@ -1,0 +1,29 @@
+<!-- 本launch仅测试Optitrack消息 -->
+<launch>
+	<arg name="with_mavros" default="true"/>
+	<arg name="with_transceiver" default="true"/>
+	<arg name="rate_hz" default="50.0"/>
+
+    <!-- MAVROS -->
+	<node if="$(arg with_mavros)" pkg="mavros" type="mavros_node" name="mavros" output="screen">
+		<param name="target_system_id" value="1" />
+		<param name="target_component_id" value="1" />
+		<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_pluginlists.yaml" />
+		<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_config.yaml" />
+	</node> 
+
+	<!-- vrpn -->
+	<include file="$(find vrpn_client_ros)/launch/sample.launch"/>
+
+	<!-- TF camera_link in base_link -->
+	<node if="$(arg with_mavros)" pkg="tf" type="static_transform_publisher" name="tf_base_camera" args="0.07 0.016 -0.04 -1.5707963 0 -1.5707963 base_link camera_link 100"/>
+
+	<!-- run the px4_transceiver.cpp -->
+	<node if="$(arg with_transceiver)" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
+		<param name="input_source" value="0" /><!--  0 for vicon， 1 for Cartographer, 2 for gazebo, 3 Intel T265 dual camera, 4 VINS-Fusion, 5 ORB-SLAM3  -->
+		<param name="rate_hz" value="$(arg rate_hz)"/>
+	</node>
+	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
+</launch>
+

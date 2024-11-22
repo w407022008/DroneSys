@@ -1,0 +1,11 @@
+## parameter for px4_commander.cpp
+
+Init_position_x : 0.0
+Init_position_y : 0.0
+Init_position_z : 0.0
+Takeoff_height : 1.0
+Land_speed : 0.2
+
+Disarm_height : 0.0
+
+Command_rate: 50

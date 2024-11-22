@@ -1,0 +1,77 @@
+%YAML:1.0
+
+#common parameters
+#support: 1 imu 1 cam; 1 imu 2 cam: 2 cam; 
+imu: 1         
+num_of_cam: 1
+
+imu_topic: "/camera/imu"
+image0_topic: "/camera/infra2/image_rect_raw"
+image1_topic: "/camera/infra1/image_rect_raw"
+output_path: "/home/sique/output"
+
+cam0_calib: "left.yaml"
+cam1_calib: "right.yaml"
+image_width: 640
+image_height: 480
+   
+
+# Extrinsic parameter between IMU and Camera.
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [9.9998344885283819e-01, 4.0581272123018635e-03, -4.0784340024061705e-03, 8.6436697056769818e-02,
+       -4.0609472763258499e-03, -9.9999152079006104e-01, -6.8341436908052875e-04, 8.0100610070546197e-03,
+       4.0756260380595986e-03, 6.9996536324247959e-04, -9.9999144962388964e-01, 6.3326311034842611e-02, 
+       0., 0., 0., 1.]
+
+body_T_cam1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 9.9915078785525546e-01, -3.3645392494669100e-02, -2.3784253028041137e-02, 1.4804753990883948e-02,
+       -3.2690418530357028e-02, -9.9868624829977115e-01, 3.9460283745029578e-02, 4.6756462734344723e-02,
+       -2.5080663159739405e-02, -3.8649256406919658e-02, -9.9893803377119461e-01, 1.0346569515432877e-02,
+       0., 0., 0., 1. ]
+
+#Multiple thread support
+multiple_thread: 1      # thread to process separately from feature extract
+input_rate: 20          # camera msg accepted rate
+cut_rate: 1             # processing once after feature extracting and optical flow tracking
+
+#feature traker paprameters
+max_cnt: 150            # max feature number in feature tracking
+min_dist: 30            # min distance (pixel) between two features 
+#freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
+F_threshold: 1.0        # ransac threshold (pixel)
+show_track: 1           # publish tracking image as topic
+corner_detector: 1      # 1: FAST corner detector; 0: shi-tomasi corner detector
+flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
+tf_pub: 0               # publish tf transform of vio_imu from world
+
+#optimization parameters
+max_solver_time: 0.01  # max solver itration time (s), to guarantee real time
+max_num_iterations: 8   # max solver itrations, to guarantee real time
+keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
+
+#imu parameters       The more accurate parameters you provide, the better performance
+acc_n: 0.5          # accelerometer measurement noise standard deviation. #0.2   0.04
+gyr_n: 0.08         # gyroscope measurement noise standard deviation.     #0.05  0.004
+acc_w: 0.008         # accelerometer bias random work noise standard deviation.  #0.002
+gyr_w: 0.0005       # gyroscope bias random work noise standard deviation.     #4.0e-5
+g_norm: 9.805         # gravity magnitude
+
+#unsynchronization parameters
+estimate_td: 0                      # online estimate time offset between camera and imu
+td: 0.00                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+
+#loop closure parameters
+load_previous_pose_graph: 1        # load and reuse previous pose graph; load from 'pose_graph_save_path'
+pose_graph_save_path: "/home/sique/output/" # save and load path
+save_image: 0                   # save image in pose graph for visualization prupose; you can close this function by setting 0 
+skip_cnt: 10                    # creat a keyframe for every skip_cnt
+skip_dis: 1.0                    # creat a keyframe if translation is greater then skip_dis

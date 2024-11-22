@@ -1,0 +1,2 @@
+active_perception:bspline:bspline_opt:exploration_manager:path_searching:plan_env:plan_manage:poly_traj:traj_utils:utils/lkh_tsp_solver
+-G Unix Makefiles -DCATKIN_DEVEL_PREFIX=/home/sique/src/DroneSys_sim/devel_isolated -DCMAKE_INSTALL_PREFIX=/home/sique/src/DroneSys_sim/install_isolated

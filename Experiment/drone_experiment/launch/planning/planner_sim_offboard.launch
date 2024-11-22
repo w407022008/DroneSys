@@ -1,0 +1,97 @@
+<launch>
+
+	<arg name="joystick" default="0"/> <!-- 0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+  <arg name="type_in_goal" default="false"/>
+  <arg name="drone_model" default="0"/> <!-- 0: Gazebo Model; 1: Simple Model; 2:Real Model -->
+	
+  <arg name="map_resolution" default="0.1" />
+  <arg name="sensor_max_range" default="2.0" />
+
+	
+	<!-- Joystick Dirver -->
+	<node if="$(eval arg('joystick') > 0)" pkg="joy" type="joy_node" name="joystick" />
+	<node if="$(eval arg('joystick') == 3)" pkg="joy_remote" type="JY901_Bluetooth_Pyserial.py" name="joystick_frame" launch-prefix="gnome-terminal --tab --" />
+    
+
+  <!-- run the pub_goal.cpp -->
+  <node if="$(arg type_in_goal)" pkg="control" type="pub_goal" name="pub_goal" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+
+	
+  <!-- Initialize Environment, Publish global / local point clouds -->
+  <node pkg="planning_simulator" name="random_forest" type="random_forest" output="screen">
+    <!-- Drone initial postion -->
+    <param name="init_pos_x" value="0.0" type="double"/>
+    <param name="init_pos_y" value="0.0" type="double"/>
+    <!-- Map size, number of obstacles, resolution -->
+    <param name="global_map/x_size" value="20.0" type="double"/> <!-- Global map limited space -->
+    <param name="global_map/y_size" value="20.0" type="double"/>
+    <param name="global_map/z_size" value="4.0" type="double"/>
+    <param name="map/resolution" value="$(arg map_resolution)" type="double"/> <!-- points resolution -->
+    <param name="map/pillar_num" value="80" type="double"/> <!-- Num of colum to be created -->
+    <param name="map/circle_num" value="30" type="double"/> <!-- Num of circle to be created -->
+    <param name="map/min_distance_init" value="1.0" type="double"/> <!-- Initial free space -->
+    <param name="map/min_distance" value="1.5" type="double"/> <!-- Minimum distance between obstacles(Column or circle) -->
+    <!-- Definition of obstacle shapes -->
+    <param name="pillar_shape/min_radius" value="0.1" type="double"/>
+    <param name="pillar_shape/max_radius" value="0.2" type="double"/> <!-- Column diameter -->
+    <param name="pillar_shape/min_height" value="1.0" type="double"/>
+    <param name="pillar_shape/max_height" value="5.0" type="double"/>
+    <param name="circle_shape/min_radius" value="1.0" type="double"/> <!-- Long and short diameter of the ellipse -->
+    <param name="circle_shape/max_radius" value="3.0" type="double"/>
+    <param name="circle_shape/min_height" value="1.0" type="double"/> <!-- Height of circle center  -->
+    <param name="circle_shape/max_height" value="2.0" type="double"/>
+    <param name="circle_shape/theta" value="0.5" type="double"/> <!-- Random z-axis rotation -->
+    <!-- Env Sense -->
+    <param name="sensing/sense_range" value="$(arg sensor_max_range)" type="double"/> <!-- Sensory range -->
+    <param name="sensing/sense_rate" value="30.0" type="double"/> <!-- pcl pub rate -->
+  </node>
+
+
+
+  <!-- Drone Model -->
+  <!-- Gazebo Model -->
+  <include if="$(eval arg('drone_model') == 0)" file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+    <arg name="gazebo_gui" default="false"/>
+    <arg name="world" value=""/>
+    <arg name="mode" value=""/>
+    <arg name="x" value="0.0"/>
+    <arg name="y" value="0.0"/>
+    <arg name="z" value="1.0"/>
+  </include>
+  <!-- Simple Model -->
+  <node if="$(eval arg('drone_model') == 1)" pkg="planning_simulator" name="uav_sim" type="uav_sim" output="screen">	
+    <param name="init_pos_x" value="0.0" type="double"/>
+    <param name="init_pos_y" value="0.0" type="double"/>
+    <param name="init_pos_z" value="1.0" type="double"/>
+    <param name="planner_type" value="0" type="int"/>
+    <param name="color/a" value="1.0"/>    
+    <param name="color/r" value="0.0"/>        
+    <param name="color/g" value="0.0"/>        
+    <param name="color/b" value="0.0"/>       
+    <param name="robot_scale" value="1.0"/>
+    <param name="mesh_resource" value="$(find planning_simulator)/meshes/hummingbird.mesh"/>
+  </node>
+  <!-- Real Model -->
+  <group if="$(eval arg('drone_model') == 2)">
+    <include file="$(find drone_experiment)/launch/px4_base_onboard.launch">
+      <arg name="input_source" default="4"/> <!-- -1 Enable Mavros+sender, 0 Enable sender, 1 for Vicon 3 for gazebo ground truth, 5 SLAM  -->
+      <arg name="SLAM_source" default="4"/> <!--  0 for MonoVision(Worst)， 1 for RGBD(medium), 2 for StereoVision(Best), 3 fro Mono-IMU(medium), 4 for Stereo-IMU(Best)  -->
+      <arg name="fcu_url" default="/dev/ttyPX4:4000000"/> <!-- ttyPX4 with usb cable, or S4 with UART4 GPIO on orangepi4b -->
+      <arg name="gcs_url" default="udp-b://192.168.0.100:14555@14550"/> <!-- ip addr on board, it seem that u dont need to set anythin in QGC -->
+    </include>
+    <!-- run the ground_station_msg.cpp -->
+    <node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+    <!-- run the ground_station.cpp -->
+    <node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --">	
+      <param name="refresh_time" value="1.0" type="double"/>	<!-- release cycle -->
+      <param name="mission_type" value="0" type="int"/>	<!-- vision detection -->
+    </node>
+  </group>
+	
+  <!-- RVIZ -->
+  <arg name="visualization" default="true"/>
+  <group if="$(arg visualization)">
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find drone_experiment)/config/rviz_config/rviz_planning_map.rviz" />
+  </group>
+</launch>
+

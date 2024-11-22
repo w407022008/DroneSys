@@ -1,0 +1,58 @@
+common:
+    lid_topic: "/unilidar/cloud" 
+    imu_topic: "/unilidar/imu" 
+    con_frame: false # true: if you need to combine several(10 default) LiDAR frames together as one input
+    #con_frame_num: 1 # the number of frames combined. no one ues it, replace as 10 by default
+    #cut_frame: false # true: if you need to cut one LiDAR frame into several subframes. No one use it, replaced by cut_frame_init = false
+    #cut_frame_time_interval: 0.1 # should be integral fraction of 1 / LiDAR frequency   
+    #time_diff_lidar_to_imu: 0.0 # Time offset between LiDAR and IMU calibrated by other algorithms, e.g., LI-Init (find in Readme). No one use it, replaced by time_lag_IMU_wtr_lidar = 0.0
+
+preprocess:             # only receive pcl msg actually: li_initialization.cpp preprocess.cpp
+    timestamp_unit: 0   # the time unit in the PointCloud2 topic msg: 0-second, 1-mili, 2-micro, 3-nano.
+    lidar_type: 5       # enum LID_TYPE{AVIA = 1, VELO16, OUST64, HESAIxt32, UNILIDAR}
+    scan_line: 18       # num of scan line per frame
+    scan_rate: 10       # scan rate
+    blind: 0.2          # nearby blind range
+
+mapping:
+    imu_en: true            # use imu? would be
+    extrinsic_est_en: false # for aggressive motion, set this variable false
+    #imu_time_inte: 0.004    # = 1 / frequency of IMU. Related with prop_at_freq_of_imu but no one use it, replaced by 0.005
+    lidar_time_inte: 0.1    # = 1 / frequency of LiDAR. sampling time interval
+    satu_acc: 30.0 # the saturation value of IMU's acceleration. not related to the units
+    satu_gyro: 35 # the saturation value of IMU's angular velocity. not related to the units
+    acc_norm: 9.81          # actual measured norm of IMU's acceleration, used to scale acc against gravity
+    lidar_meas_cov: 0.01    # lidar measurement cov
+    acc_cov_output: 500
+    gyr_cov_output: 1000 
+    b_acc_cov: 0.0001 
+    b_gyr_cov: 0.0001 
+    imu_meas_acc_cov: 0.1 #0.1 # 2
+    imu_meas_omg_cov: 0.1 #0.1 # 2 
+    gyr_cov_input: 0.01 # for IMU as input model
+    acc_cov_input: 0.1 # for IMU as input model
+    plane_thr: 0.1          # the threshold for plane criteria, the smaller, the flatter a plane
+    match_s: 81             # 
+    ivox_grid_resolution: 2.0
+    gravity: [0.0, 0.0, -9.810] # [-0.30, 0.880, -9.76] # liosam [0.0, 9.810, 0.0] # # preknown gravity, use when imu_en is false or start from a non-stationary state
+    gravity_init: [0.0, 0.0, -9.810] # preknown gravity in the initial IMU frame for unstationary start or in the initial LiDAR frame for using without IMU
+    extrinsic_T: [ 0.007698, 0.014655, -0.00667] # ulhk # [-0.5, 1.4, 1.5] # utbm
+    extrinsic_R: [ 1, 0, 0,
+                   0, 1, 0,
+                   0, 0, 1 ] # ulhk 4 utbm 3
+    det_range: 300.0            # max detection range
+    fov_degree: 180
+    vel_cov: 20
+
+odometry: 
+    publish_odometry_without_downsample: false  # no one would like it to be true
+
+publish:
+    path_en: true                 # false: close the path output
+    scan_publish_en: true         # false: close all the point cloud output
+    scan_bodyframe_pub_en: false  # true: output the point cloud scans in IMU-body-frame
+
+pcd_save:
+    pcd_save_en: false
+    interval: -1                 # how many LiDAR frames saved in each pcd file; 
+                                 # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.

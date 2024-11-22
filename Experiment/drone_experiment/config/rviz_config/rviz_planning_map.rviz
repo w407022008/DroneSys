@@ -1,0 +1,509 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Drone_state1
+        - /Ground_Truth1
+        - /VFHB-Planner1
+        - /EGO-Planner1
+        - /Fast-Planner1
+      Splitter Ratio: 0.5616942644119263
+    Tree Height: 714
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /3D Nav Goal1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+      - /Current View1/Focal Point1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: local
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz/TF
+      Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Drone_Pose
+          Queue Size: 10
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Axes
+          Topic: /mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Buffer Length: 30
+          Class: rviz/Path
+          Color: 255; 25; 0
+          Enabled: true
+          Head Diameter: 0.30000001192092896
+          Head Length: 0.20000000298023224
+          Length: 0.30000001192092896
+          Line Style: Billboards
+          Line Width: 0.029999999329447746
+          Name: Drone_Path
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: None
+          Queue Size: 10
+          Radius: 0.029999999329447746
+          Shaft Diameter: 0.10000000149011612
+          Shaft Length: 0.10000000149011612
+          Topic: /drone_msg/drone_trajectory
+          Unreliable: false
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone_msg/robot_marker
+          Name: Marker
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Axes Length: 0.5
+          Axes Radius: 0.15000000596046448
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Reference_Pose
+          Queue Size: 10
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Axes
+          Topic: /drone_msg/control/ref_pose_rviz
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 25; 255; 0
+          Enabled: true
+          History Length: 1
+          Name: Joy_goal
+          Queue Size: 10
+          Radius: 0.30000001192092896
+          Topic: /joy/goal
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: Drone_state
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 3.7271833419799805
+            Min Value: -0.23733174800872803
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 186; 189; 182
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: global
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 10
+          Size (m): 0.05000000074505806
+          Style: Squares
+          Topic: /drone_msg/planning/global_pcl_sim
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 3.7271833419799805
+            Min Value: -0.23733174800872803
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 114; 159; 207
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: local
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Squares
+          Topic: /local_obs_pcl
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 3.7271833419799805
+            Min Value: -0.23733174800872803
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 114; 159; 207
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: local
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Squares
+          Topic: /drone_msg/planning/local_enu_pcl_sim
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: true
+      Name: Ground_Truth
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /histo_planner/optimized_trajectory
+          Name: opt_traj_yel
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /histo_planner/initial_trajectory
+          Name: init_traj_re
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 1.9500000476837158
+            Min Value: 0.3499999940395355
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: sensed
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /histo_planner/local_hist_pcl
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Class: rviz/Image
+          Enabled: true
+          Image Topic: /histo_planner/obs_image
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: Obs_histogram
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+        - Class: rviz/Image
+          Enabled: true
+          Image Topic: /histo_planner/his_image
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: Weighted_hist
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 204; 41; 204
+          Enabled: true
+          History Length: 1
+          Name: GuidePoint
+          Queue Size: 10
+          Radius: 0.20000000298023224
+          Topic: /histo_planner/guide
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 204; 0; 0
+          Enabled: true
+          History Length: 1
+          Name: ClosestPoint
+          Queue Size: 10
+          Radius: 0.20000000298023224
+          Topic: /histo_planner/closest
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 25; 255; 0
+          Enabled: true
+          History Length: 1
+          Name: Goal
+          Queue Size: 10
+          Radius: 0.30000001192092896
+          Topic: /histo_planner/goal
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: VFHB-Planner
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /ego_planner/a_star_list
+          Name: a_start
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /ego_planner/init_list
+          Name: init
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /ego_planner/optimal_list
+          Name: opt
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2.3499999046325684
+            Min Value: 0.550000011920929
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: inflated_obs
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Flat Squares
+          Topic: /ego_planner/grid_map/occupancy_inflate
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: EGO-Planner
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /fast_planner/initial_trajectory
+          Name: init
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /fast_planner/optimized_trajectory
+          Name: opt
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 1.9500000476837158
+            Min Value: -0.05000000074505806
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: inflated_obs
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Flat Squares
+          Topic: /fast_planner/sdf_map/inflate_cloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: true
+      Name: Fast-Planner
+  Enabled: true
+  Global Options:
+    Background Color: 255; 255; 255
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz_plugins/Goal3DTool
+      Topic: /drone_msg/planning/goal
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 22.626203536987305
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 1.294796109199524
+      Target Frame: world
+      Yaw: 3.130399703979492
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1792
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Obs_histogram:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000003d0000005f8fc020000000cfb0000001200530065006c0065006300740069006f006e000000006e000000b0000000b000fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000006e000003380000018200fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000002b40000012f000000b000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000001a004f00620073005f0068006900730074006f006700720061006d01000003b2000001530000002600fffffffb0000001a00570065006900670068007400650064005f00680069007300740100000511000001550000002600fffffffb0000001a004f00620073005f0068006900730074006f006700720061006d00000003c2000000b60000000000000000fb0000001a00570065006900670068007400650064005f00680069007300740000000484000000e20000000000000000000000010000028e000004f8fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000006e000004f80000013200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000b7000000060fc0100000002fb0000000800540069006d0065010000000000000b70000006dc00fffffffb0000000800540069006d0065010000000000000450000000000000000000000794000005f800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: true
+  Weighted_hist:
+    collapsed: false
+  Width: 2928
+  X: 144
+  Y: 54

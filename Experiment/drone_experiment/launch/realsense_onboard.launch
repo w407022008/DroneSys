@@ -1,0 +1,71 @@
+<launch>
+	<arg name="depth_enable" default="true"/>
+	<arg name="infra1_enable" default="true"/>
+	<arg name="infra2_enable" default="false"/>
+	<arg name="color_enable" default="false"/>
+	<arg name="raw_pointcloud" default="false"/>
+	<arg name="emitter_on_off" default="false"/>
+	<arg name="emitter_enabled" default="2"/>
+	<arg name="depth_fps" default="60"/>
+	<arg name="infra_fps" default="60"/>
+	<arg name="color_fps" default="60"/>
+	<arg name="initial_reset" default="true"/>
+	<arg name="sensor_max_range" default="4.0"/>
+
+	<arg name="with_mavros" default="true"/>
+	<arg name="with_transceiver" default="true"/>
+	<arg name="rate_hz" default="50.0"/>
+	<arg name="slam_driver" default="4"/>  <!-- 0 for vicon， 4 VINS-Fusion, 5 ORB-SLAM3,2 for gazebo,  1 for Cartographer, 3 Intel T265 dual camera -->
+	
+	<!-- ========================================= -->
+	<!-- realsense_camera sdk -->
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+		<arg name="enable_depth"        value="$(arg depth_enable)"/>
+		<arg name="enable_infra1"       value="$(arg infra1_enable)"/>
+		<arg name="enable_infra2"       value="$(arg infra2_enable)"/> 
+		<arg name="enable_color"        value="$(arg color_enable)"/>
+		<arg name="enable_pointcloud"   value="$(arg raw_pointcloud)"/>
+		<arg name="depth_fps"           value="$(arg depth_fps)"/>
+		<arg name="infra_fps"           value="$(arg infra_fps)"/>
+		<arg name="color_fps"           value="$(arg color_fps)"/>
+		<arg name="gyro_fps"            value="400"/>
+		<arg name="accel_fps"           value="250"/>
+		<arg name="enable_gyro"         value="true"/>
+		<arg name="enable_accel"        value="true"/>
+		<arg name="align_depth"         value="false"/>
+		<arg name="pointcloud_texture_stream" value="RS2_STREAM_ANY"/>
+		<arg name="filters"             value="decimation"/> <!-- colorizer,disparity,spatial,temporal,hole_filling,decimation,pointcloud,hdr_merge -->
+		<arg name="decimation_filter_magnitude" default="4"/>
+		<arg name="unite_imu_method"    value="linear_interpolation"/>
+		<arg name="initial_reset"       value="$(arg initial_reset)"/>
+		<arg name="clip_distance"       value="$(arg sensor_max_range)"/>
+		<arg name="emitter_on_off"      value="$(arg emitter_on_off)"/>
+	</include>
+	<!-- 0:Disable 1:Enable 2:AUTO -->
+	<rosparam param="/camera/stereo_module/emitter_enabled" subst_value="True">$(arg emitter_enabled)</rosparam>
+	<rosparam param="/camera/stereo_module/emitter_on_off" subst_value="True">$(arg emitter_on_off)</rosparam>
+
+    <!-- TF linking for Vins-SLAM -->
+	<group if="$(eval arg('slam_driver') == 4)">
+		<node pkg="tf" type="static_transform_publisher" name="tf_vio_camera" args="0.0 0.0 0.0 0 0 0 vio_camera camera_link 100"/>
+		<node pkg="tf" type="static_transform_publisher" name="tf_vio_imu" args="-0.005 0.025 0.0 0 0 1.5707963 base_link vio_imu 100"/>
+	</group>
+
+	<!-- run the px4_transceiver.cpp -->
+	<node if="$(arg with_transceiver)" pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen" >
+		<!--  0 for vicon， 1 for Cartographer, 2 for gazebo, 3 Intel T265 dual camera, 4 VINS-Fusion, 5 ORB-SLAM3  -->
+		<param name="input_source" value="$(arg slam_driver)" />
+		<param name="rate_hz" value="$(arg rate_hz)"/>
+	</node>
+
+    <!-- MAVROS -->
+    <node if="$(arg with_mavros)" pkg="mavros" type="mavros_node" name="mavros" output="screen" >
+        <param name="target_system_id" value="1" />
+        <param name="target_component_id" value="1" />
+        <rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_pluginlists.yaml" />
+        <rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_config.yaml" />
+    </node> 
+	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
+</launch>
+

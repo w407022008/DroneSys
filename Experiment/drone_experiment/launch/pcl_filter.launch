@@ -1,0 +1,84 @@
+<launch>
+	<arg name="depth_image_proc" default="false"/>
+
+	<arg name="object_link_name" default="/vio_camera"/>
+	<arg name="frame_name" default="/world"/>
+	<arg name="sensor_max_range" default="40.0"/>
+	<arg name="max_ground_height" default="0.1" />
+	<arg name="resolution" default="0.1" />
+	<arg name="data_type" default="3" /> <!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
+	<!-- if data_type < 3 -->
+	<arg name="is_rgbd" default="0" /> <!-- 0: 3dLidar; 1: rgbd camera-->
+	<arg name="points_out" default="/camera/local_pointclouds" />
+	<arg name="rgb_camera_info" value="/camera/color/camera_info"/>
+	<arg name="rgb_img_rect" value="/camera/color/image_raw"/>  <!--Rectified color image-->
+	<!-- if data_type == 3 -->
+	<arg name="cut_edge" default="1" />
+	<arg name="interval" default="1" />
+	<arg name="dist_min" default="0.5" />
+	<arg name="dep_camera_info" default="/depth/camera_info/repub"/>
+	<arg name="dep_img_rect" default="/depth/depth_16bit/repub" />
+	<arg name="inf_img_rect" default="/cam0/image_rect/repub" />
+	<arg name="dep_infra_sync" default="false" />
+	<arg name="dep_pcl_out" default="/local_obs_pcl" />
+	
+	<!-- depth to pcl : Points_filter.cpp -->
+	<node unless="$(arg depth_image_proc)" pkg="points_worker" name="points_filter_main" type="points_filter_main" output="screen">
+		<param name="points_filter/frame_name" value="$(arg frame_name)" type="string"/>
+		<param name="points_filter/object_link_name" value="$(arg object_link_name)" type="string"/>
+		
+		<!-- Sensory distance, considering only obstacles within sensory distance -->
+		<param name="points_filter/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>
+		<param name="points_filter/ground_removal" value="false" type="bool"/>
+		<param name="points_filter/radiusoutlierremoval" value="true" type="bool"/>
+		<param name="points_filter/ror_radius" value="$(arg resolution)" type="double"/>
+		<param name="points_filter/ror_nbs" value="20" type="int"/>
+		<param name="points_filter/downsampling" value="true" type="bool"/>
+		<param name="points_filter/spatial" value="false" type="bool"/>
+		<param name="points_filter/concatenate" value="true" type="bool"/>
+		<param name="points_filter/ground_height" value="$(arg max_ground_height)" type="double"/>
+		<param name="points_filter/resolution" value="$(arg resolution)" type="double"/>
+		
+		<!-- 1:<sensor_msgs::LaserScan>,2:<sensor_msgs::PointCloud2>,3:<sensor_msgs::Image> -->
+		<param name="points_filter/data_type" value="$(arg data_type)" type="int"/>
+		
+		<!-- if data_type < 3 -->
+		<param name="points_filter/is_lidar" value="$(eval arg('is_rgbd') == 0)" type="bool"/>
+		<param name="points_filter/is_rgbd" value="$(eval arg('is_rgbd') == 1)" type="bool"/>
+		<remap from="/points_filter/sensor" to="$(arg points_out)" />
+		
+		<!-- if data_type == 3 -->
+		<remap from="/camera/infra1/image_rect_raw" to="$(arg inf_img_rect)" />
+		<remap from="/camera/depth/image_rect_raw" to="$(arg dep_img_rect)" />
+		<remap from="/camera/depth/camera_info" to="$(arg dep_camera_info)" />
+		<remap from="/local_obs_pcl" to="$(arg dep_pcl_out)" />
+		<param name="points_filter/dist_min" value="$(arg dist_min)" type="double"/>
+		<param name="points_filter/cut_edge" value="$(arg cut_edge)" type="int"/>
+		<param name="points_filter/interval" value="$(arg interval)" type="int"/>
+	</node>
+	
+	<group if="$(arg depth_image_proc)">
+		<node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
+
+		<!-- Convert depth from mm (in uint16) to meters -->
+		<node if="false" pkg="nodelet" type="nodelet" name="convert_metric" args="load depth_image_proc/convert_metric standalone_nodelet">
+			<remap from="image_raw" to="$(arg dep_img_rect)"/>
+			<remap from="image" to="$(arg dep_img_rect)"/>
+		</node>
+		<!-- Construct point cloud of the rgb and depth topics -->
+		<node if="false" pkg="nodelet" type="nodelet" name="points_xyzrgb" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
+			<remap from="rgb/camera_info" to="$(arg rgb_camera_info)" />
+			<remap from="rgb/image_rect_color" to="$(arg rgb_img_rect)"/>
+			<remap from="depth_registered/image_rect" to="$(arg dep_img_rect)"/>
+			<remap from="depth_registered/points" to="$(arg out_cloud)"/>
+		</node>
+		<!-- Construct point cloud of the depth topics -->
+		<node pkg="nodelet" type="nodelet" name="nodelet1"
+			args="load depth_image_proc/point_cloud_xyz nodelet_manager">
+			<remap from="camera_info" to="$(arg dep_camera_info)"/>
+			<remap from="image_rect" to="$(arg dep_img_rect)"/>
+			<remap from="points" to="$(arg points_out)"/>
+		</node>
+	</group>
+	
+</launch>

@@ -1,0 +1,84 @@
+<launch>
+	<arg name="input_source" default="1"/> <!-- -1 Enable Mavros+sender, 0 Only sender, 1 for Vicon, 4 VINS-Fusion, 5 SLAM  -->
+
+	<!-- only mavros -->
+	<group if="$(eval arg('input_source') == -1)">
+		<node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+			<param name="target_system_id" value="1" />
+			<param name="target_component_id" value="1" />
+			<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_pluginlists.yaml" />
+			<rosparam command="load" file="$(find drone_experiment)/config/mavros_config/px4_config.yaml" />
+		</node> 
+		<!-- run the px4_transceiver.cpp -->
+		<node pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen" >
+			<!--  0 for vicon， 1 for Cartographer, 2 for gazebo, 3 Intel T265 dual camera, 4 VINS-Fusion, 5 ORB-SLAM3  -->
+			<param name="input_source" value="4" />
+			<param name="rate_hz" value="50.0"/>
+		</node>
+	</group>
+
+    <!-- vrpn with mavros -->
+	<group if="$(eval arg('input_source') == 1)">
+		<include file="$(find drone_experiment)/launch/Optitrack_onboard.launch">
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
+			<arg name="rate_hz" value="50.0"/>
+		</include>
+	</group>
+
+    <!-- VINS-Fusion with mavros -->
+	<group if="$(eval arg('input_source') == 4)">
+		<include file="$(find drone_experiment)/launch/realsense_onboard.launch">
+			<arg name="emitter_enabled" default="1"/><!-- 0:Disable 1:Enable 2:AUTO -->
+			<arg name="emitter_on_off" default="true"/>
+			<arg name="infra1_enable" default="true"/>
+			<arg name="depth_fps" default="60"/>
+			<arg name="infra_fps" default="60"/>
+			<arg name="color_fps" default="60"/>		
+			
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
+			<arg name="rate_hz" value="50.0"/>
+			
+			<arg name="slam_driver" default="4"/><!-- 4 VINS-Fusion, 5 ORB-SLAM3  -->
+		</include>
+		<include file="$(find drone_experiment)/launch/slam/vins_fusion/vins_fusion.launch">
+			<arg name="loop_closure" value="false"/>
+			<arg name="gps_global" value="false"/>
+			<arg name="onboard" default="true"/>
+			<arg name="rviz" value="false"/>
+		</include>
+	</group>
+
+    <!-- orb-slam3 with mavros -->
+	<group if="$(eval arg('input_source') == 5)">
+		<include file="$(find drone_experiment)/launch/realsense_onboard.launch">			
+			<arg name="emitter_enabled" default="1"/><!-- 0:Disable 1:Enable 2:AUTO -->
+			<arg name="emitter_on_off" default="true"/>
+			<arg name="infra1_enable" default="true"/>
+			<arg name="infra2_enable" default="true"/>
+			<arg name="depth_fps" default="60"/>
+			<arg name="infra_fps" default="60"/>
+			<arg name="color_fps" default="60"/>	
+
+			<arg name="with_mavros" value="true"/>
+			<arg name="with_transceiver" value="true"/>
+			<arg name="rate_hz" value="50.0"/>
+			
+			<arg name="slam_driver" default="5"/><!-- 4 VINS-Fusion, 5 ORB-SLAM3  -->
+		</include>
+		<include file="$(find drone_experiment)/launch/slam/orb_slam3/orb_slam_stereo_inertial.launch">
+			<arg name="onboard" value="true"/>
+			<arg name="rviz" value="false"/>
+		</include>
+	</group>
+
+
+
+
+	<!-- run the px4_commander.cpp -->
+	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen"/>
+	
+	<rosparam command="load" file="$(find drone_experiment)/../../device.yaml" />
+</launch>
+

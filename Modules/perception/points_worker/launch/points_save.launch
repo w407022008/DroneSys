@@ -1,0 +1,13 @@
+<launch>
+
+	<arg name="pcd_file_save_at" default="~/Desktop/test.pcd"/>
+	<arg name="pcl_topic_in" default="/local_obs_pcl" />
+	
+	<!-- points to pcd : Points_saver.cpp -->
+	<node pkg="points_worker" name="points_saver_node" type="points_saver_node" output="screen">
+		<param name="pcd_file_save_at" value="$(arg pcd_file_save_at)" type="string"/>
+		<param name="pcl_topic_in" value="$(arg pcl_topic_in)" type="string"/>
+		
+	</node>
+	
+</launch>

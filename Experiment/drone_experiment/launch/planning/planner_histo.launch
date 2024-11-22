@@ -1,0 +1,104 @@
+<launch>
+	<arg name="sensor_max_range" default="3.0"/>
+	<arg name="forbidden_range" default="0.2"/>
+	<arg name="max_tracking_error" default="0.2"/>
+	<arg name="yaw_rate" default="2.0"/>
+	<arg name="max_vel" default="2.0" />
+	<arg name="max_acc" default="1.0" />
+
+	<!-- GeoFence -->
+	<arg name="geo_x_min" default="-15.2" />
+	<arg name="geo_x_max" default="15.2" />
+	<arg name="geo_y_min" default="-15.2" />
+	<arg name="geo_y_max" default="15.2" />
+	<arg name="geo_z_min" default="0.1" />
+	<arg name="geo_z_max" default="4.2" />
+
+	<!-- goal point topic sub-->
+	<arg name="goal_topic" value="/drone_msg/planning/goal" />
+	<!-- pcl with odom topic sub **or** camera -->
+	<arg name="odom_topic" value="/drone_msg/drone_state" />
+	<arg name="pcl_topic" value="/drone_msg/planning/local_enu_pcl_sim" />
+	<!-- traj topic pub -->
+	<arg name="traj_topic" value="/drone_msg/control_command" />
+
+	<!-- Planner -->
+	<node pkg="histo_planner" name="histo_planner" type="histo_planner_main" output="screen">
+		<remap from="/histo_planner/local_pcl" to="$(arg pcl_topic)" />
+		<remap from="/histo_planner/goal" to="$(arg goal_topic)" />
+		<remap from="/histo_planner/drone_state" to="$(arg odom_topic)"/>
+		<remap from="/histo_planner/control_command" to="$(arg traj_topic)"/>
+		
+		<param name="histo_planner/sim_mode" value="true" type="bool"/>             <!-- True: if use Gazebo Drone; False: if use Real Drone -->
+		<param name="histo_planner/path_tracking_enable" value="true" type="bool"/>  <!-- Whether to enable traj tracking and pub pos reference -->
+		
+		<!-- Core Param -->
+		<param name="histo_planner/forbidden_range" value="$(arg forbidden_range)" type="double"/>	<!-- Inflation parameter, typically set to the radius of the drone or greater -->
+		<param name="histo_planner/max_tracking_error" value="$(arg max_tracking_error)" type="double"/>						<!-- Safe distance -->
+		<param name="histo_planner/sensor_max_range" value="$(arg sensor_max_range)" type="double"/>	<!-- Sensory distance, considering only obstacles within the range -->
+		<param name="histo_planner/range_near_start" value="$(arg forbidden_range)" type="double"/>	<!-- start zone: do nothing -->
+		<param name="histo_planner/range_near_end" value="0.05" type="double"/>							<!-- end zone: reach the goal? -->
+		<param name="histo_planner/time_traj_interval" value="0.4" type="double"/>						<!-- the bigger the more control points (limited) -->
+		<param name="histo_planner/time_to_replan" value="10.0" type="double"/>							<!-- time_to_replan -->
+		<param name="histo_planner/ground_height" value="$(arg geo_z_min)" type="double"/>			<!-- virtual ground -->
+		<param name="histo_planner/ceil_height" value="$(arg geo_z_max)" type="double"/>				<!-- virtual ceil -->
+
+		<param name="histo_planner/is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice Histogram mode below -->
+		<param name="histo_planner/fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
+		<!-- Whether use joy control:  0：disable, 1：control in Body Frame，2：control in ENU Frame 3: control in Joystick Frame -->
+		<param name="histo_planner/control_from_joy" value="3" type="int"/>
+		<param name="histo_planner/joy_goal_xy_max" value="4.0" type="double"/>		<!-- Horizontal furthest distance (when joy control) -->
+		<param name="histo_planner/joy_goal_z_max" value="1.0" type="double"/>		<!-- Vertical furthest distance (when joy control) -->
+		<!-- Yaw auto-hold? -->
+		<param name="histo_planner/yaw_tracking_mode" value="1" type="int"/>			<!-- 0: Disable, 1: Auto-tracking, 2: Manually-tracking -->
+		<param name="histo_planner/spinning_once_first" value="false" type="bool"/>  <!-- Spinning once turn first before starting tracking a new traj -->
+		<param name="histo_planner/yaw_rate" value="$(arg yaw_rate)" type="double"/>             <!-- Maximum steering speed (whenever auto-hold or joy control) -->
+		<param name="histo_planner/time_forward_facing_toward" value="2.0" type="double"/>  <!-- Camera facing towards the waypoint n second later, The lower speed the higher value-->
+		<!-- Goal Regenerate, when it is unreachable ? -->
+			<!-- 1: Move the original goal in the direction of the falling gradient of the obstacle map! [Not recommended] -->
+			<!-- 2: Searching within the cylindrical space centred on the original goal, first searching for positions closer to cur_pos and the goal.  [Not recommended] -->
+			<!-- 3: Back to the feasible position along the trajectory -->
+		<param name="histo_planner/goal_regenerate_mode" value="3" type="int"/>
+		<param name="histo_planner/min_goal_height" value="1.0" type="double"/>
+		
+		<!-- Histogram -->
+		<param name="histogram/h_cnt" value="60" type="double"/>
+		<param name="histogram/v_cnt" value="20" type="double"/>
+		<param name="histogram/min_vel_default" value="0.2" type="double"/>
+		<param name="histogram/max_planning_vel" value="$(arg max_vel)" type="double"/>            <!-- Maximum speed, the smaller the setting the safer -->
+		<param name="histogram/isCylindrical" value="false" type="bool"/>          <!-- if 3D, histogram with cylindrical histogram -->
+		<param name="histogram/std_normal" value="0.6" type="double"/>        <!--Std of normal distribution function weights, for Cylindrical Histogram -->
+		<param name="histogram/isSpherical" value="true" type="bool"/>             <!-- if 3D, histogram with spherical histogram -->
+		<param name="histogram/min_fun_cos_value" value="0.3" type="double"/>      <!-- Minimum of cos distribution, for Spherical Histogram; The higher the value the more likely the turn -->
+		<param name="histogram/fun_cos_pow" value="1.0" type="double"/>        <!-- exponent of cos distribution for Spherical Histogram -->
+		
+		<!-- B-Spline -->
+		<param name="bspline/limit_vel" value="$(arg max_vel)" type="double"/>
+		<param name="bspline/limit_acc" value="$(arg max_acc)" type="double"/>
+
+		<!-- GeoFence -->
+		<param name="geo_fence/x_min" value="$(arg geo_x_min)" type="double"/>
+		<param name="geo_fence/x_max" value="$(arg geo_x_max)" type="double"/>
+		<param name="geo_fence/y_min" value="$(arg geo_y_min)" type="double"/>
+		<param name="geo_fence/y_max" value="$(arg geo_y_max)" type="double"/>
+		<param name="geo_fence/z_min" value="$(arg geo_z_min)" type="double"/>
+		<param name="geo_fence/z_max" value="$(arg geo_z_max)" type="double"/>
+				
+		<!-- Optimization -->
+		<param name="optimization/lamda_smooth" value="0.1" type="double"/>                   <!-- smoothness jerk -->
+		<param name="optimization/lamda_obs" value="100.0" type="double"/>                       <!-- distance -->
+		<param name="optimization/lamda_feas" value="0.01" type="double"/>                      <!-- feasibility vel&acc -->
+		<param name="optimization/lamda_end" value="0.0" type="double"/>                       <!-- endpoint pos -->
+		<param name="optimization/lamda_tensile" value="30.0" type="double"/>                  <!-- tensile strength -->
+		<param name="optimization/ratio" value="0.1" type="double"/>                           <!-- bend to tensile strength, the smaller the softer -->
+		<param name="optimization/ratio_limit" value="1.0" type="double"/>                     <!-- max grediant gain for dist_grad, if dist smaller than dist0 -->
+		<param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>	          <!-- Maximum speed, used for optimization -->
+		<param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>	          <!-- Maximum accel, used for optimization -->
+		<param name="optimization/algorithm" value="40" type="int"/>                           <!-- Opt Alg 40: SLSQP(constrained), 24 NLOPT_LD_MMA(Method of Moving Asymptotes) -->
+		<param name="optimization/max_iteration_num" value="200" type="int"/>                  <!-- Maximum number of optimization iterations -->
+		<param name="optimization/min_iter_err" value="1e-6" type="double"/>                   <!-- Minimum optimization iteration error -->
+		<param name="optimization/max_iter_time" value="0.003" type="double"/>                   <!-- Maximum optimization iteration time -->
+		<param name="optimization/order" value="3" type="int"/>                               <!-- Orders of a spline -->
+	</node>
+
+</launch>

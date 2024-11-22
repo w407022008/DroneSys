@@ -1,0 +1,49 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/cx/sim_ws/wuhan/fuel_ref/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/active_perception/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/bspline/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/bspline_opt/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/exploration_manager/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/kr_mav_controllers/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/kr_mav_manager/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/kr_quadrotor_simulator/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/interfaces/kr_serial_interface/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/trackers/kr_trackers/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/kr_mav_control/trackers/kr_trackers_manager/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/utils/lkh_tsp_solver/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/local_sensing/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/mrsl_quadrotor/mrsl_quadrotor_simulator/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/mrsl_quadrotor/mrsl_quadrotor_utils/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/Utils/multi_map_server/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/object_det/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/path_searching/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/plan_env/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/plan_manage/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/poly_traj/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/Utils/pose_utils/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/Utils/quadrotor_msgs/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/sem_to_cloud/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/so3_control/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/so3_disturbance_generator/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/so3_quadrotor_simulator/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/fuel_planner/traj_utils/include/**",
+        "/home/cx/sim_ws/wuhan/fuel_ref/src/FUEL/uav_simulator/Utils/uav_utils/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
