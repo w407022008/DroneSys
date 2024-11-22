@@ -62,11 +62,13 @@ void Estimator::clearState()
         pre_integrations[i] = nullptr;
     }
 
-    for (int i = 0; i < NUM_OF_CAM; i++)
-    {
-        tic[i] = Vector3d::Zero();
-        ric[i] = Matrix3d::Identity();
-    }
+    // for (int i = 0; i < NUM_OF_CAM; i++)
+    // {
+    //     tic[i] = Vector3d::Zero();
+    //     ric[i] = Matrix3d::Identity();
+    // }
+    tic.clear();
+    ric.clear();
 
     first_imu = true,
     sum_of_back = 0;

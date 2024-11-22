@@ -31,12 +31,13 @@ catkin_make --source Modules/control/rpg_mpc --build build/control/rpg_mpc
 ## IO & Perception
 catkin_make --source Modules/perception/points_worker --build build/perception/points_worker
 #catkin_make --source Modules/perception/OptiTrack --build build/perception/OptiTrack
+catkin_make --source Modules/perception/opencv_sgbm --build build/perception/opencv_sgbm
 #catkin_make --source Modules/perception/semi_global_matching --build build/perception/semi_global_matching
 #catkin_make --source Modules/perception/elas_stereo_matching --build build/perception/elas_stereo_matching
 #catkin_make --source Modules/perception/state_predictor --build build/perception/state_predictor
 
 ## SLAM
-bash Tools/slam/compile_point_lio.sh
+#bash Tools/slam/compile_point_lio.sh
 bash Tools/slam/compile_openvins.sh
 bash Tools/slam/compile_vins.sh
 bash Tools/slam/compile_msckf_vio.sh
@@ -45,6 +46,7 @@ bash Tools/slam/compile_msckf_vio.sh
 ## Planning
 #catkin_make --source Modules/planning/FastPlanner --build build/planning/FastPlanner -j2
 catkin_make --source Modules/planning/ego-planner --build build/planning/ego-planner -j2
+catkin_make --source Modules/planning/fuel_planner --build build/planning/fuel_planner -j2
 catkin_make --source Modules/planning/histo-planner --build build/planning/histo-planner -j2
 catkin_make --source Modules/planning/polynomial_planning --build build/planning/polynomial_planning
 
