@@ -1,0 +1,8 @@
+prefix=/home/sique/src/DroneSys_sim/install_isolated
+
+Name: quadrotor_common
+Description: Description of quadrotor_common
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lquadrotor_common
+Requires: eigen_catkin geometry_msgs nav_msgs quadrotor_msgs roscpp

@@ -1,0 +1,13 @@
+# Target labels
+ sitl_gazebo-classic
+# Source files and their labels
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic-complete.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-install.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-mkdir.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-download.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-update.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-patch.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-configure.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-build.rule

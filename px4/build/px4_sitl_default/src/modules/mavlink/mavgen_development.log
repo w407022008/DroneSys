@@ -1,0 +1,16 @@
+Validation skipped for /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/development.xml.
+Parsing /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/development.xml
+Validation skipped for /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/common.xml.
+Parsing /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/common.xml
+Validation skipped for /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/standard.xml.
+Parsing /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/standard.xml
+Validation skipped for /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/minimal.xml.
+Parsing /home/sique/src/PX4_v1.14.2/src/modules/mavlink/mavlink/message_definitions/v1.0/minimal.xml
+Merged enum MAV_CMD
+Merged enum MAV_CMD
+Found 234 MAVLink message types in 4 XML files
+Generating C implementation in directory /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/mavlink/development
+Generating C implementation in directory /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/mavlink/common
+Generating C implementation in directory /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/mavlink/standard
+Generating C implementation in directory /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/mavlink/minimal
+Copying fixed headers for protocol 2.0 to /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/mavlink

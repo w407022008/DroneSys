@@ -1,0 +1,8 @@
+prefix=/home/sique/src/DroneSys_sim/devel_isolated/active_perception
+
+Name: active_perception
+Description: Description of active_perception
+Version: 0.0.0
+Cflags: -I/home/sique/src/DroneSys_sim/Modules/planning/fuel_planner/active_perception/include
+Libs: -L${prefix}/lib -lactive_perception
+Requires: plan_env bspline path_searching

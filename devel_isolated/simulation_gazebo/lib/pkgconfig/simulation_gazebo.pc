@@ -1,0 +1,8 @@
+prefix=/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo
+
+Name: simulation_gazebo
+Description: Description of simulation_gazebo
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp rospy gazebo_ros std_msgs message_runtime geometry_msgs

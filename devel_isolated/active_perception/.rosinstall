@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/sique/src/DroneSys_sim/devel_isolated/active_perception/setup.sh

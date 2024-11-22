@@ -1,0 +1,13 @@
+# Target labels
+ mavsdk_tests
+# Source files and their labels
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/mavsdk_tests
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/mavsdk_tests.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/mavsdk_tests-complete.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-install.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-mkdir.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-download.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-update.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-patch.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-configure.rule
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/mavsdk_tests/mavsdk_tests-build.rule

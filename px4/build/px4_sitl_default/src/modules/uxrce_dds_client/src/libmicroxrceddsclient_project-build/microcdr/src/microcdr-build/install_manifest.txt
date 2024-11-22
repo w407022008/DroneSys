@@ -1,0 +1,8 @@
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/lib/libmicrocdr.a
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/include/ucdr/microcdr.h
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/include/ucdr/visibility.h
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/include/ucdr/config.h
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/share/microcdr/cmake/microcdrTargets.cmake
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/share/microcdr/cmake/microcdrTargets-relwithdebinfo.cmake
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/share/microcdr/cmake/microcdrConfig.cmake
+/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/temp_install/microcdr-2.0.0/share/microcdr/cmake/microcdrConfigVersion.cmake

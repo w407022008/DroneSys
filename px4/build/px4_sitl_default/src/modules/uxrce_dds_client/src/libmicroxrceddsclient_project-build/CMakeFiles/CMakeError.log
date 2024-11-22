@@ -1,0 +1,48 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_2fd3f && [1/2] Building C object CMakeFiles/cmTC_2fd3f.dir/src.c.o
+[2/2] Linking C executable cmTC_2fd3f
+FAILED: cmTC_2fd3f 
+: && /usr/lib/ccache/cc -I/home/sique/src/PX4_v1.14.2/boards/px4/sitl/src -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/common/include -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/lib -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/generic/generic/include -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/common/include -I/home/sique/src/PX4_v1.14.2/platforms/common -I/home/sique/src/PX4_v1.14.2/platforms/common/include -I/home/sique/src/PX4_v1.14.2/src -I/home/sique/src/PX4_v1.14.2/src/include -I/home/sique/src/PX4_v1.14.2/src/lib -I/home/sique/src/PX4_v1.14.2/src/lib/matrix -I/home/sique/src/PX4_v1.14.2/src/modules -I/home/sique/src/PX4_v1.14.2/platforms/posix/include -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Install/include -DCMAKE_HAVE_LIBC_PTHREAD  -fuse-ld=gold CMakeFiles/cmTC_2fd3f.dir/src.c.o  -o cmTC_2fd3f   && :
+CMakeFiles/cmTC_2fd3f.dir/src.c.o:src.c:function main: error: undefined reference to 'pthread_create'
+CMakeFiles/cmTC_2fd3f.dir/src.c.o:src.c:function main: error: undefined reference to 'pthread_detach'
+CMakeFiles/cmTC_2fd3f.dir/src.c.o:src.c:function main: error: undefined reference to 'pthread_join'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_893dd && [1/2] Building C object CMakeFiles/cmTC_893dd.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_893dd
+FAILED: cmTC_893dd 
+: && /usr/lib/ccache/cc -I/home/sique/src/PX4_v1.14.2/boards/px4/sitl/src -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/common/include -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/lib -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/generic/generic/include -I/home/sique/src/PX4_v1.14.2/platforms/posix/src/px4/common/include -I/home/sique/src/PX4_v1.14.2/platforms/common -I/home/sique/src/PX4_v1.14.2/platforms/common/include -I/home/sique/src/PX4_v1.14.2/src -I/home/sique/src/PX4_v1.14.2/src/include -I/home/sique/src/PX4_v1.14.2/src/lib -I/home/sique/src/PX4_v1.14.2/src/lib/matrix -I/home/sique/src/PX4_v1.14.2/src/modules -I/home/sique/src/PX4_v1.14.2/platforms/posix/include -I/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Install/include -DCHECK_FUNCTION_EXISTS=pthread_create  -fuse-ld=gold CMakeFiles/cmTC_893dd.dir/CheckFunctionExists.c.o  -o cmTC_893dd  -lpthreads && :
+/usr/bin/ld.gold: error: cannot find -lpthreads
+CMakeFiles/cmTC_893dd.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:function main: error: undefined reference to 'pthread_create'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+

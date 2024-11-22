@@ -1,0 +1,8 @@
+prefix=/home/sique/src/DroneSys_sim/devel_isolated/bspline_opt
+
+Name: bspline_opt
+Description: Description of bspline_opt
+Version: 0.0.0
+Cflags: -I/home/sique/src/DroneSys_sim/Modules/planning/fuel_planner/bspline_opt/include
+Libs: -L${prefix}/lib -lbspline_opt
+Requires: plan_env active_perception

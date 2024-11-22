@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/CMakeFiles/libmicroxrceddsclient_project"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/CMakeFiles/libmicroxrceddsclient_project.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/CMakeFiles/libmicroxrceddsclient_project-complete.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-install.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-mkdir.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-download.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-update.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-patch.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-configure.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/uxrce_dds_client/src/libmicroxrceddsclient_project-stamp/libmicroxrceddsclient_project-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"libmicroxrceddsclient_project"
+		],
+		"name" : "libmicroxrceddsclient_project"
+	}
+}

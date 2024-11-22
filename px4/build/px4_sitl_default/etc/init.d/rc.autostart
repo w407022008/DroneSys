@@ -1,0 +1,491 @@
+#
+#
+#  THIS FILE IS AUTO-GENERATED. DO NOT EDIT!
+#
+#
+# SYS_AUTOSTART = 0 means no autostart (default)
+#
+# AUTOSTART PARTITION:
+#  0    ..   999        Reserved (historical)
+#  1000 ..   1999       Simulation setups
+#  2000 ..   2999       Standard planes
+#  3000 ..   3999       Flying wing
+#  4000 ..   4999       Quadrotor x
+#  5000 ..   5999       Quadrotor +
+#  6000 ..   6999       Hexarotor x
+#  7000 ..   7999       Hexarotor +
+#  8000 ..   8999       Octorotor x
+#  9000 ..   9999       Octorotor +
+# 10000 ..  10999       Quadrotor Wide arm / H frame
+# 11000 ..  11999       Hexa Cox
+# 12000 ..  12999       Octo Cox
+# 13000 ..  13999       VTOL
+# 14000 ..  14999       Tri Y
+# 17000 ..  17999       Autogyro
+
+
+set AIRFRAME none
+
+# GROUP: Airship
+
+#
+# Cloudship
+if param compare SYS_AUTOSTART 2507
+then
+	set AIRFRAME 2507_cloudship
+fi
+
+
+# GROUP: Autogyro
+
+#
+# ThunderFly Auto-G2
+if param compare SYS_AUTOSTART 17002
+then
+	set AIRFRAME 17002_TF-AutoG2
+fi
+
+#
+# ThunderFly TF-G2
+if param compare SYS_AUTOSTART 17003
+then
+	set AIRFRAME 17003_TF-G2
+fi
+
+
+# GROUP: Balloon
+
+#
+# ThunderFly balloon TF-B1
+if param compare SYS_AUTOSTART 18001
+then
+	set AIRFRAME 18001_TF-B1
+fi
+
+
+# GROUP: Dodecarotor cox
+
+#
+# Generic Dodecarotor cox geometry
+if param compare SYS_AUTOSTART 24001
+then
+	set AIRFRAME 24001_dodeca_cox
+fi
+
+
+# GROUP: Helicopter
+
+#
+# Generic Helicopter (Tail ESC)
+if param compare SYS_AUTOSTART 16001
+then
+	set AIRFRAME 16001_helicopter
+fi
+
+
+# GROUP: Hexarotor +
+
+#
+# Generic Hexarotor + geometry
+if param compare SYS_AUTOSTART 7001
+then
+	set AIRFRAME 7001_hexa_+
+fi
+
+
+# GROUP: Hexarotor Coaxial
+
+#
+# Generic Hexarotor coaxial geometry
+if param compare SYS_AUTOSTART 11001
+then
+	set AIRFRAME 11001_hexa_cox
+fi
+
+
+# GROUP: Hexarotor x
+
+#
+# Generic Hexarotor x geometry
+if param compare SYS_AUTOSTART 6001
+then
+	set AIRFRAME 6001_hexa_x
+fi
+
+#
+# UVify Draco-R
+if param compare SYS_AUTOSTART 6002
+then
+	set AIRFRAME 6002_draco_r
+fi
+
+
+# GROUP: Octorotor +
+
+#
+# Generic Octocopter + geometry
+if param compare SYS_AUTOSTART 9001
+then
+	set AIRFRAME 9001_octo_+
+fi
+
+
+# GROUP: Octorotor Coaxial
+
+#
+# Generic 10" Octo coaxial geometry
+if param compare SYS_AUTOSTART 12001
+then
+	set AIRFRAME 12001_octo_cox
+fi
+
+
+# GROUP: Octorotor x
+
+#
+# Generic Octocopter X geometry
+if param compare SYS_AUTOSTART 8001
+then
+	set AIRFRAME 8001_octo_x
+fi
+
+
+# GROUP: Quadrotor +
+
+#
+# Generic 10" Quad + geometry
+if param compare SYS_AUTOSTART 5001
+then
+	set AIRFRAME 5001_quad_+
+fi
+
+
+# GROUP: Quadrotor H
+
+#
+# Reaper 500 Quad
+if param compare SYS_AUTOSTART 4040
+then
+	set AIRFRAME 4040_reaper
+fi
+
+#
+# BetaFPV Beta75X 2S Brushless Whoop
+if param compare SYS_AUTOSTART 4041
+then
+	set AIRFRAME 4041_beta75x
+fi
+
+
+# GROUP: Quadrotor x
+
+#
+# Generic Quadcopter
+if param compare SYS_AUTOSTART 4001
+then
+	set AIRFRAME 4001_quad_x
+fi
+
+#
+# S500 Generic
+if param compare SYS_AUTOSTART 4014
+then
+	set AIRFRAME 4014_s500
+fi
+
+#
+# Holybro S500
+if param compare SYS_AUTOSTART 4015
+then
+	set AIRFRAME 4015_holybro_s500
+fi
+
+#
+# PX4 Vision Dev Kit v1
+if param compare SYS_AUTOSTART 4016
+then
+	set AIRFRAME 4016_holybro_px4vision
+fi
+
+#
+# NXP HoverGames
+if param compare SYS_AUTOSTART 4017
+then
+	set AIRFRAME 4017_nxp_hovergames
+fi
+
+#
+# Holybro X500 V2
+if param compare SYS_AUTOSTART 4019
+then
+	set AIRFRAME 4019_x500_v2
+fi
+
+#
+# PX4 Vision Dev Kit v1.5
+if param compare SYS_AUTOSTART 4020
+then
+	set AIRFRAME 4020_holybro_px4vision_v1_5
+fi
+
+#
+# Generic 250 Racer
+if param compare SYS_AUTOSTART 4050
+then
+	set AIRFRAME 4050_generic_250
+fi
+
+#
+# HolyBro QAV250
+if param compare SYS_AUTOSTART 4052
+then
+	set AIRFRAME 4052_holybro_qav250
+fi
+
+#
+# Holybro Kopis 2
+if param compare SYS_AUTOSTART 4053
+then
+	set AIRFRAME 4053_holybro_kopis2
+fi
+
+#
+# Advanced Technology Labs (ATL) Mantis EDU
+if param compare SYS_AUTOSTART 4061
+then
+	set AIRFRAME 4061_atl_mantis_edu
+fi
+
+#
+# UVify IFO
+if param compare SYS_AUTOSTART 4071
+then
+	set AIRFRAME 4071_ifo
+fi
+
+#
+# UVify IFO
+if param compare SYS_AUTOSTART 4073
+then
+	set AIRFRAME 4073_ifo-s
+fi
+
+#
+# COEX Clover 4
+if param compare SYS_AUTOSTART 4500
+then
+	set AIRFRAME 4500_clover4
+fi
+
+#
+# Crazyflie 2
+if param compare SYS_AUTOSTART 4900
+then
+	set AIRFRAME 4900_crazyflie
+fi
+
+#
+# Crazyflie 2.1
+if param compare SYS_AUTOSTART 4901
+then
+	set AIRFRAME 4901_crazyflie21
+fi
+
+
+# GROUP: Simulation
+
+#
+# HIL Quadcopter X
+if param compare SYS_AUTOSTART 1001
+then
+	set AIRFRAME 1001_rc_quad_x.hil
+fi
+
+#
+# SIH Quadcopter X
+if param compare SYS_AUTOSTART 1100
+then
+	set AIRFRAME 1100_rc_quad_x_sih.hil
+fi
+
+
+# GROUP: Tricopter Y+
+
+#
+# Generic Multirotor with tilt
+if param compare SYS_AUTOSTART 14001
+then
+	set AIRFRAME 14001_generic_mc_with_tilt
+fi
+
+
+# GROUP: Flying Wing
+
+#
+# Generic Flying Wing
+if param compare SYS_AUTOSTART 3000
+then
+	set AIRFRAME 3000_generic_wing
+fi
+
+
+# GROUP: Plane A-Tail
+
+#
+# Applied Aeronautics Albatross
+if param compare SYS_AUTOSTART 2106
+then
+	set AIRFRAME 2106_albatross
+fi
+
+
+# GROUP: Simulation
+
+#
+# SIH plane AERT
+if param compare SYS_AUTOSTART 1101
+then
+	set AIRFRAME 1101_rc_plane_sih.hil
+fi
+
+
+# GROUP: Standard Plane
+
+#
+# Generic Standard Plane
+if param compare SYS_AUTOSTART 2100
+then
+	set AIRFRAME 2100_standard_plane
+fi
+
+
+# GROUP: Rover
+
+#
+# Generic Ground Vehicle (Ackermann)
+if param compare SYS_AUTOSTART 50000
+then
+	set AIRFRAME 50000_generic_ground_vehicle
+fi
+
+#
+# Aion Robotics R1 UGV
+if param compare SYS_AUTOSTART 50003
+then
+	set AIRFRAME 50003_aion_robotics_r1_rover
+fi
+
+#
+# NXP Cup car: DF Robot GPX
+if param compare SYS_AUTOSTART 50004
+then
+	set AIRFRAME 50004_nxpcup_car_dfrobot_gpx
+fi
+
+
+# GROUP: Underwater Robot
+
+#
+# Generic Underwater Robot
+if param compare SYS_AUTOSTART 60000
+then
+	set AIRFRAME 60000_uuv_generic
+fi
+
+#
+# HippoCampus UUV (Unmanned Underwater Vehicle)
+if param compare SYS_AUTOSTART 60001
+then
+	set AIRFRAME 60001_uuv_hippocampus
+fi
+
+
+# GROUP: Vectored 6 DOF UUV
+
+#
+# BlueROV2 (Heavy Configuration)
+if param compare SYS_AUTOSTART 60002
+then
+	set AIRFRAME 60002_uuv_bluerov2_heavy
+fi
+
+
+# GROUP: Simulation
+
+#
+# SIH Tailsitter Duo
+if param compare SYS_AUTOSTART 1102
+then
+	set AIRFRAME 1102_tailsitter_duo_sih.hil
+fi
+
+
+# GROUP: Standard VTOL
+
+#
+# HIL Standard VTOL QuadPlane
+if param compare SYS_AUTOSTART 1002
+then
+	set AIRFRAME 1002_standard_vtol.hil
+fi
+
+#
+# Generic Standard VTOL
+if param compare SYS_AUTOSTART 13000
+then
+	set AIRFRAME 13000_generic_vtol_standard
+fi
+
+#
+# Vertical Technologies DeltaQuad
+if param compare SYS_AUTOSTART 13013
+then
+	set AIRFRAME 13013_deltaquad
+fi
+
+#
+# BabyShark VTOL
+if param compare SYS_AUTOSTART 13014
+then
+	set AIRFRAME 13014_vtol_babyshark
+fi
+
+
+# GROUP: VTOL Tailsitter
+
+#
+# Generic VTOL Tailsitter
+if param compare SYS_AUTOSTART 13200
+then
+	set AIRFRAME 13200_generic_vtol_tailsitter
+fi
+
+
+# GROUP: VTOL Tiltrotor
+
+#
+# Generic Quadplane VTOL Tiltrotor
+if param compare SYS_AUTOSTART 13030
+then
+	set AIRFRAME 13030_generic_vtol_quad_tiltrotor
+fi
+
+#
+# Generic Tiltrotor VTOL
+if param compare SYS_AUTOSTART 13100
+then
+	set AIRFRAME 13100_generic_vtol_tiltrotor
+fi
+
+
+
+if [ ${AIRFRAME} != none ]
+then
+	echo "Loading airframe: /etc/init.d/airframes/${AIRFRAME}"
+	. /etc/init.d/airframes/${AIRFRAME}
+else
+	echo "ERROR [init] No file matches SYS_AUTOSTART value found in : /etc/init.d/airframes"
+	param set SYS_AUTOSTART 0
+	tone_alarm ${TUNE_ERR}
+fi
+unset AIRFRAME

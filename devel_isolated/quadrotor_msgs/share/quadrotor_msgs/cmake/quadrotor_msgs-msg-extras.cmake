@@ -1,0 +1,2 @@
+set(quadrotor_msgs_MESSAGE_FILES "/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/AutopilotFeedback.msg;/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/ControlCommand.msg;/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/LowLevelFeedback.msg;/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/PositionCommand.msg;/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/Trajectory.msg;/home/sique/src/DroneSys_sim/Modules/msgs/quadrotor_msgs/msg/TrajectoryPoint.msg")
+set(quadrotor_msgs_SERVICE_FILES "")

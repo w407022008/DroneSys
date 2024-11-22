@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/src/modules/simulation/simulator_mavlink/CMakeFiles/sitl_gazebo-classic-complete.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-install.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-mkdir.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-download.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-update.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-patch.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-configure.rule"
+		},
+		{
+			"file" : "/home/sique/src/PX4_v1.14.2/build/px4_sitl_default/external/Stamp/sitl_gazebo-classic/sitl_gazebo-classic-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"sitl_gazebo-classic"
+		],
+		"name" : "sitl_gazebo-classic"
+	}
+}

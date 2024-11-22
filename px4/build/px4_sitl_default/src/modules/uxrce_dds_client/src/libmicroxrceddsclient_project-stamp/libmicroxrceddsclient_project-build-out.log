@@ -1,0 +1,8 @@
+[1/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/util/time.c.o
+[2/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/profile/transport/ip/ip_posix.c.o
+[3/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/profile/transport/ip/udp/udp_transport.c.o
+[4/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/profile/transport/ip/udp/udp_transport_posix.c.o
+[5/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/profile/transport/serial/serial_transport.c.o
+[6/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/profile/transport/serial/serial_transport_posix.c.o
+[7/8] Building C object CMakeFiles/microxrcedds_client.dir/src/c/util/ping.c.o
+[8/8] Linking C static library libmicroxrcedds_client.a

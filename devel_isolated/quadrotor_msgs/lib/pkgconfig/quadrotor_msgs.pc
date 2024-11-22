@@ -1,0 +1,8 @@
+prefix=/home/sique/src/DroneSys_sim/devel_isolated/quadrotor_msgs
+
+Name: quadrotor_msgs
+Description: Description of quadrotor_msgs
+Version: 0.0.0
+Cflags: -I/home/sique/src/DroneSys_sim/devel_isolated/quadrotor_msgs/include
+Libs: -L${prefix}/lib 
+Requires: 

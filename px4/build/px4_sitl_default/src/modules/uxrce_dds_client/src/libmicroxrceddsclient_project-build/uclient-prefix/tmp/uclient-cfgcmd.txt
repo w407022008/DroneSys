@@ -1,0 +1,1 @@
+cmd='/usr/bin/cmake;-GNinja;-C<TMP_DIR>/uclient-cache-$<CONFIG>.cmake;<SOURCE_DIR><SOURCE_SUBDIR>'
