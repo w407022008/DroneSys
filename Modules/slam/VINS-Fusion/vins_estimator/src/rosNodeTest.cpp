@@ -243,6 +243,8 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
         ROS_WARN("restart the estimator!");
         estimator.clearState();
         estimator.setParameter();
+        while(!img0_buf.empty()) img0_buf.pop();
+        while(!img1_buf.empty()) img1_buf.pop();
     }
     return;
 }

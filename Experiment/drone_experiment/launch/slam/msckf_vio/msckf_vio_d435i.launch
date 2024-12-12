@@ -26,8 +26,6 @@
       <param name="stereo_threshold" value="5"/>      <!-- stereo match-->
 
       <remap from="~imu" to="/camera/imu"/>
-      <remap from="~cam0_image" to="/camera/infra1/image_rect_raw"/>
-      <remap from="~cam1_image" to="/camera/infra2/image_rect_raw"/>
     </node>
 
     <!-- Msckf Vio Nodelet  -->
