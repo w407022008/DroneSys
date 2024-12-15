@@ -14,7 +14,6 @@ build_isolated/
 devel/
 devel_isolated/
 install/
-install_isolated/
 .vscode/
 
 # pytorch/python/numpy formats
