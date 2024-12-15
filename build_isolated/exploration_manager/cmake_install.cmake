@@ -144,6 +144,10 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/exploration_manager" TYPE DIRECTORY FILES "/home/sique/src/DroneSys_sim/Modules/planning/fuel_planner/exploration_manager/config")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/exploration_manager" TYPE DIRECTORY FILES "/home/sique/src/DroneSys_sim/Modules/planning/fuel_planner/exploration_manager/resource")
 endif()
 

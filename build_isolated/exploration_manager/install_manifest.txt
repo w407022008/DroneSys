@@ -11,6 +11,7 @@
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/cmake/exploration_managerConfig.cmake
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/cmake/exploration_managerConfig-version.cmake
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/package.xml
+/home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/config/traj.rviz
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/resource/curve1.txt
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/scripts/keyboard_control.py
 /home/sique/src/DroneSys_sim/install_isolated/share/exploration_manager/scripts/command_converter.py

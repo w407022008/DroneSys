@@ -4,7 +4,7 @@
   <!-- topic of your odometry such as VIO or LIO /vins_estimator/odometry  /mavros/local_position/odom  vrpn_client_node/NanoDrone250/pose -->
   <arg name="odom_topic" value="/mavros/local_position/odom" />
   <arg name="sense_range_max" value="4.0"/>
-  <arg name="max_yaw_rate" value="50"/>
+  <arg name="max_yaw_rate" value="100"/>
   <arg name="resolution" value="0.2"/>
   <arg name="obs_inflate" value="0.2"/>
   <arg name="FOV_H" value="69"/> <!-- degree -->
@@ -15,8 +15,8 @@
   <arg name="depth_topic" value="/camera/depth/image_raw"/>
   <arg name="cloud_topic" value="/pcl_render_node/cloud"/>
   <!-- maximum velocity and acceleration the drone will reach -->
-  <arg name="max_vel" value="0.3" />
-  <arg name="max_acc" value="0.3" />
+  <arg name="max_vel" value="1.0" />
+  <arg name="max_acc" value="0.5" />
 
   <!-- sdf_map.cpp -->
 

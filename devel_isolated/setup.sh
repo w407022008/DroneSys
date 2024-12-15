@@ -6,4 +6,4 @@ if [ ! -z "$_CATKIN_SETUP_DIR" ] && [ "$_CATKIN_SETUP_DIR" != "/home/sique/src/D
   return 1
 fi
 
-_CATKIN_SETUP_DIR= . "/home/sique/src/DroneSys_sim/devel_isolated/exploration_manager/setup.sh"
+_CATKIN_SETUP_DIR= . "/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo/setup.sh"

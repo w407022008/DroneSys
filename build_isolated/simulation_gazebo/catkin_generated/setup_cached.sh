@@ -8,6 +8,9 @@
 
 # modified environment variables
 export CMAKE_PREFIX_PATH="/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PWD='/home/sique/src/DroneSys_sim/build_isolated/simulation_gazebo'
+export PYTHONPATH="/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo/lib/python3/dist-packages:$PYTHONPATH"
 export ROSLISP_PACKAGE_DIRECTORIES='/home/sique/src/DroneSys_sim/devel_isolated/simulation_gazebo/share/common-lisp'
 export ROS_PACKAGE_PATH='/home/sique/src/DroneSys_sim/Simulator/gazebo_simulator:/home/sique/src/DroneSys_sim/install_isolated/share:/opt/ros/noetic/share'
