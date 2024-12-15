@@ -1,8 +1,0 @@
-prefix=/home/sique/src/DroneSys_sim/devel_isolated/mavros_extras
-
-Name: mavros_extras
-Description: Description of mavros_extras
-Version: 1.20.0
-Cflags: -I/usr/include
-Libs: -L${prefix}/lib /usr/lib/x86_64-linux-gnu/libboost_system.so.1.71.0
-Requires: geometry_msgs mavros mavros_msgs roscpp sensor_msgs std_msgs visualization_msgs

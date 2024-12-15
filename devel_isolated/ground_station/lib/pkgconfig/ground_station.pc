@@ -1,8 +1,0 @@
-prefix=/home/sique/src/DroneSys_sim/devel_isolated/ground_station
-
-Name: ground_station
-Description: Description of ground_station
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: message_runtime

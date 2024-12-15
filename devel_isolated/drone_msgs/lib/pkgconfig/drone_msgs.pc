@@ -1,8 +1,0 @@
-prefix=/home/sique/src/DroneSys_sim/devel_isolated/drone_msgs
-
-Name: drone_msgs
-Description: Description of drone_msgs
-Version: 0.0.0
-Cflags: -I/home/sique/src/DroneSys_sim/devel_isolated/drone_msgs/include
-Libs: -L${prefix}/lib 
-Requires: message_runtime actionlib_msgs geometry_msgs sensor_msgs message_runtime std_msgs mavros_msgs

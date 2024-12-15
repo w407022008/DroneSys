@@ -1,8 +1,0 @@
-prefix=/home/sique/src/DroneSys_sim/devel_isolated/path_searching
-
-Name: path_searching
-Description: Description of path_searching
-Version: 0.0.0
-Cflags: -I/home/sique/src/DroneSys_sim/Modules/planning/fuel_planner/path_searching/include
-Libs: -L${prefix}/lib -lpath_searching
-Requires: plan_env
