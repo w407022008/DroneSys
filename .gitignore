@@ -1,0 +1,46 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+nano.save
+.catkin_workspace
+
+**~
+**.bag
+
+build/
+build_isolated/
+devel/
+devel_isolated/
+install/
+install_isolated/
+.vscode/
+
+# pytorch/python/numpy formats
+# *.pth
+*.pkl
+*.npy
+
+# ipython/jupyter notebooks
+*.ipynb
+**/.ipynb_checkpoints/
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# Pycharm editor settings
+.idea
+
+# project dirs
+/datasets
+/models
+
+
+
+*.bag
+temp/
+device.yaml
