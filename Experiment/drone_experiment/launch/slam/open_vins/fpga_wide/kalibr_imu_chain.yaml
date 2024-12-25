@@ -1,0 +1,55 @@
+%YAML:1.0
+
+imu0:
+  T_i_b:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  # Values from allan plots
+  # https://github.com/rpng/ar_table_dataset
+  #accelerometer_noise_density: 0.0010382453726199955
+  #accelerometer_random_walk: 4.132785219723178e-05
+  #gyroscope_noise_density: 0.00010272083263292572
+  #gyroscope_random_walk: 1.1106223553679963e-06
+  # Inflated values (to account for unmodelled effects)
+  #  - white noise multiplied by 2
+  #  - bias random walk multiplied by 10
+  accelerometer_noise_density: 0.0412841138820346
+  accelerometer_random_walk: 0.0026165658404531697
+  gyroscope_noise_density: 0.003956431322090597
+  gyroscope_random_walk: 8.092617164591767e-05
+  rostopic: /imu/repub
+  time_offset: 0.0
+  update_rate: 160.0
+  # three different modes supported:
+  # "calibrated" (same as "kalibr"), "kalibr", "rpng"
+  # "kalibr" contains Dw6^T, Da6^T, R_IMUtoGYRO and Tg9
+  # "rpng" contains Dw6, Da6, R_IMUtoACC, Tg9, where D_6 are up-triangular matrices
+  model: "kalibr"
+  # how to get from Kalibr imu.yaml result file:
+  #   - Tw is Dw^{-1} imu0:gyroscopes:M:
+  #   - R_IMUtoGYRO: is imu0:gyroscopes:C_gyro_i:
+  #   - Ta is Da^{-1} imu0:accelerometers:M:
+  #   - R_IMUtoACC not used by Kalibr, set as Identical since the base inertial frame must coincide with one
+  #   - Tg is imu0:gyroscopes:A:
+  Tw:
+    - [ 0.99074,0.00000,-0.00000 ]
+    - [ 0.00755,1.03406,-0.00000 ]
+    - [ -0.00358,0.00327,0.99698 ]
+  R_IMUtoGYRO:
+    - [ 0.99987,0.00831,-0.01404 ]
+    - [ -0.00888,0.99912,-0.04097 ]
+    - [ 0.01369,0.04109,0.99906 ]
+  Ta:
+    - [ 1.02385,-0.00000,-0.00000 ]
+    - [ 0.00095,1.00200,0.00000 ]
+    - [ -0.00119,0.00853,0.99411 ]
+  R_IMUtoACC:
+    - [ 1.0, 0.0, 0.0 ]
+    - [ 0.0, 1.0, 0.0 ]
+    - [ 0.0, 0.0, 1.0 ]
+  Tg:
+    - [ 0.002445,0.001446,-0.011641 ]
+    - [ 0.000464,0.001442,-0.013310 ]
+    - [ 0.001764,0.000472,-0.000950 ]

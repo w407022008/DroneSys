@@ -1,0 +1,13 @@
+<launch>
+
+    <!-- MASTER NODE! -->
+    <node name="ov_msckf" pkg="ov_msckf" type="run_subscribe_msckf" output="screen" clear_params="true" required="true">
+ 
+        <param name="config_path" type="string" 
+            value="$(find drone_experiment)/launch/slam/open_vins/fpga_wide/estimator_config.yaml" />
+
+    </node>
+
+    <!-- if we should viz the groundtruth -->
+    <node if="true" type="rviz" name="rviz" pkg="rviz" args="-d $(find drone_experiment)/launch/slam/open_vins/display.rviz" />
+</launch>
