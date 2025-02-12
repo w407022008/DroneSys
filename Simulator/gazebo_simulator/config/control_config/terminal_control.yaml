@@ -2,12 +2,12 @@ Common:
   Center_x: 0.0
   Center_y: 0.0
   Center_z: 1.5
-  radius: 1.5               ## m  Horizontal rotation radius
+  radius: 3.5               ## m  Horizontal rotation radius
   undulation: 0.7               ## m  Vertical undulation height
   spin_rate: 1.0                         ## spinning rate
   spin_offset: 0.0                      ## spinning offset from x-positive axis
 Circle:
-  circle_omega_1: 1.0                ## rad/s Angular velocity around a circle
+  circle_omega_1: 2.0                ## rad/s Angular velocity around a circle
   circle_omega_2: 1.4                ## rad/s Angular velocity of undulation in z-axis
 Line:
   line_omega_1: -0.4                ## rad/s Angular velocity mapping to linear velocity
@@ -15,7 +15,7 @@ Line:
   line_omega_3: 0.0                ## rad/s  Rotational speed around z-axis
   yaw_offset: 1.57                       ## rad Yaw offset. 0= start along X-axis;   pi/2= start along Y-axis.
 Eight:
-  eight_omega_1: 0.5                ## rad/s Angular velocity around the figure of eight
+  eight_omega_1: 1.5                ## rad/s Angular velocity around the figure of eight
   eight_omega_2: 0.45                ## rad/s Angular velocity of undulation in z-axis
   eight_omega_3: 0.0625                ## rad/s  Rotational speed around z-axis
 Step:

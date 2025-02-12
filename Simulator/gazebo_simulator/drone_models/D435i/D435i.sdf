@@ -131,7 +131,7 @@
         <update_rate>30</update_rate>
         <visualize>1</visualize>
         <!-- kinect RGB-D Plugin -->
-        <plugin name="camera_plugin" filename="libgazebo_ros_openni_kinect.so">
+        <!--<plugin name="camera_plugin" filename="libgazebo_ros_openni_kinect.so">
           <robotNamespace></robotNamespace>
           <baseline>0.2</baseline>
           <alwaysOn>true</alwaysOn>
@@ -155,7 +155,7 @@
           <Cy>0</Cy>
           <focalLength>0</focalLength>
           <hackBaseline>0</hackBaseline>
-        </plugin>
+        </plugin>-->
         <!-- Depth_Camera RGB-D Plugin -->
        <!-- <plugin name="camera_plugin" filename="libgazebo_ros_depth_camera.so">
          <alwaysOn>true</alwaysOn>
@@ -179,8 +179,8 @@
       </sensor>
     </link>
     <!-- realsense插件可以生成RGB-D模型，也可以生成Stereo模型（但是该插件不能生成点云）。现实中，D435i可出点云 -->
-    <!-- <plugin name="camera" filename="librealsense_gazebo_plugin.so">
-    </plugin> -->
+    <plugin name="camera" filename="librealsense_gazebo_plugin.so">
+    </plugin>
   </model>
 </sdf>
 

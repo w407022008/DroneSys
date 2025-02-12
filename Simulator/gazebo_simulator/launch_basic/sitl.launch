@@ -1,13 +1,13 @@
 <launch>
 	<!-- Inital position -->
 	<arg name="x" default="1.0"/>
-	<arg name="y" default="3.0"/>
-	<arg name="z" default="0.2"/>
+	<arg name="y" default="0.0"/>
+	<arg name="z" default="0.0"/>
 	<arg name="R" default="0"/>
 	<arg name="P" default="0"/>
 	<arg name="Y" default="0.0"/>
 	<!-- SITL for PX4 -->
-	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
+	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/multi_objects.world"/>
 	<arg name="mode" default="_D435i"/>
 	<arg name="model" default="iris"/> 
 	<arg name="sdf" default="$(find simulation_gazebo)/drone_models/mav_isir$(arg mode)/mav_isir$(arg mode).sdf"/>
@@ -79,10 +79,10 @@
 	</node>
 
 	<!-- run the ground_station.cpp -->
-	<node pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	<node if="false" pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 	<!-- run the ground_station_msg.cpp -->
-	<node pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	<node if="false" pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 </launch>
 
