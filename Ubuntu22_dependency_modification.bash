@@ -3,11 +3,13 @@
 ## Driver
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Driver/realsense-ros-2.3.2/realsense2_camera/CMakeLists.txt
 
+## utils
+#sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/utils/mavros/libmavconn/CMakeLists.txt
+sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/utils/mavros/mavros/CMakeLists.txt
+sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/utils/mavros/mavros_extras/CMakeLists.txt
+
 ## common
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/common/mavros_interface/CMakeLists.txt
-#sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/common/mavros/libmavconn/CMakeLists.txt
-sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/common/mavros/mavros/CMakeLists.txt
-sed -i -e s/"include(EnableCXX11)"/"add_compile_options(-std=c++17)"/g ./Modules/common/mavros/mavros_extras/CMakeLists.txt
 sed -i -e s/"-std=c++11"/"-std=c++17"/g ./Modules/common/quadrotor_common/CMakeLists.txt
 
 ## control
