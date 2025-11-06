@@ -19,7 +19,7 @@ echo "Configuring and building Sophus ..."
 cd ../../Sophus
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
 make -j$cpu_num
 
 echo "Configuring and building ORB_SLAM3 ..."

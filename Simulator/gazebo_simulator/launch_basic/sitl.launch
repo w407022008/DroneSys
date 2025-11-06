@@ -1,12 +1,12 @@
 <launch>
-	<!-- Inital position -->
+	<!-- vehicle pose -->
 	<arg name="x" default="1.0"/>
 	<arg name="y" default="0.0"/>
 	<arg name="z" default="0.0"/>
 	<arg name="R" default="0"/>
 	<arg name="P" default="0"/>
 	<arg name="Y" default="0.0"/>
-	<!-- SITL for PX4 -->
+	<!-- vehicle model and world -->
 	<arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/multi_objects.world"/>
 	<arg name="mode" default="_D435i"/>
 	<arg name="model" default="iris"/> 
@@ -15,16 +15,23 @@
 	<!-- reff to PX4/ROMFS/px4fmu_common/init.d-posix/rcS -->
 	<env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg model)" />
 	<env name="PX4_ESTIMATOR" value="ekf2"/>
+	<arg name="est" default="ekf2"/>
 	<!-- low computing performance low factor -->
 	<env name="PX4_SIM_SPEED_FACTOR" value="1.0" />
 	
-	<!-- Gazebo configs -->
+	<!-- PX4 SITL -->
+	<arg name="interactive" default="true"/>
+	<arg unless="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+	<arg     if="$(arg interactive)" name="px4_command_arg1" value=""/>
+	<node name="sitl" pkg="px4" type="px4" output="screen"
+            args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS $(arg px4_command_arg1)" required="true"/>
+
+	<!-- Spaw Gazebo world -->
 	<arg name="gazebo_gui" default="false"/>
 	<arg name="debug" default="false"/>
 	<arg name="verbose" default="false"/>
 	<arg name="paused" default="false"/>
 	<arg name="respawn_gazebo" default="false"/>
-	<!-- Gazebo sim -->
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
 		<arg name="gui" value="$(arg gazebo_gui)"/>
 		<arg name="debug" value="$(arg debug)"/>
@@ -34,27 +41,21 @@
 		<arg name="world_name" value="$(arg world)"/>
 	</include>
 
-	<!-- PX4 configs -->
-	<arg name="interactive" default="true"/>
-	<!-- PX4 SITL -->
-    <arg unless="$(arg interactive)" name="px4_command_arg1" value="-d"/>
-    <arg     if="$(arg interactive)" name="px4_command_arg1" value=""/>
-    <node name="sitl" pkg="px4" type="px4" output="screen"
-        args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS $(arg px4_command_arg1)" required="true"/>
-
 	<!-- Spawn vehicle model -->
 	<!-- https://github.com/ros-simulation/gazebo_ros_pkgs/blob/kinetic-devel/gazebo_ros/scripts/spawn_model -->
 	<node name="$(anon vehicle_spawn)" pkg="gazebo_ros" type="spawn_model" output="screen" 
 		args="-sdf -file $(arg sdf) -model mav_isir -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)">
 	</node>
 
-
 	<!-- MAVROS -->
-	<node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+	<arg name="respawn_mavros" default="false"/>
+	<arg name="fcu_protocol" default="v2.0" />
+	<node pkg="mavros" type="mavros_node" name="mavros" required="$(eval not respawn_mavros)" clear_params="true" output="screen" respawn="$(arg respawn_mavros)">
 		<param name="fcu_url" value="udp://:14540@localhost:14557" />
 		<param name="gcs_url" value="" />
 		<param name="target_system_id" value="1" />
 		<param name="target_component_id" value="1" />
+		<param name="fcu_protocol" value="$(arg fcu_protocol)" />
 		<rosparam command="load" file="$(find simulation_gazebo)/config/mavros_config/px4_pluginlists.yaml" />
 		<rosparam command="load" file="$(find simulation_gazebo)/config/mavros_config/px4_config.yaml" />
 	</node>
@@ -66,23 +67,24 @@
 		<arg name="z" value="$(arg z)"/>
 	</include>
 
-	<!-- run the px4_transceiver.cpp -->
+	<!-- Message from PX4 -->
 	<node pkg="mavros_interface" type="px4_transceiver" name="px4_transceiver" output="screen">
 		<!-- positioning source: 0 for vicon， 1 for L-SLAM, 2 for gazebo ground truth, 3 for Intel T265 dual camera slam，4 for V-SLAM-->
 		<param name="input_source" value="2" />
 		<param name="rate_hz" value="30" />
 	</node>
 	
-	<!-- run the px4_commander.cpp -->
+	<!-- Message to PX4 -->
 	<node pkg="mavros_interface" type="px4_commander" name="px4_commander" output="screen">
 		<rosparam command="load" file="$(find simulation_gazebo)/config/control_config/px4_commander.yaml"/>
 	</node>
 
-	<!-- run the ground_station.cpp -->
-	<node if="false" pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	<!-- Ground station -->
+	<arg name="ground_station" default="true"/>
+	<node if="$(arg ground_station)" pkg="ground_station" type="ground_station" name="ground_station" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
-	<!-- run the ground_station_msg.cpp -->
-	<node if="false" pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
+	<!-- Ground station message -->
+	<node if="$(arg ground_station)" pkg="ground_station" type="ground_station_msg" name="ground_station_msg" output="screen" launch-prefix="gnome-terminal --tab --"/>	
 
 </launch>
 

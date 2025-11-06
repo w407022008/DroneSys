@@ -9,6 +9,7 @@
 	<arg name="mode" default=""/>
 	<!-- Launch Gazebo Simulation -->
 	<include file="$(find simulation_gazebo)/launch_basic/sitl.launch">
+		<arg name="ground_station" default="false"/>
 		<arg name="gazebo_gui" default="$(arg gazebo_gui)"/>
 		<arg name="world" value="$(arg world)"/>
 		<arg name="mode" value="$(arg mode)"/>
