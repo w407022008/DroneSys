@@ -6,3 +6,7 @@
 	path = Modules/tools/cpu_monitor
 	url = https://github.com/alspitz/cpu_monitor.git
 	branch = master
+[submodule "Modules/perception/object_track/library/ultralytics"]
+	path = Modules/perception/object_track/library/ultralytics
+	url = https://github.com/ultralytics/ultralytics.git
+	branch = main
