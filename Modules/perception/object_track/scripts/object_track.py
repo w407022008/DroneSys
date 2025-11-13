@@ -27,6 +27,7 @@ try:
     from std_msgs.msg import String
     from geometry_msgs.msg import TwistStamped
     from sensor_msgs.msg import Image, Imu
+    import std_msgs.msg  # 新增导入
     from cv_bridge import CvBridge
     ROS_AVAILABLE = True
     print("ROS模块导入成功")
@@ -51,7 +52,7 @@ model_loaded = False  # 新增：模型加载状态标志
 
 # 新增：USB相机配置
 use_usb_camera = False  # 默认不使用USB相机
-usb_camera_device = "/dev/video2"  # USB相机设备路径，可根据实际情况修改
+usb_camera_device = "/dev/video0"  # USB相机设备路径，可根据实际情况修改
 usb_camera = None  # USB相机对象
 
 # 新增：目标类别过滤配置
@@ -66,6 +67,10 @@ image_height = 1080
 # 第一帧图像处理标志
 first_image_processed = False
 
+# 新增：安全高度参数（单位：米）
+MINIMUM_ALTITUDE = 2.0  # 默认最低飞行高度为4米
+current_altitude = 0.0  # 当前相对高度
+
 # 创建鼠标目标选择器实例
 mouse_selector = MouseTargetSelector()
 
@@ -79,26 +84,21 @@ MAX_VELOCITY = 5.0
 current_roll = 0.0
 current_pitch = 0.0
 current_yaw = 0.0
-#如何使跟踪目标快且稳定地出现在画面中心，需要调整PID参数和速度增益系数
-# # 定义速度增益系数（将PID输出转换为相机坐标系下的实际速度）
-VELOCITY_GAIN_X = 0.0001*10 # m/s 10~20
-VELOCITY_GAIN_Y = 0.0001*10  # m/s yaw方向速度较小，因为y方向可以偏航转动
-VELOCITY_GAIN_Z = 0.0001*100 # m/s 100~200
-ANGULAR_GAIN = 0.001*4 # rad/s yaw方向的偏航角速度  4~6之间
-# VELOCITY_GAIN_X = 0.0 # m/s 
-# VELOCITY_GAIN_Y = 0.0  # m/s yaw方向速度较小，因为y方向可以偏航转动
-# VELOCITY_GAIN_Z = 0.0  # m/s 
-# ANGULAR_GAIN = 0.0 # rad/s yaw方向的偏航角速度  4~10之间
-# ========================
-# PID控制器模块（函数实现）
-# ========================
+
+desired_area_k = 50 # 期望目标面积的比例系数，默认值为50
 # PID控制器状态变量
+# 控制面积误差，沿光轴方向
+pid_z_state = {'kp': 1/((1920*1080)/desired_area_k), 'ki': 0.0000, 'kd': 0.0000, 'previous_error': 0, 'integral': 0}
 # 控制y向速度（相机系）- 对应水平位置误差
-pid_x_state = {'kp': 0.1, 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_x_state = {'kp': 1/(1920*0.5), 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
 # 控制z向速度（相机系）- 对应垂直位置误差
-pid_y_state = {'kp': 0.1, 'ki': 0.000, 'kd': 0.0, 'previous_error': 0, 'integral': 0}
-# 控制x向速度（相机系）- 对应面积误差
-pid_z_state = {'kp': 0.01, 'ki': 0.0000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_y_state = {'kp': 1/(1080*0.5), 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+
+# 定义速度增益系数（将PID输出转换为相机坐标系下的实际速度）
+VELOCITY_GAIN_X = 2  # m/s 光轴方向
+VELOCITY_GAIN_Y = 2  # m/s 垂直方向
+VELOCITY_GAIN_Z = 2  # m/s 水平方向
+ANGULAR_GAIN = math.pi/4  # rad/s 偏航角速度
 
 # 新增：COCO数据集80个类别名称，用于配置文件中的类别名到索引的映射
 COCO_CLASSES = [
@@ -294,79 +294,6 @@ def transform_camera_to_enu(cam_x, cam_y, cam_z):
     
     return enu_x, enu_y, enu_z
 
-# 新增: 加载检测配置函数
-def load_detection_config(config_path):
-    """
-    从YAML文件加载目标检测配置
-    
-    Args:
-        config_path (str): YAML配置文件路径
-    
-    Returns:
-        list: 目标类别索引列表，如果加载失败则返回None
-    """
-    global target_classes
-    
-    try:
-        # 检查配置文件是否存在
-        if not os.path.exists(config_path):
-            print(f"配置文件不存在: {config_path}，将使用默认配置")
-            # 创建一个默认配置文件
-            create_default_config(config_path)
-        
-        # 读取YAML配置文件
-        with open(config_path, 'r') as file:
-            config = yaml.safe_load(file)
-        
-        # 获取要检测的类别名称列表
-        class_names = config.get('target_classes', [])
-        
-        if not class_names:
-            print("警告: 未指定目标类别，将检测所有类别")
-            return None
-        
-        # 将类别名称转换为索引
-        class_indices = []
-        for class_name in class_names:
-            if class_name in COCO_CLASSES:
-                class_indices.append(COCO_CLASSES.index(class_name))
-            else:
-                print(f"警告: 类别名称 '{class_name}' 不在COCO数据集中，已忽略")
-        
-        if not class_indices:
-            print("警告: 没有有效的目标类别，将检测所有类别")
-            return None
-        
-        print(f"已加载目标检测配置，将检测以下类别: {', '.join([COCO_CLASSES[idx] for idx in class_indices])}")
-        return class_indices
-        
-    except Exception as e:
-        print(f"加载检测配置出错: {e}")
-        return None
-
-# 新增: 创建默认配置文件
-def create_default_config(config_path):
-    """
-    创建默认的YAML配置文件
-    
-    Args:
-        config_path (str): 要创建的配置文件路径
-    """
-    try:
-        # 默认配置 - 检测人和车辆
-        default_config = {
-            'target_classes': ['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck'],
-            'confidence_threshold': 0.25,
-            'comments': '# 这是检测配置文件。\n# 你可以在target_classes列表中指定要检测的类别\n# 有效的类别名称包括: ' + ', '.join(COCO_CLASSES)
-        }
-        
-        # 写入YAML文件
-        with open(config_path, 'w') as file:
-            yaml.dump(default_config, file, default_flow_style=False, sort_keys=False)
-            
-        print(f"已创建默认配置文件: {config_path}")
-    except Exception as e:
-        print(f"创建默认配置文件出错: {e}")
 
 # ========================
 # 函数定义
@@ -389,6 +316,9 @@ def init_ros_components():
     
     # 订阅无人机当前姿态信息
     attitude_sub = rospy.Subscriber('/mavros/imu/data', Imu, attitude_callback)
+    
+    # 新增：订阅无人机相对高度信息
+    altitude_sub = rospy.Subscriber('/mavros/global_position/rel_alt', std_msgs.msg.Float64, altitude_callback)
 
 # 新增: 初始化USB相机
 def init_usb_camera():
@@ -427,58 +357,6 @@ def init_usb_camera():
         print(f"初始化USB相机时出错: {e}")
         return False
 
-def init_model():
-    """初始化YOLOv8模型"""
-    global model, model_loaded
-    try:
-        # 获取当前工作目录
-        current_dir = os.getcwd()
-        print(f"当前工作目录: {current_dir}")
-        
-        # 检查模型文件是否存在
-        model_path = os.path.join(current_dir, 'yolov8n.pt')
-        print(f"检查模型文件路径: {model_path}")
-        
-        if os.path.exists(model_path):
-            print(f"模型文件存在: {model_path}")
-        else:
-            print(f"警告：模型文件不存在: {model_path}")
-            # 尝试在其他可能的位置查找
-            possible_paths = [
-                '/home/gzy/ultralytics/yolov8n.pt',
-                './yolov8n.pt',
-                '../yolov8n.pt'
-            ]
-            
-            for path in possible_paths:
-                if os.path.exists(path):
-                    model_path = path
-                    print(f"在 {path} 找到模型文件")
-                    break
-            else:
-                print("错误：在任何预期位置都未找到模型文件")
-                return False
-        
-        # 加载YOLOv8模型（使用预训练的yolov8n模型）
-        print("正在加载YOLOv8模型...")
-        model = YOLO(model_path)
-        
-        # 验证模型是否加载成功
-        if model is None:
-            print("错误：模型加载失败")
-            return False
-            
-        print("YOLOv8模型加载成功")
-        print(f"模型类型: {type(model)}")
-        model_loaded = True  # 设置模型加载完成标志
-        return True
-    except Exception as e:
-        print(f"模型加载时出错: {e}")
-        import traceback
-        traceback.print_exc()
-        model = None
-        model_loaded = False  # 确保标志为False
-        return False
 
 def init_controllers():
     """初始化PID控制器"""
@@ -504,58 +382,7 @@ def init_target_parameters():
     global desired_area
     # 设置期望的目标面积（可根据实际情况调整）
     # 使用默认图像尺寸计算初始期望面积
-    desired_area = (640 * 480) // 100  # 总像素的1/100 = 30720
-
-def init_system():
-    """初始化系统"""
-    global image_width, image_height, running, target_classes
-    
-    # 初始化控制标志
-    running = True
-    
-    # 加载目标检测配置
-    target_classes = load_detection_config(config_file)
-    
-    # 初始化模型（在初始化ROS组件之前加载模型，避免在模型加载完成前处理图像）
-    model_initialized = init_model()
-    if not model_initialized:
-        print("警告：模型初始化失败，将继续运行但不会进行目标追踪")
-    
-    # 根据配置选择初始化ROS组件或USB相机
-    if use_usb_camera:
-        print("使用USB相机作为图像输入")
-        camera_initialized = init_usb_camera()
-        if not camera_initialized:
-            print("错误: USB相机初始化失败")
-            return False
-        # 如果ROS可用，仍然初始化ROS节点（用于发布控制命令）
-        if ROS_AVAILABLE:
-            rospy.init_node('yolo_tracker_pid', anonymous=True)
-            # 创建发布者（只用于发布控制命令）
-            target_info_pub = rospy.Publisher('/yolo/target_info', String, queue_size=10)
-            velocity_pub = rospy.Publisher('/mavros/setpoint_velocity/cmd_vel', TwistStamped, queue_size=10)
-    else:
-        # 使用ROS订阅方式
-        if not ROS_AVAILABLE:
-            print("错误：ROS不可用，无法使用ROS订阅方式")
-            return False
-        rospy.init_node('yolo_tracker_pid', anonymous=True)
-        
-    # 初始化ROS组件
-    init_ros_components()
-    
-    # 初始化控制器
-    init_controllers()
-    
-    # 初始化坐标变换器
-    init_coordinate_transformer()
-    
-    # 初始化目标参数
-    init_target_parameters()
-    
-    print("YOLOv8 目标追踪节点已初始化")
-    print("按 'q' 键退出程序")
-    return True
+    desired_area = (640 * 480) // 50 # 总像素的1/100 = 30720
 
 def extract_tracking_info(result):
     """
@@ -773,6 +600,43 @@ def calculate_velocity_control(tracking_info):
     # 注意：角速度的变换可能与线速度不同，需要根据具体情况调整
     # 这里假设角速度也使用相同的方式变换（这可能不完全正确，需根据物理意义调整）
     enu_wx, enu_wy, enu_wz = transform_camera_to_enu(cam_wx, cam_wy, cam_wz)
+
+    # _, _, enu_vz = transform_camera_to_enu(cam_vx, cam_vy, cam_vz)
+    # enu_vx, enu_vy, _ = transform_camera_to_enu(cam_vx, cam_vy, 0)
+
+    # 新增逻辑：检查目标检测框是否靠近边缘，如果是，则只允许上下方向运动
+    selected_target_id = mouse_selector.get_selected_target_id()
+    if len(tracking_info) > 0 and selected_target_id is not None:
+        # 查找选中的目标
+        target = None
+        for t in tracking_info:
+            if t['id'] == selected_target_id:
+                target = t
+                break
+        
+        if target is not None:
+            # 检查目标检测框是否靠近边缘
+            edge_threshold = 0.5*0.2  # 10%的图像边缘区域
+            x1, y1, x2, y2 = target['xyxy']
+            
+            # 检查是否在边缘区域
+            near_edge = (y1 <= image_height * edge_threshold)
+            
+            if near_edge:
+                # 当目标靠近边缘时，只允许z方向运动，禁止x和y方向运动
+                enu_vx, enu_vy = 0.0, 0.0
+                enu_vz = (1 - 2*y1/image_height)*3
+                print("目标靠近边缘，仅允许竖直方向上下运动")
+
+    # 新增：高度保护机制
+    # 如果当前高度低于设定的最低高度，则强制Z轴速度向上（正值）
+    if current_altitude < MINIMUM_ALTITUDE:
+        altitude_error = MINIMUM_ALTITUDE - current_altitude
+        # 根据高度误差调整上升速度，误差越大上升越快
+        required_upward_velocity = max(0.2, altitude_error * 1.0)  # 最小上升速度0.2m/s
+        enu_vz = max(enu_vz, required_upward_velocity)  # 确保有足够的上升速度
+        print(f"高度保护启动: 当前高度 {current_altitude:.2f}m < 最低高度 {MINIMUM_ALTITUDE}m, "
+              f"强制上升速度: {enu_vz:.2f} m/s")
         
     return enu_vx, enu_vy, enu_vz, enu_wx, enu_wy, enu_wz
 
@@ -824,7 +688,7 @@ def process_frame(cv_image):
         cv_image: OpenCV格式的图像
     """
     global running, model, model_loaded, image_width, image_height, first_image_processed, desired_area
-    global mouse_selector, target_classes
+    global mouse_selector, target_classes, desired_area_k
     
     try:
         # 获取图像的实际尺寸
@@ -833,7 +697,7 @@ def process_frame(cv_image):
         # 如果是第一次处理图像，更新依赖于图像尺寸的参数
         if not first_image_processed:
             # 重新计算期望的目标面积
-            desired_area = (image_width * image_height) // 50  # 总像素的1/50
+            desired_area = (image_width * image_height) // desired_area_k # 总像素的50
             print(f"实际图像尺寸: {image_width}x{image_height}, 更新期望目标面积: {desired_area}")
             first_image_processed = True
         
@@ -867,17 +731,18 @@ def process_frame(cv_image):
         # 添加提示信息到图像上
         annotated_frame = mouse_selector.draw_selection_message(annotated_frame)
         
-        # 显示当前检测的目标类别
-        if target_classes is not None:
-            class_names = [COCO_CLASSES[idx] for idx in target_classes]
-            class_text = f"检测类别: {', '.join(class_names)}"
-            cv2.putText(annotated_frame, class_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-                        0.6, (0, 255, 0), 2)
-        
-        # 显示窗口并设置鼠标回调
+        # # 显示当前检测的目标类别
+        # if target_classes is not None:
+        #     class_names = [COCO_CLASSES[idx] for idx in target_classes]
+        #     class_text = f"检测类别: {', '.join(class_names)}"
+        #     cv2.putText(annotated_frame, class_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
+        #                 0.6, (0, 255, 0), 2)
+
+        # 创建可调节大小的窗口并显示图像
+        cv2.namedWindow('YOLOv8 Object Tracking and PID Control', cv2.WINDOW_NORMAL)
         cv2.imshow('YOLOv8 Object Tracking and PID Control', annotated_frame)
         cv2.setMouseCallback('YOLOv8 Object Tracking and PID Control', mouse_selector.mouse_callback)
-        
+
         # 发布目标信息（用于调试）
         publish_target_info(tracking_info)
         
@@ -982,6 +847,23 @@ def attitude_callback(msg):
         # 如果tf库不可用，尝试使用备用方法
         fallback_attitude_processing(msg)
 
+# 新增：处理相对高度信息的回调函数
+def altitude_callback(msg):
+    """
+    处理无人机相对高度信息
+    
+    Args:
+        msg: 标准消息，包含相对高度信息
+    """
+    global current_altitude
+    
+    try:
+        # 从消息中获取相对高度
+        current_altitude = msg.data
+        print(f"当前相对高度: {current_altitude:.2f} 米")
+    except Exception as e:
+        print(f"处理高度信息时出错: {e}")
+
 def cleanup():
     """
     清理资源
@@ -995,6 +877,185 @@ def cleanup():
         
     cv2.destroyAllWindows()  # 关闭所有OpenCV窗口
     print("资源已释放")
+
+
+def init_model():
+    """初始化YOLOv8模型"""
+    global model, model_loaded
+    try:
+        # 获取当前工作目录
+        current_dir = os.getcwd()
+        print(f"当前工作目录: {current_dir}")
+
+        # 检查模型文件是否存在
+        model_path = os.path.join(current_dir, 'yolov8n.pt')
+        print(f"检查模型文件路径: {model_path}")
+
+        if os.path.exists(model_path):
+            print(f"模型文件存在: {model_path}")
+        else:
+            print(f"警告：模型文件不存在: {model_path}")
+            # 尝试在其他可能的位置查找
+            possible_paths = [
+                '/home/gzy/ultralytics/yolov8n.pt',
+                './yolov8n.pt',
+                '../yolov8n.pt'
+            ]
+
+            for path in possible_paths:
+                if os.path.exists(path):
+                    model_path = path
+                    print(f"在 {path} 找到模型文件")
+                    break
+            else:
+                print("错误：在任何预期位置都未找到模型文件")
+                return False
+
+        # 加载YOLOv8模型（使用预训练的yolov8n模型）
+        print("正在加载YOLOv8模型...")
+        model = YOLO(model_path)
+
+        # 验证模型是否加载成功
+        if model is None:
+            print("错误：模型加载失败")
+            return False
+
+        print("YOLOv8模型加载成功")
+        print(f"模型类型: {type(model)}")
+        model_loaded = True  # 设置模型加载完成标志
+        return True
+    except Exception as e:
+        print(f"模型加载时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        model = None
+        model_loaded = False  # 确保标志为False
+        return False
+
+def create_default_config(config_path):
+    """
+    创建默认的YAML配置文件
+
+    Args:
+        config_path (str): 要创建的配置文件路径
+    """
+    try:
+        # 默认配置 - 检测人和车辆
+        default_config = {
+            'target_classes': ['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck'],
+            'confidence_threshold': 0.25,
+            'comments': '# 这是检测配置文件。\n# 你可以在target_classes列表中指定要检测的类别\n# 有效的类别名称包括: ' + ', '.join(
+                COCO_CLASSES)
+        }
+
+        # 写入YAML文件
+        with open(config_path, 'w') as file:
+            yaml.dump(default_config, file, default_flow_style=False, sort_keys=False)
+
+        print(f"已创建默认配置文件: {config_path}")
+    except Exception as e:
+        print(f"创建默认配置文件出错: {e}")
+
+# 新增: 加载检测配置函数
+def load_detection_config(config_path):
+    """
+    从YAML文件加载目标检测配置
+
+    Args:
+        config_path (str): YAML配置文件路径
+
+    Returns:
+        list: 目标类别索引列表，如果加载失败则返回None
+    """
+    global target_classes
+
+    try:
+        # 检查配置文件是否存在
+        if not os.path.exists(config_path):
+            print(f"配置文件不存在: {config_path}，将使用默认配置")
+            # 创建一个默认配置文件
+            create_default_config(config_path)
+
+        # 读取YAML配置文件
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+
+        # 获取要检测的类别名称列表
+        class_names = config.get('target_classes', [])
+
+        if not class_names:
+            print("警告: 未指定目标类别，将检测所有类别")
+            return None
+
+        # 将类别名称转换为索引
+        class_indices = []
+        for class_name in class_names:
+            if class_name in COCO_CLASSES:
+                class_indices.append(COCO_CLASSES.index(class_name))
+            else:
+                print(f"警告: 类别名称 '{class_name}' 不在COCO数据集中，已忽略")
+
+        if not class_indices:
+            print("警告: 没有有效的目标类别，将检测所有类别")
+            return None
+
+        print(f"已加载目标检测配置，将检测以下类别: {', '.join([COCO_CLASSES[idx] for idx in class_indices])}")
+        return class_indices
+
+    except Exception as e:
+        print(f"加载检测配置出错: {e}")
+        return None
+
+def init_system():
+    """初始化系统"""
+    global image_width, image_height, running, target_classes
+
+    # 初始化控制标志
+    running = True
+
+    # 加载目标检测配置
+    target_classes = load_detection_config(config_file)
+
+    # 初始化模型（在初始化ROS组件之前加载模型，避免在模型加载完成前处理图像）
+    model_initialized = init_model()
+    if not model_initialized:
+        print("警告：模型初始化失败，将继续运行但不会进行目标追踪")
+
+    # 根据配置选择初始化ROS组件或USB相机
+    if use_usb_camera:
+        print("使用USB相机作为图像输入")
+        camera_initialized = init_usb_camera()
+        if not camera_initialized:
+            print("错误: USB相机初始化失败")
+            return False
+        # 如果ROS可用，仍然初始化ROS节点（用于发布控制命令）
+        if ROS_AVAILABLE:
+            rospy.init_node('yolo_tracker_pid', anonymous=True)
+            # 创建发布者（只用于发布控制命令）
+            target_info_pub = rospy.Publisher('/yolo/target_info', String, queue_size=10)
+            velocity_pub = rospy.Publisher('/mavros/setpoint_velocity/cmd_vel', TwistStamped, queue_size=10)
+    else:
+        # 使用ROS订阅方式
+        if not ROS_AVAILABLE:
+            print("错误：ROS不可用，无法使用ROS订阅方式")
+            return False
+        rospy.init_node('yolo_tracker_pid', anonymous=True)
+
+    # 初始化ROS组件
+    init_ros_components()
+
+    # 初始化控制器
+    init_controllers()
+
+    # 初始化坐标变换器
+    init_coordinate_transformer()
+
+    # 初始化目标参数
+    init_target_parameters()
+
+    print("YOLOv8 目标追踪节点已初始化")
+    print("按 'q' 键退出程序")
+    return True
 
 def run():
     """
@@ -1066,8 +1127,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='YOLOv8目标追踪程序')
     parser.add_argument('--use-usb-camera', action='store_true', 
                         help='使用USB相机直接读取图像，而不是通过ROS订阅')
-    parser.add_argument('--device', type=str, default='/dev/video6',
-                        help='USB相机设备路径 (默认: /dev/video6)')
+    parser.add_argument('--device', type=str, default='/dev/video2',
+                        help='USB相机设备路径 (默认: /dev/video2)')
     parser.add_argument('--config', type=str, default='detection_config.yaml',
                         help='目标检测配置文件路径 (默认: detection_config.yaml)')
     
