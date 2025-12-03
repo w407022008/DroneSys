@@ -42,5 +42,8 @@
         </geometry>
       </visual>
     </link>
+    
+    <!-- 添加控制人物行走的插件 -->
+    <plugin name="person_walking_plugin" filename="libperson_walking_plugin.so"/>
   </model>
 </sdf>

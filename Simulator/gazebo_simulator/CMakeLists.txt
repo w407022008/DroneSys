@@ -60,12 +60,22 @@ add_library(realsense_gazebo_plugin
     src/gazebo_plugin/RealSensePlugin.cpp
     src/gazebo_plugin/gazebo_ros_realsense.cpp
 )
+
+add_library(person_walking_plugin SHARED src/gazebo_plugin/person_walking_plugin.cpp)
 target_link_libraries(realsense_gazebo_plugin 
     ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES}
-    )
+)
+
+target_link_libraries(person_walking_plugin 
+    ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES}
+)
 add_dependencies(realsense_gazebo_plugin 
     ${catkin_EXPORTED_TARGETS}
-    )
+)
+
+add_dependencies(person_walking_plugin 
+    ${catkin_EXPORTED_TARGETS}
+)
 
 
 add_executable(qrcode_control 
@@ -107,7 +117,7 @@ catkin_install_python(PROGRAMS
     #scripts/get_ground_truth.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(TARGETS realsense_gazebo_plugin
+install(TARGETS realsense_gazebo_plugin person_walking_plugin
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
