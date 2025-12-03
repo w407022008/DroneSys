@@ -6,6 +6,14 @@ YOLOv8 目标追踪ROS节点
 此脚本将YOLOv8目标追踪功能封装为ROS节点，
 通过PID控制器计算无人机在x、y、z方向的速度，
 并通过MAVROS的topic将速度指令发布给PX4飞控系统
+
+控制目标：
+    1. “目标像素框的中心点的横坐标”  在图像的中心位置
+    2. "目标像素框的面积"  是特定值（例如10000像素方）
+
+控制量：
+    针对控制目标1： yaw方向加速度enu_wx
+    针对控制目标2： 水平面的速度enu_vx, enu_vy（光轴方向的速度投影到水平面内的分量）
 """
 
 import cv2
@@ -19,13 +27,15 @@ import json
 import threading
 import time
 import math
+# 导入鼠标目标选择器
+from mouse_target_selector import MouseTargetSelector
 
 # 尝试导入ROS模块
 ROS_AVAILABLE = False
 try:
     import rospy
     from std_msgs.msg import String
-    from geometry_msgs.msg import TwistStamped
+    from geometry_msgs.msg import TwistStamped, PoseStamped
     from sensor_msgs.msg import Image, Imu
     import std_msgs.msg  # 新增导入
     from cv_bridge import CvBridge
@@ -35,8 +45,7 @@ except ImportError as e:
     print(f"ROS模块导入失败: {e}")
     print("此脚本需要在ROS环境中运行")
 
-# 导入鼠标目标选择器
-from mouse_target_selector import MouseTargetSelector
+
 
 # ========================
 # 全局变量
@@ -51,8 +60,8 @@ running = True
 model_loaded = False  # 新增：模型加载状态标志
 
 # 新增：USB相机配置
-use_usb_camera = False  # 默认不使用USB相机
-usb_camera_device = "/dev/video0"  # USB相机设备路径，可根据实际情况修改
+use_usb_camera = True  # 默认不使用USB相机
+usb_camera_device = "/dev/video2"  # USB相机设备路径，可根据实际情况修改
 usb_camera = None  # USB相机对象
 
 # 新增：目标类别过滤配置
@@ -85,20 +94,33 @@ current_roll = 0.0
 current_pitch = 0.0
 current_yaw = 0.0
 
+last_tracked_target_id = None  # 用于存储上一次跟踪的目标ID
+initial_area = None       # 存储初始检测到的目标面积
+start_transition_time = None  # 存储开始过渡的时间戳
+TRANSITION_DURATION = 3.0  # 过渡持续时间（秒），可根据需要调整
+
+
 desired_area_k = 50 # 期望目标面积的比例系数，默认值为50
 # PID控制器状态变量
 # 控制面积误差，沿光轴方向
-pid_z_state = {'kp': 1/((1920*1080)/desired_area_k), 'ki': 0.0000, 'kd': 0.0000, 'previous_error': 0, 'integral': 0}
+pid_z_state = {'kp': 1/((1920*1080)/desired_area_k), 'ki': 1/((1920*1080)/desired_area_k) , 'kd': 0, 'previous_error': 0, 'integral': 0}
 # 控制y向速度（相机系）- 对应水平位置误差
-pid_x_state = {'kp': 1/(1920*0.5), 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_x_state = {'kp': 5/(1920*0.5), 'ki': 10/(1920*0.5*10), 'kd': 0, 'previous_error': 0, 'integral': 0}
 # 控制z向速度（相机系）- 对应垂直位置误差
 pid_y_state = {'kp': 1/(1080*0.5), 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_enu_z1 = {'kp': 1/(1080*0.5), 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_enu_z2 = {'kp':5, 'ki': 0.000, 'kd': 0.000, 'previous_error': 0, 'integral': 0}
+pid_angle = {'kp': 1/(math.pi/3), 'ki': 1/((math.pi/3)*10), 'kd': 0 , 'previous_error': 0, 'integral': 0}
 
 # 定义速度增益系数（将PID输出转换为相机坐标系下的实际速度）
-VELOCITY_GAIN_X = 2  # m/s 光轴方向
-VELOCITY_GAIN_Y = 2  # m/s 垂直方向
-VELOCITY_GAIN_Z = 2  # m/s 水平方向
-ANGULAR_GAIN = math.pi/4  # rad/s 偏航角速度
+VELOCITY_GAIN_X = 5  # m/s 光轴方向
+VELOCITY_GAIN_Y = 0  # m/s 
+VELOCITY_GAIN_Z = 0  # m/s 
+VELOCITY_GAIN_Z1 = 0  # m/s 
+ANGULAR_GAIN = math.pi/6  # rad/s 偏航角速度
+gain_xy = 5  # 水平面内速度增益系数
+default_target_angle = 40*math.pi/180
+default_target_altitude = 1.0  # 目标高度为1米
 
 # 新增：COCO数据集80个类别名称，用于配置文件中的类别名到索引的映射
 COCO_CLASSES = [
@@ -112,8 +134,72 @@ COCO_CLASSES = [
     'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
     'hair drier', 'toothbrush'
 ]
+def get_linear_adjusted_pid(base_params, error_y, max_error=None):
+    """
+    根据error_y值在线性范围内(0~max_error)调整PID参数
+    
+    Args:
+        base_params (dict): 基础PID参数
+        error_y (float): 垂直方向误差
+        max_error (float): 最大误差值，默认为image_height/2
+        
+    Returns:
+        dict: 调整后的PID参数
+    """
+    
+    # 如果没有提供max_error，则使用默认值image_height/2
+    if max_error is None:
+        max_error = image_height / 2
+    
+    # 计算比例因子
+    ratio = error_y / max_error if max_error > 0 else 0
+    #调整因子ratio的4次方，-1~1
+    factor = abs(ratio) ** 10 
+    
+    # 创建新的参数字典
+    adjusted_params = base_params.copy()
+    
+    # 根据指数因子调整PID参数
+    # 这里可以根据需要调整各参数的调整幅度
+    adjusted_params['kp'] = base_params['kp'] * factor  # Kp随error_y指数增长
+    adjusted_params['ki'] = base_params['ki'] * (1 + 0.5 * factor)  # Ki最大增加50%
+    adjusted_params['kd'] = base_params['kd'] * (1 + 0.3 * factor)  # Kd最大增加30%
+    
+    return adjusted_params
 
-def pid_update(pid_state, error, dt=1.0):
+def get_linear_adjusted_pid_z(base_params, error_y, max_error=None):
+    """
+    根据error_y值在线性范围内(0~max_error)调整PID参数
+    
+    Args:
+        base_params (dict): 基础PID参数
+        error_y (float): 垂直方向误差
+        max_error (float): 最大误差值，默认为image_height/2
+        
+    Returns:
+        dict: 调整后的PID参数
+    """
+    # 如果没有提供max_error，则使用默认值image_height/2
+    if max_error is None:
+        max_error = image_height / 2
+    
+    # 计算比例因子
+    ratio = error_y / max_error if max_error > 0 else 0
+    #factor在0~1之间，越靠近0，光轴速度越小
+    factor = 1- abs(ratio)
+    
+    # 创建新的参数字典
+    adjusted_params = base_params.copy()
+    
+    # 根据指数因子调整PID参数
+    # 这里可以根据需要调整各参数的调整幅度
+    adjusted_params['kp'] = base_params['kp'] * factor  
+    adjusted_params['ki'] = base_params['ki'] * (1 + 0.5 * factor)  # Ki最大增加50%
+    adjusted_params['kd'] = base_params['kd'] * (1 + 0.3 * factor)  # Kd最大增加30%
+    
+    return adjusted_params
+
+def pid_update(pid_state, error, dt=1/20, max_integral=None):
     """
     更新PID控制器，计算控制输出
     
@@ -121,12 +207,17 @@ def pid_update(pid_state, error, dt=1.0):
         pid_state (dict): PID控制器状态
         error (float): 当前误差值
         dt (float): 时间间隔，默认为1.0
+        max_integral (float): 积分项最大值，防止积分饱和，如果为None则不限制
             
     Returns:
         float: PID控制器的输出值
     """
     # 累积误差（积分项）
     pid_state['integral'] += error * dt
+    
+    # 限制积分项范围，防止积分饱和
+    if max_integral is not None:
+        pid_state['integral'] = max(-max_integral, min(max_integral, pid_state['integral']))
     
     # 计算误差变化率（微分项）
     derivative = (error - pid_state['previous_error']) / dt
@@ -291,7 +382,6 @@ def transform_camera_to_enu(cam_x, cam_y, cam_z):
     
     # 再从机身坐标系转换到ENU坐标系
     enu_x, enu_y, enu_z = transform_body_to_enu(body_x, body_y, body_z)
-    
     return enu_x, enu_y, enu_z
 
 
@@ -318,7 +408,7 @@ def init_ros_components():
     attitude_sub = rospy.Subscriber('/mavros/imu/data', Imu, attitude_callback)
     
     # 新增：订阅无人机相对高度信息
-    altitude_sub = rospy.Subscriber('/mavros/global_position/rel_alt', std_msgs.msg.Float64, altitude_callback)
+    altitude_sub = rospy.Subscriber('/mavros/local_position/pose', PoseStamped, altitude_callback)
 
 # 新增: 初始化USB相机
 def init_usb_camera():
@@ -371,7 +461,7 @@ def init_coordinate_transformer():
     # 相机安装角度参数（弧度）
     # roll: 绕X轴旋转角度, pitch: 绕Y轴旋转角度, yaw: 绕Z轴旋转角度
     camera_roll = 0.0  # 相机绕机体X轴旋转角度（左右倾斜），根据描述设置为0.785弧度
-    camera_pitch = math.radians(30)   # 相机绕机体Y轴旋转角度（俯仰角）
+    camera_pitch = math.radians(0)   # 相机绕机体Y轴旋转角度（俯仰角）
     camera_yaw = 0.0     # 相机绕机体Z轴旋转角度（偏航角）
     
     # 设置相机安装角度
@@ -417,6 +507,10 @@ def extract_tracking_info(result):
         center_x = (xyxy[:, 0] + xyxy[:, 2]) / 2
         center_y = (xyxy[:, 1] + xyxy[:, 3]) / 2
         
+        # 计算底部中心点坐标 (x保持不变，y设为底部)
+        bottom_center_x = (xyxy[:, 0] + xyxy[:, 2]) / 2
+        bottom_center_y = xyxy[:, 3]  # 底部y坐标即为右下角y坐标
+        
         # 计算边界框的宽度和高度
         width = xyxy[:, 2] - xyxy[:, 0]  # 右下角x - 左上角x
         height = xyxy[:, 3] - xyxy[:, 1]  # 右下角y - 左上角y
@@ -424,8 +518,8 @@ def extract_tracking_info(result):
         # 计算边界框面积
         area = width * height
         
-        # 将中心点坐标、尺寸和面积组合成数组
-        target_positions = np.column_stack((center_x, center_y))
+        # 将底部中心点坐标、尺寸和面积组合成数组
+        target_positions = np.column_stack((bottom_center_x, bottom_center_y))
         target_sizes = np.column_stack((width, height))
         target_areas = area
         
@@ -435,7 +529,7 @@ def extract_tracking_info(result):
                 'bbox': bounding_boxes[i],  # [中心点x, 中心点y, 宽度, 高度]
                 'id': object_ids[i] if object_ids else -1,  # 目标ID
                 'confidence': confidence_scores[i],  # 置信度
-                'center': target_positions[i],  # [中心点x, 中心点y]
+                'center': target_positions[i],  # [底部中心点x, 底部中心点y]
                 'size': target_sizes[i],  # [宽度, 高度]
                 'area': target_areas[i],  # 边界框面积（像素）
                 'xyxy': xyxy[i],  # 添加边界框坐标 [x1, y1, x2, y2]
@@ -482,6 +576,8 @@ def publish_target_info(tracking_info):
     except Exception as e:
         print(f"发布目标信息时出错: {e}")
 
+    last_error_z = 0.0  # 初始化上一次的面积误差
+    last_control_signal_x = 0.0
 def calculate_camera_velocity(tracking_info):
     """
     订阅YOLO输出信息，计算相机坐标系下的速度和角速度
@@ -492,12 +588,14 @@ def calculate_camera_velocity(tracking_info):
     Returns:
         tuple: (velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z) 相机坐标系下的速度和角速度（m/s, rad/s）
     """
+    global last_error_z ,last_control_signal_x
+    global last_tracked_target_id, initial_area, start_transition_time
     # 获取选中的目标ID
     selected_target_id = mouse_selector.get_selected_target_id()
     
     # 默认速度和角速度为0（无目标时保持静止）
     velocity_x, velocity_y, velocity_z = 0.0, 0.0, 0.0
-    angular_x, angular_y, angular_z = 0.0, 0.0, 0.0  # 添加角速度初始化
+    velocity_enu_z1 = 0.0  # 初始化velocity_enu_z1变量
 
     # 如果检测到目标且有选中的目标
     if len(tracking_info) > 0 and selected_target_id is not None:
@@ -512,7 +610,22 @@ def calculate_camera_velocity(tracking_info):
         if target is not None:
             center_x, center_y = target['center']  # 目标中心点坐标
             area = target['area']  # 目标边界框面积
-            
+
+            # ==== 新增：计算当前 desired_area_temp ====
+            desired_area_temp = desired_area  # 默认为目标面积
+            # ==== 新增：检查目标是否发生变化，如果变化则重置 initial_area ====
+            if selected_target_id != last_tracked_target_id:
+                initial_area = area  # 更新初始面积为新目标的当前面积
+                desired_area_temp = initial_area 
+                last_tracked_target_id = selected_target_id  # 更新上一次跟踪的目标ID
+                print(f"切换跟踪目标至 ID: {selected_target_id}, 新初始面积: {initial_area}")
+            # ===============================================================================
+            if initial_area is not None:
+                desired_area_temp = apply_filter(desired_area, desired_area_temp, alpha=0.5)
+                print(f"当前目标面积: {desired_area_temp:.2f}") # 可选：打印进度
+
+            # =========================================================
+
             # 计算图像中心点坐标
             center_image_x = image_width / 2
             center_image_y = image_height / 2
@@ -520,67 +633,218 @@ def calculate_camera_velocity(tracking_info):
             # 计算误差
             error_x = center_image_x - center_x  # 期望的中心x - 实际中心x
             error_y = center_image_y - center_y  # 期望的中心y - 实际中心y
-            error_z = desired_area - area        # 期望面积 - 实际面积
+            error_z = desired_area_temp - area        # 期望面积 - 实际面积
+            filtered_error_z = apply_filter(error_z + last_error_z, last_error_z, alpha=0.7)
+            # 更新上一次滤波后的值
+            last_error_z = filtered_error_z
             
-            # 新增逻辑：检查是否在允许的误差范围内（中心点误差不超过1%，面积误差不超过1%）
-            # 计算图像中心点的10%误差范围
-            center_tolerance_x = image_width * 0.1
-            center_tolerance_y = image_height * 0.1
-            # 计算面积的20%误差范围
-            area_tolerance = desired_area * 0.2
-            
-            # 如果中心点误差和面积误差都在1%以内，则将所有速度和角速度指令设置为0
-            if (abs(error_x) <= center_tolerance_x and 
-                abs(error_y) <= center_tolerance_y and 
-                abs(error_z) <= area_tolerance):
-                control_signal_x = 0.0
-                control_signal_y = 0.0
-                control_signal_z = 0.0
-                print(f"目标在允许误差范围内，所有控制指令设置为0")
-                print(f"中心误差: X={error_x:.2f}, Y={error_y:.2f}, 面积误差: {error_z:.2f}")
-                # 保持默认值0，不需要额外设置
+            edge_threshold = 0.01  # 边缘阈值，距离图像边缘1%范围内认为是边缘
+            # 获取检测框的四个顶点坐标
+            x1, y1, x2, y2 = target['xyxy']
+            target_in_edge = (y2 >= image_height * (1 - edge_threshold))
+
+            if target_in_edge:
+                control_signal_x = last_control_signal_x +0.001
+                last_control_signal_x = control_signal_x
+                print(f"目标检测框在屏幕边缘，control_signal_x保持不变")
             else:
-                # 使用PID控制器计算各方向控制信号
+                #用于控制相机光轴速度
+                control_signal_x = pid_update(pid_z_state, error_z, max_integral=10)
+                last_control_signal_x = control_signal_x
+            # 用于控制yaw的角速度
+            control_signal_y = pid_update(pid_x_state, error_x, max_integral=100)  
+            
+            # 用于控制相机z轴速度
+            adjusted_pid_z = get_linear_adjusted_pid_z(pid_y_state, error_y)
+            control_signal_z = pid_update(adjusted_pid_z, error_y)
+            #用于控制enu_z的速度
+            adjusted_pid_enu_z1 = get_linear_adjusted_pid(pid_enu_z1, error_y) 
+            control_signal_enu_z1 = pid_update(adjusted_pid_enu_z1, error_y) #相乘
 
-                # 逻辑：如果目标检测框的任何顶点在屏幕边缘，则x方向速度指令设置为零
-                # 原因：边缘目标可能未完全显示，无法准确判断距离远近
-                edge_threshold = 0.005  # 边缘阈值，距离图像边缘10%范围内认为是边缘
-
-                # 获取检测框的四个顶点坐标
-                x1, y1, x2, y2 = target['xyxy']
-                target_in_edge = (x1 <= image_width * edge_threshold or 
-                                x2 >= image_width * (1 - edge_threshold) or 
-                                y1 <= image_height * edge_threshold or 
-                                y2 >= image_height * (1 - edge_threshold))
-
-                if target_in_edge:
-                    control_signal_x = 0.0  # 禁止x方向速度指令
-                    print(f"目标检测框在屏幕边缘，禁止基于面积的距离控制")
-                else:
-                    control_signal_x = pid_update(pid_z_state, error_z)
-                # 相机坐标系下，y轴的控制信号（对应水平位置误差）
-                control_signal_y = pid_update(pid_x_state, error_x)  
-                # 相机坐标系下，z轴的控制信号（对应垂直位置误差）
-                control_signal_z = pid_update(pid_y_state, error_y)  
-                
             # 将控制信号转换为实际速度和角速度（m/s）
             velocity_x = control_signal_x * VELOCITY_GAIN_X
             velocity_y = control_signal_y * VELOCITY_GAIN_Y
             velocity_z = control_signal_z * VELOCITY_GAIN_Z
-            angular_x = 0.0
-            angular_y = 0.0
-            angular_z = control_signal_y * ANGULAR_GAIN
+            #x的4次方变化规律，在0~VELOCITY_GAIN_Z1之间
+            velocity_enu_z1 = control_signal_enu_z1 * VELOCITY_GAIN_Z1
+
+            enu_wx = 0.0
+            enu_wy = 0.0
+            enu_wz = control_signal_y * ANGULAR_GAIN
             
             # 打印控制信息（调试用）
             print(f"跟踪目标ID: {selected_target_id}")
+            print(f"初始面积: {area:.2f}, 临时目标面积: {desired_area_temp:.2f}, 最终目标面积: {desired_area:.2f}")
             print(f"控制误差 - X: {error_x:.2f}, Y: {error_y:.2f}, Z: {error_z:.2f}")
             print(f"控制信号 - X: {control_signal_x:.2f}, Y: {control_signal_y:.2f}, Z: {control_signal_z:.2f}")
             print(f"相机坐标系速度 - VX: {velocity_x:.3f} m/s, VY: {velocity_y:.3f} m/s, VZ: {velocity_z:.3f} m/s")
-            print(f"相机坐标系角速度 - WX: {angular_x:.3f} rad/s, WY: {angular_y:.3f} rad/s, WZ: {angular_z:.3f} rad/s")
+            print(f"相机坐标系角速度 - WX: {enu_wx:.3f} rad/s, WY: {enu_wy:.3f} rad/s, WZ: {enu_wz:.3f} rad/s")
     # 注意：这里不再处理目标丢失的情况，因为MouseTargetSelector已经处理了
     
-    # 返回线速度和角速度
-    return velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z
+
+
+
+    # 仅使用相机坐标系下的velocity_x计算ENU速度
+    enu_vx, enu_vy, _ = transform_camera_to_enu(velocity_x, 0, 0)
+
+    # 获取当前高度
+    target_altitude = default_target_altitude  # 目标高度为1米
+    #计算定高飞行所需要的enu_z轴速度
+    error_enu_z = target_altitude - current_altitude
+    control_signal_enu_z2 = pid_update(pid_enu_z2, error_enu_z)
+    velocity_enu_z2 = control_signal_enu_z2
+    enu_vz = velocity_enu_z2
+
+    # 添加最大速度限制
+    speed_magnitude = math.sqrt(enu_vx**2 + enu_vy**2 + enu_vz**2)
+    if speed_magnitude > MAX_VELOCITY:
+        scale_factor = MAX_VELOCITY / speed_magnitude
+        enu_vx *= scale_factor
+        enu_vy *= scale_factor
+        enu_vz *= scale_factor
+        print(f"速度超过限制，已缩放至{MAX_VELOCITY} m/s以内")
+        
+    return enu_vx, enu_vy, enu_vz, enu_wx, enu_wy, enu_wz
+
+def pixel_to_angle(pixel_x, pixel_y, image_width, image_height, fov_h=157.38, fov_v=157.38*1080/1920):
+    """
+    将像素坐标差转换为相机坐标系下的角度
+    
+    Args:
+        pixel_x (float): 像素水平差值（相对于图像中心）
+        pixel_y (float): 像素垂直差值（相对于图像中心）
+        image_width (int): 图像宽度
+        image_height (int): 图像高度
+        fov_h (float): 相机水平视场角（度）
+        fov_v (float): 相机垂直视场角（度）
+        
+    Returns:
+        tuple: (yaw_angle, pitch_angle) 相机坐标系下的偏航角和俯仰角（弧度）
+    """
+    # 计算每个像素对应的角度
+    pixel_to_rad_h = math.radians(fov_h) / image_width
+    pixel_to_rad_v = math.radians(fov_v) / image_height
+    
+    # 像素差转换为角度（弧度）
+    # 在相机坐标系中：X前，Y左，Z上
+    # 正的pixel_x（目标在右侧）对应负的yaw_angle（需要向右转）
+    # 正的pixel_y（目标在下方）对应正的pitch_angle（需要向下转）
+    yaw_angle = -pixel_x * pixel_to_rad_h
+    pitch_angle = pixel_y * pixel_to_rad_v
+    
+    return yaw_angle, pitch_angle
+
+def angle_to_vector(yaw_angle, pitch_angle):
+    """
+    将偏航角和俯仰角转换为单位向量
+    
+    Args:
+        yaw_angle (float): 偏航角（弧度）
+        pitch_angle (float): 俯仰角（弧度）
+        
+    Returns:
+        tuple: (x, y, z) 单位向量坐标
+    """
+    # 球坐标系转换为笛卡尔坐标系
+    # 相机坐标系：X前，Y左，Z上
+    x = math.cos(yaw_angle) * math.cos(pitch_angle)
+    y = math.sin(yaw_angle) * math.cos(pitch_angle)
+    z = -math.sin(pitch_angle)
+    
+    # 归一化为单位向量
+    magnitude = math.sqrt(x*x + y*y + z*z)
+    if magnitude > 0:
+        x /= magnitude
+        y /= magnitude
+        z /= magnitude
+    
+    return x, y, z
+
+def transform_vector_camera_to_body(cam_vector):
+    """
+    将相机坐标系下的向量转换到机体坐标系
+    
+    Args:
+        cam_vector (tuple): 相机坐标系下的向量 (x, y, z)
+        
+    Returns:
+        tuple: ENU坐标系下的向量 (x, y, z)
+    """
+    # 获取相机安装角度
+    camera_roll = coordinate_transformer_state['camera_roll']
+    camera_pitch = coordinate_transformer_state['camera_pitch']
+    camera_yaw = coordinate_transformer_state['camera_yaw']
+    
+    # 第一步：从相机坐标系转换到机身坐标系
+    # 创建相机到机身的旋转矩阵（根据相机安装角度）
+    cam_to_body = np.array([
+        [np.cos(camera_pitch)*np.cos(camera_yaw), 
+         np.cos(camera_pitch)*np.sin(camera_yaw), 
+         -np.sin(camera_pitch)],
+        [np.sin(camera_roll)*np.sin(camera_pitch)*np.cos(camera_yaw) - np.cos(camera_roll)*np.sin(camera_yaw),
+         np.sin(camera_roll)*np.sin(camera_pitch)*np.sin(camera_yaw) + np.cos(camera_roll)*np.cos(camera_yaw),
+         np.sin(camera_roll)*np.cos(camera_pitch)],
+        [np.cos(camera_roll)*np.sin(camera_pitch)*np.cos(camera_yaw) + np.sin(camera_roll)*np.sin(camera_yaw),
+         np.cos(camera_roll)*np.sin(camera_pitch)*np.sin(camera_yaw) - np.sin(camera_roll)*np.cos(camera_yaw),
+         np.cos(camera_roll)*np.cos(camera_pitch)]
+    ])
+    
+    # 将相机坐标系下的向量转换到机身坐标系
+    body_vector = np.dot(cam_to_body, np.array(cam_vector))
+    
+    return tuple(body_vector)
+    
+def transform_vector_body_to_enu(body_vector, uav_roll, uav_pitch,uav_yaw):
+    """
+    将机体坐标系下的向量转换到ENU世界坐标系
+    
+    Args:
+        body_vector (tuple): 机体坐标系下的向量 (x, y, z)
+        
+    Returns:
+        tuple: ENU坐标系下的向量 (x, y, z)
+    """
+    # 第二步：从机身坐标系转换到ENU世界坐标系
+    # 创建机身到ENU的旋转矩阵（根据无人机当前姿态）
+    body_to_enu = np.array([
+        [np.cos(uav_yaw)*np.cos(uav_pitch),
+         np.cos(uav_yaw)*np.sin(uav_pitch)*np.sin(uav_roll) - np.sin(uav_yaw)*np.cos(uav_roll),
+         np.cos(uav_yaw)*np.sin(uav_pitch)*np.cos(uav_roll) + np.sin(uav_yaw)*np.sin(uav_roll)],
+        [np.sin(uav_yaw)*np.cos(uav_pitch),
+         np.sin(uav_yaw)*np.sin(uav_pitch)*np.sin(uav_roll) + np.cos(uav_yaw)*np.cos(uav_roll),
+         np.sin(uav_yaw)*np.sin(uav_pitch)*np.cos(uav_roll) - np.cos(uav_yaw)*np.sin(uav_roll)],
+        [-np.sin(uav_pitch),
+         np.cos(uav_pitch)*np.sin(uav_roll),
+         np.cos(uav_pitch)*np.cos(uav_roll)]
+    ])
+    
+    # 将机身坐标系下的向量转换到ENU世界坐标系
+    enu_vector = np.dot(body_to_enu, body_vector)
+    
+    return tuple(enu_vector)
+
+    # 向量滤波
+    last_enu_target_vector = np.array([0.0, 0.0, 0.0])
+def apply_vector_filter(current_vector, last_vector, alpha=0.3):
+    """
+    应用向量低通滤波器平滑向量变化
+    
+    Args:
+        current_vector (numpy.ndarray): 当前计算的向量
+        last_vector (numpy.ndarray): 上一次滤波后的向量
+        alpha (float): 滤波系数，值在0到1之间，越小越平滑但响应越慢
+        
+    Returns:
+        numpy.ndarray: 滤波后的向量
+    """
+    filtered_vector = alpha * np.array(current_vector) + (1 - alpha) * np.array(last_vector)
+    
+    # 归一化为单位向量
+    magnitude = np.linalg.norm(filtered_vector)
+    if magnitude > 0:
+        filtered_vector = filtered_vector / magnitude
+        
+    return filtered_vector
 
 def calculate_velocity_control(tracking_info):
     """
@@ -592,20 +856,14 @@ def calculate_velocity_control(tracking_info):
     Returns:
         tuple: (velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z) ENU坐标系下的速度和角速度
     """
-    # 计算相机坐标系下的速度和角速度
-    cam_vx, cam_vy, cam_vz, cam_wx, cam_wy, cam_wz = calculate_camera_velocity(tracking_info)
-    
-    # 使用坐标变换器进行坐标系转换
-    enu_vx, enu_vy, enu_vz = transform_camera_to_enu(cam_vx, cam_vy, cam_vz)
-    # 注意：角速度的变换可能与线速度不同，需要根据具体情况调整
-    # 这里假设角速度也使用相同的方式变换（这可能不完全正确，需根据物理意义调整）
-    enu_wx, enu_wy, enu_wz = transform_camera_to_enu(cam_wx, cam_wy, cam_wz)
-
-    # _, _, enu_vz = transform_camera_to_enu(cam_vx, cam_vy, cam_vz)
-    # enu_vx, enu_vy, _ = transform_camera_to_enu(cam_vx, cam_vy, 0)
-
-    # 新增逻辑：检查目标检测框是否靠近边缘，如果是，则只允许上下方向运动
+    global last_enu_target_vector, last_tracked_target_id
+        # 获取选中的目标ID
     selected_target_id = mouse_selector.get_selected_target_id()
+    
+    # 默认速度和角速度为0（无目标时保持静止）
+    enu_vx, enu_vy, enu_vz, enu_wx, enu_wy, enu_wz = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0   
+
+    # 如果检测到目标且有选中的目标
     if len(tracking_info) > 0 and selected_target_id is not None:
         # 查找选中的目标
         target = None
@@ -614,29 +872,102 @@ def calculate_velocity_control(tracking_info):
                 target = t
                 break
         
+        # 如果找到选中的目标
         if target is not None:
-            # 检查目标检测框是否靠近边缘
-            edge_threshold = 0.5*0.2  # 10%的图像边缘区域
-            x1, y1, x2, y2 = target['xyxy']
+            center_x, center_y = target['center']  # 目标中心点坐标
+            width, height = target['size']  # 目标宽度和高度
+            area = target['area']  # 目标边界框面积
             
-            # 检查是否在边缘区域
-            near_edge = (y1 <= image_height * edge_threshold)
-            
-            if near_edge:
-                # 当目标靠近边缘时，只允许z方向运动，禁止x和y方向运动
-                enu_vx, enu_vy = 0.0, 0.0
-                enu_vz = (1 - 2*y1/image_height)*3
-                print("目标靠近边缘，仅允许竖直方向上下运动")
+            center_y = center_y + height / 2 # 调整为边界框底部中心点
 
-    # 新增：高度保护机制
-    # 如果当前高度低于设定的最低高度，则强制Z轴速度向上（正值）
-    if current_altitude < MINIMUM_ALTITUDE:
-        altitude_error = MINIMUM_ALTITUDE - current_altitude
-        # 根据高度误差调整上升速度，误差越大上升越快
-        required_upward_velocity = max(0.2, altitude_error * 1.0)  # 最小上升速度0.2m/s
-        enu_vz = max(enu_vz, required_upward_velocity)  # 确保有足够的上升速度
-        print(f"高度保护启动: 当前高度 {current_altitude:.2f}m < 最低高度 {MINIMUM_ALTITUDE}m, "
-              f"强制上升速度: {enu_vz:.2f} m/s")
+            # 计算图像中心点坐标
+            center_image_x = image_width / 2
+            center_image_y = image_height / 2
+            # 计算像素误差（从图像中心到目标）
+            pixel_error_x = center_x - center_image_x  # 正值表示目标在图像中心右侧
+            pixel_error_y = center_y - center_image_y  # 正值表示目标在图像中心下方
+            error_x = center_image_x - center_x
+            # 计算角度误差（相机坐标系）
+            yaw_error, pitch_error = pixel_to_angle(pixel_error_x, pixel_error_y, 
+                                                    image_width, image_height)
+            # 将角度误差转换为相机坐标系下的单位向量
+            cam_target_vector = angle_to_vector(yaw_error, pitch_error)
+
+            # 将相机坐标系下的目标方向向量转换到ENU世界坐标系
+                # 获取无人机当前姿态
+            uav_roll = coordinate_transformer_state['current_roll']
+            uav_pitch = coordinate_transformer_state['current_pitch']
+            uav_yaw = coordinate_transformer_state['current_yaw']    
+            body_target_vector = transform_vector_camera_to_body(cam_target_vector)
+            enu_vector = transform_vector_body_to_enu(body_target_vector, uav_roll, uav_pitch,uav_yaw)
+            # 对向量应用滤波器
+            if selected_target_id != last_tracked_target_id:
+                last_enu_target_vector = enu_vector 
+                last_tracked_target_id = selected_target_id  # 更新上一次跟踪的目标ID
+            last_enu_target_vector = apply_vector_filter(enu_vector, last_enu_target_vector, alpha=0.9)
+            print(f"滤波前的ENU向量: {enu_vector}，滤波后的ENU向量: {last_enu_target_vector}")
+
+            enu_vector = last_enu_target_vector
+
+            # 计算水平面内的速度，速度大小由enu_vector与水平方向的夹角与目标夹角的差值决定
+            # 计算enu_vector与水平方向的夹角
+            # 添加数值稳定性检查
+            enu_magnitude = np.linalg.norm(enu_vector)
+            horizontal_magnitude = np.linalg.norm(enu_vector[:2])
+
+            if enu_magnitude > 0 and horizontal_magnitude > 0:
+                # 使用clip确保点积结果在[-1, 1]范围内，避免arccos计算错误
+                # 计算向量与Z轴的夹角（90度减去与水平面的夹角）
+                # 向量与Z轴夹角的余弦值 = |z分量| / 向量模长
+                cos_angle_with_z = abs(enu_vector[2]) / enu_magnitude
+                # 限制在[-1, 1]范围内，防止计算误差
+                cos_angle_with_z = np.clip(cos_angle_with_z, -1.0, 1.0)
+                # 计算与Z轴的夹角
+                angle_with_z = np.arccos(cos_angle_with_z)
+                # 与水平面的夹角 = 90度 - 与Z轴的夹角
+                angle_diff = abs(math.pi/2 - angle_with_z)
+                
+                # 速度大小由enu_vector与水平方向的夹角与目标夹角的差值决定
+                target_angle = default_target_angle
+                error_angle = target_angle - angle_diff
+                print(f"绝对水平面角度差: {math.degrees(error_angle):.4f} 目标角度: {math.degrees(target_angle):.4f} 当前角度: {math.degrees(angle_diff):.4f}")
+                control_signal_angle = pid_update(pid_angle, error_angle, max_integral=math.pi/20)
+                velocity_xy = control_signal_angle * gain_xy
+
+                # enu坐标系下xy平面内的水平速度，大小等于velocity_xy，方向和enu_vector在水平面内的投影方向一致
+                # 修复负号问题并添加数值稳定性检查
+                normalized_horizontal_x = enu_vector[0] / horizontal_magnitude
+                normalized_horizontal_y = enu_vector[1] / horizontal_magnitude
+                
+                enu_vx = velocity_xy * normalized_horizontal_x
+                enu_vy = velocity_xy * normalized_horizontal_y
+                print(f"水平速度大小: {velocity_xy:.4f} , x速度: {enu_vx:.4f} , y速度: {enu_vy:.4f}")
+            else:
+                # 如果向量为零向量或没有水平分量，则不产生水平运动
+                enu_vx, enu_vy = 0.0, 0.0
+                print("警告：目标向量为零向量或没有水平分量，无法计算水平速度")
+
+            # 用于控制yaw的角速度
+            enu_wz = pid_update(pid_x_state, error_x, max_integral=100)* ANGULAR_GAIN
+
+    # 获取当前高度
+    if default_target_altitude < 1.5:
+        target_altitude = 1.5
+    else:
+        target_altitude = default_target_altitude  # 目标高度
+    #计算定高飞行所需要的enu_z轴速度
+    error_enu_z = target_altitude - current_altitude
+    enu_vz = pid_update(pid_enu_z2, error_enu_z)
+    print(f"当前相对高度: {current_altitude:.2f} 米")
+
+    # 添加最大速度限制
+    speed_magnitude = math.sqrt(enu_vx**2 + enu_vy**2 + enu_vz**2)
+    if speed_magnitude > MAX_VELOCITY:
+        scale_factor = MAX_VELOCITY / speed_magnitude
+        enu_vx *= scale_factor
+        enu_vy *= scale_factor
+        enu_vz *= scale_factor
+        print(f"速度超过限制，已缩放至{MAX_VELOCITY} m/s以内")
         
     return enu_vx, enu_vy, enu_vz, enu_wx, enu_wy, enu_wz
 
@@ -680,6 +1011,24 @@ def publish_velocity_command(velocity_x, velocity_y, velocity_z, angular_x=0.0, 
     except Exception as e:
         print(f"发布速度和角速度指令时出错: {e}")
 
+def apply_filter(current_value, last_value, alpha=0.3):
+    """
+    应用一阶低通滤波器平滑数值变化
+    
+    Args:
+        current_value (float): 当前计算的值
+        last_value (float): 上一次滤波后的值
+        alpha (float): 滤波系数，值在0到1之间，越小越平滑但响应越慢
+        
+    Returns:
+        float: 滤波后的值
+    """
+    return alpha * current_value + (1 - alpha) * last_value
+
+# 控制指令滤波
+last_velocity_x, last_velocity_y, last_velocity_z = 0.0, 0.0, 0.0
+last_angular_z = 0.0
+
 def process_frame(cv_image):
     """
     处理一帧图像，执行目标检测和跟踪
@@ -689,7 +1038,7 @@ def process_frame(cv_image):
     """
     global running, model, model_loaded, image_width, image_height, first_image_processed, desired_area
     global mouse_selector, target_classes, desired_area_k
-    
+    global last_velocity_x, last_velocity_y, last_velocity_z, last_angular_z
     try:
         # 获取图像的实际尺寸
         image_height, image_width = cv_image.shape[:2]
@@ -731,13 +1080,6 @@ def process_frame(cv_image):
         # 添加提示信息到图像上
         annotated_frame = mouse_selector.draw_selection_message(annotated_frame)
         
-        # # 显示当前检测的目标类别
-        # if target_classes is not None:
-        #     class_names = [COCO_CLASSES[idx] for idx in target_classes]
-        #     class_text = f"检测类别: {', '.join(class_names)}"
-        #     cv2.putText(annotated_frame, class_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                 0.6, (0, 255, 0), 2)
-
         # 创建可调节大小的窗口并显示图像
         cv2.namedWindow('YOLOv8 Object Tracking and PID Control', cv2.WINDOW_NORMAL)
         cv2.imshow('YOLOv8 Object Tracking and PID Control', annotated_frame)
@@ -747,10 +1089,21 @@ def process_frame(cv_image):
         publish_target_info(tracking_info)
         
         # 计算速度和角速度控制指令
-        velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z = calculate_velocity_control(tracking_info)
+        velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z = calculate_velocity_control(tracking_info) # 矢量控制-高空-给定角度
+        # velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z = calculate_camera_velocity(tracking_info) # 像素控制-平飞-给定面积
         
+        # 应用低通滤波器平滑控制指令
+        filtered_vx = apply_filter(velocity_x, last_velocity_x, alpha=1)
+        filtered_vy = apply_filter(velocity_y, last_velocity_y, alpha=1)
+        filtered_vz = apply_filter(velocity_z, last_velocity_z, alpha=1)
+        filtered_wz = apply_filter(angular_z, last_angular_z, alpha=1)
+        # 更新上一次滤波后的值
+        last_velocity_x, last_velocity_y, last_velocity_z = filtered_vx, filtered_vy, filtered_vz
+        last_angular_z = filtered_wz
+
         # 发布速度和角速度控制指令给PX4飞控
-        publish_velocity_command(velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z)
+        # publish_velocity_command(velocity_x, velocity_y, velocity_z, angular_x, angular_y, angular_z)
+        publish_velocity_command(filtered_vx, filtered_vy, filtered_vz, angular_x, angular_y, filtered_wz)
             
     except Exception as e:
         print(f"图像处理时出错: {e}")
@@ -853,14 +1206,14 @@ def altitude_callback(msg):
     处理无人机相对高度信息
     
     Args:
-        msg: 标准消息，包含相对高度信息
+        msg: geometry_msgs/PoseStamped消息，包含位置信息
     """
     global current_altitude
     
     try:
-        # 从消息中获取相对高度
-        current_altitude = msg.data
-        print(f"当前相对高度: {current_altitude:.2f} 米")
+        # 从PoseStamped消息中获取z坐标作为相对高度
+        current_altitude = msg.pose.position.z
+        # print(f"当前相对高度: {current_altitude:.2f} 米")
     except Exception as e:
         print(f"处理高度信息时出错: {e}")
 
@@ -878,7 +1231,6 @@ def cleanup():
     cv2.destroyAllWindows()  # 关闭所有OpenCV窗口
     print("资源已释放")
 
-
 def init_model():
     """初始化YOLOv8模型"""
     global model, model_loaded
@@ -888,7 +1240,7 @@ def init_model():
         print(f"当前工作目录: {current_dir}")
 
         # 检查模型文件是否存在
-        model_path = os.path.join(current_dir, 'yolov8n.pt')
+        model_path = os.path.join(current_dir, 'yolo11n.pt')
         print(f"检查模型文件路径: {model_path}")
 
         if os.path.exists(model_path):
@@ -1127,7 +1479,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='YOLOv8目标追踪程序')
     parser.add_argument('--use-usb-camera', action='store_true', 
                         help='使用USB相机直接读取图像，而不是通过ROS订阅')
-    parser.add_argument('--device', type=str, default='/dev/video2',
+    parser.add_argument('--device', type=str, default='/dev/video0',
                         help='USB相机设备路径 (默认: /dev/video2)')
     parser.add_argument('--config', type=str, default='detection_config.yaml',
                         help='目标检测配置文件路径 (默认: detection_config.yaml)')
@@ -1135,9 +1487,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # 设置全局配置
-    use_usb_camera = args.use_usb_camera
+    use_usb_camera = args.use-usb-camera
     usb_camera_device = args.device
-    config_file = args.config
+    config_file = "detection_config.yaml"
     
     # 启动主程序
     main()
