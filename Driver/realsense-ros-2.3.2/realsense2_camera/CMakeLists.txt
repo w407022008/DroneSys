@@ -7,6 +7,7 @@ option(SET_USER_BREAK_AT_STARTUP "Set user wait point in startup (for debug)" OF
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(OpenCV_DIR "/usr/lib/aarch64-linux-gnu/cmake/opencv4")
 
 find_package(catkin REQUIRED COMPONENTS
     message_generation
@@ -21,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
     tf
     ddynamic_reconfigure
     diagnostic_updater
+    OpenCV
     )
 
 if(BUILD_WITH_OPENMP)
@@ -88,6 +90,7 @@ include_directories(
     include
     ${realsense2_INCLUDE_DIR}
     ${catkin_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
     )
 
 # RealSense ROS Node
@@ -121,6 +124,7 @@ target_link_libraries(${PROJECT_NAME}
     ${realsense2_LIBRARY}
     ${catkin_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
+    ${OpenCV_INCLUDE_DIRS}
     )
 
 if(WIN32)
