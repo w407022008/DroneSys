@@ -1,0 +1,18 @@
+<launch>
+	<arg name="rviz" default="true"/>
+
+	<node name="vins_left" pkg="vins" type="vins_node" output="screen" launch-prefix="gnome-terminal --tab --"
+			args="$(find drone_experiment)/launch/slam/vins_fusion/rs_d435i/realsense_left_imu_config.yaml" >
+		<!-- remap from="/vins_estimator/odometry"   to="/odometry"/-->
+        <!-- remap from="/vins_estimator/path"   to="/path"/-->
+	</node>
+
+	<node name="vins_right" pkg="vins" type="vins_node" output="screen" launch-prefix="gnome-terminal --tab --"
+			args="$(find drone_experiment)/launch/slam/vins_fusion/rs_d435i/realsense_right_imu_config.yaml" >
+		<!-- remap from="/vins_estimator/odometry"   to="/odometry"/-->
+        <!-- remap from="/vins_estimator/path"   to="/path"/-->
+	</node>
+
+    <!-- Visualization - RViz-->
+    <node if="$(arg rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="screen" args="-d $(find vins)/config/vins_test_rviz_config.rviz" launch-prefix="gnome-terminal --tab --"/>
+</launch>
