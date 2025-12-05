@@ -1,39 +1,42 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(opencv_sgbm)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++14")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
-
 find_package(catkin REQUIRED COMPONENTS
-		roscpp
-		std_msgs
-		sensor_msgs
-		cv_bridge
-		image_transport
-	)
+  roscpp
+  rospy
+  std_msgs
+  sensor_msgs
+  cv_bridge
+  message_filters
+)
 
 find_package(OpenCV REQUIRED)
 
-catkin_package(
-	LIBRARIES opencv_sgbm
-	)
-
+catkin_package()
 
 include_directories(
-       ${catkin_INCLUDE_DIRS}
-       ${OpenCV_INCLUDE_DIRS}
-     )
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+)
 
-add_executable(opencv_sgbm
-	src/opencv_sgbm.cpp 
-	)
+add_executable(opencv_sgbm src/opencv_sgbm.cpp)
+add_executable(fisheye_undistort src/tools/fisheye_undistort.cpp)
+add_executable(stereo_fisheye_undistort src/tools/stereo_fisheye_undistort.cpp)
 
 target_link_libraries(opencv_sgbm
-       ${catkin_LIBRARIES}
-       ${OpenCV_LIBRARIES}
-	)
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
+target_link_libraries(fisheye_undistort
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(stereo_fisheye_undistort
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
 #############
 ## Install ##

@@ -1,0 +1,25 @@
+<launch>
+    <!-- 启动stereo sgbm节点 -->
+    <node name="stereo_sgbm" pkg="opencv_sgbm" type="opencv_sgbm" output="screen">
+        <!-- 重映射左相机话题 -->
+        <remap from="/camera/infra1/image_rect_raw" to="/stereo/left/image_raw"/>
+        
+        <!-- 重映射右相机话题 -->
+        <remap from="/camera/infra2/image_rect_raw" to="/stereo/right/image_raw"/>
+        
+        <!-- 参数设置 -->
+        <param name="use_stereo_sgbm" type="bool" value="true"/>
+        <param name="is_fisheye" type="bool" value="false"/>
+        <param name="left_image_topic" type="str" value="/camera/infra1/image_rect_raw"/>
+        <param name="right_image_topic" type="str" value="/camera/infra2/image_rect_raw"/>
+        <param name="timestamp_tolerance" type="double" value="0.01"/>
+        
+        <!-- 鱼眼相机参数示例（如果is_fisheye为true则需要提供这些参数） -->
+        <!-- 
+        <rosparam param="left_k">[388.404, 0.0, 321.247, 0.0, 388.404, 238.485, 0.0, 0.0, 1.0]</rosparam>
+        <rosparam param="right_k">[387.954, 0.0, 317.558, 0.0, 387.954, 243.543, 0.0, 0.0, 1.0]</rosparam>
+        <rosparam param="left_d">[-0.057, 0.072, -0.068, 0.023]</rosparam>
+        <rosparam param="right_d">[-0.055, 0.069, -0.066, 0.021]</rosparam>
+        -->
+    </node>
+</launch>

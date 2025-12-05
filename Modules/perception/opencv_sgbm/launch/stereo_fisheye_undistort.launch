@@ -1,0 +1,25 @@
+<launch>
+    <!-- 双目鱼眼去畸变节点 -->
+    <node name="stereo_fisheye_undistort" pkg="opencv_sgbm" type="stereo_fisheye_undistort" output="screen">
+        <!-- 话题重映射 -->
+        <remap from="/stereo/left/image_raw" to="/camera/fisheye1/image_raw"/>
+        <remap from="/stereo/right/image_raw" to="/camera/fisheye2/image_raw"/>
+        <remap from="/stereo/left/image_undistorted" to="/camera/fisheye1/image_undistorted"/>
+        <remap from="/stereo/right/image_undistorted" to="/camera/fisheye2/image_undistorted"/>
+        
+        <!-- 左相机参数 -->
+        <rosparam param="left_k">[388.404, 0.0, 321.247, 0.0, 388.404, 238.485, 0.0, 0.0, 1.0]</rosparam>
+        <rosparam param="left_d">[-0.057, 0.072, -0.068, 0.023]</rosparam>
+        
+        <!-- 右相机参数 -->
+        <rosparam param="right_k">[387.954, 0.0, 317.558, 0.0, 387.954, 243.543, 0.0, 0.0, 1.0]</rosparam>
+        <rosparam param="right_d">[-0.055, 0.069, -0.066, 0.021]</rosparam>
+        
+        <!-- 其他参数 -->
+        <param name="left_input_topic" type="str" value="/stereo/left/image_raw"/>
+        <param name="right_input_topic" type="str" value="/stereo/right/image_raw"/>
+        <param name="left_output_topic" type="str" value="/stereo/left/image_undistorted"/>
+        <param name="right_output_topic" type="str" value="/stereo/right/image_undistorted"/>
+        <param name="timestamp_tolerance" type="double" value="0.01"/>
+    </node>
+</launch>

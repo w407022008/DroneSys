@@ -1,0 +1,19 @@
+<launch>
+    <!-- 单目鱼眼去畸变节点 -->
+    <node name="fisheye_undistort" pkg="opencv_sgbm" type="fisheye_undistort" output="screen">
+        <!-- 话题重映射 -->
+        <remap from="/stereo/left/image_raw" to="/camera/fisheye1/image_raw"/>
+        <remap from="/stereo/left/image_undistorted" to="/camera/fisheye1/image_undistorted"/>
+        
+        <!-- 相机内参矩阵K -->
+        <rosparam param="k">[388.404, 0.0, 321.247, 0.0, 388.404, 238.485, 0.0, 0.0, 1.0]</rosparam>
+        
+        <!-- 畸变系数D -->
+        <rosparam param="d">[-0.057, 0.072, -0.068, 0.023]</rosparam>
+        
+        <!-- 其他参数 -->
+        <param name="input_topic" type="str" value="/stereo/left/image_raw"/>
+        <param name="output_topic" type="str" value="/stereo/left/image_undistorted"/>
+        <param name="timestamp_tolerance" type="double" value="0.01"/>
+    </node>
+</launch>
