@@ -41,6 +41,10 @@ ImageProcessor::~ImageProcessor() {
 }
 
 bool ImageProcessor::loadParameters() {
+  // Topic name
+  nh.param<string>("cam0/topic", cam0_topic, string("cam0_image"));
+  nh.param<string>("cam1/topic", cam1_topic, string("cam1_image"));
+
   // Camera calibration parameters
   nh.param<string>("cam0/distortion_model",
       cam0_distortion_model, string("radtan"));
@@ -182,9 +186,10 @@ bool ImageProcessor::createRosIO() {
   image_transport::ImageTransport it(nh);
   debug_stereo_pub = it.advertise("debug_stereo_image", 1);
 
-  cam0_img_sub.subscribe(nh, "cam0_image", 10);
-  cam1_img_sub.subscribe(nh, "cam1_image", 10);
+  cam0_img_sub.subscribe(nh, cam0_topic, 10);
+  cam1_img_sub.subscribe(nh, cam1_topic, 10);
   stereo_sub.connectInput(cam0_img_sub, cam1_img_sub);
+  stereo_sub.setMaxIntervalDuration(ros::Duration(0.001));
   stereo_sub.registerCallback(&ImageProcessor::stereoCallback, this);
   imu_sub = nh.subscribe("imu", 50,
       &ImageProcessor::imuCallback, this);

@@ -53,12 +53,12 @@ Please kindly give us a star :star:, if you find this work useful or interesting
 
 4. The DroneSys has been tested to communicate with [PX4](https://github.com/PX4) via the mavlink protocol. In order to test the complete DroneSys, we need to install the PX4 system. 
 ```
-    git clone https://github.com/w407022008/Firmware_PX4_v1.14.2.git --depth 1 PX4_v1.14.2 --recursive
-    cd PX4_v1.14.2
-    git tag v1.14.2
+    git clone https://github.com/w407022008/Firmware_PX4_v1.15.2.git --depth 1 PX4_v1.15.2 --recursive
+    cd PX4_v1.15.2
+    git tag v1.15.2
     sudo bash Tools/setup/ubuntu.sh
     # Restart the computer on completion. And then
-    cd PX4_v1.14.2 && sudo make px4_sitl_default gazebo
+    cd PX4_v1.15.2 && sudo make px4_sitl_default gazebo
 ```
 Any error, please refer to [PX4 official installation](https://docs.px4.io/v1.14/en/dev_setup/dev_env_linux_ubuntu.html#ros-gazebo-classic).
 
@@ -106,9 +106,9 @@ source ~/src/DroneSys/devel/setup.bash
 export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:~/src/DroneSys/devel/lib
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/src/DroneSys/Simulator/gazebo_simulator/models
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/src/DroneSys/Simulator/gazebo_simulator/drone_models
-source ~/src/PX4_v1.14.2/Tools/setup_gazebo.bash ~/src/PX4_v1.14.2 ~/src/PX4_v1.14.2/build/px4_sitl_default
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.14.2
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.14.2/Tools/sitl_gazebo
+source ~/src/PX4_v1.15.2/Tools/simulation/gazebo-classic/setup_gazebo.bash ~/src/PX4_v1.15.2 ~/src/PX4_v1.15.2/build/px4_sitl_default
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.15.2
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/src/PX4_v1.15.2/Tools/simulation/gazebo-classic/sitl_gazebo-classic
 ```
 
 If you encounter problems in this step, please first refer to existing __issues__, __pull requests__ and __Google__ before raising a new issue.

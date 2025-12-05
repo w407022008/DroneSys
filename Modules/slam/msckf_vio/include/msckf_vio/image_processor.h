@@ -21,6 +21,7 @@
 #include <sensor_msgs/Image.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 namespace msckf_vio {
 
@@ -327,6 +328,9 @@ private:
   // IMU message buffer.
   std::vector<sensor_msgs::Imu> imu_msg_buffer;
 
+  // Topic name
+  std::string cam0_topic, cam1_topic;
+
   // Camera calibration parameters
   std::string cam0_distortion_model;
   cv::Vec2i cam0_resolution;
@@ -373,8 +377,11 @@ private:
     sensor_msgs::Image> cam0_img_sub;
   message_filters::Subscriber<
     sensor_msgs::Image> cam1_img_sub;
-  message_filters::TimeSynchronizer<
-    sensor_msgs::Image, sensor_msgs::Image> stereo_sub;
+  typedef message_filters::sync_policies::ApproximateTime<
+    sensor_msgs::Image, sensor_msgs::Image> sync_pol;
+  message_filters::Synchronizer<sync_pol> stereo_sub;
+  // message_filters::TimeSynchronizer<
+  //   sensor_msgs::Image, sensor_msgs::Image> stereo_sub;
   ros::Subscriber imu_sub;
   ros::Publisher feature_pub;
   ros::Publisher tracking_info_pub;
