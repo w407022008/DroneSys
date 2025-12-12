@@ -25,14 +25,20 @@ https://github.com/IntelRealSense/librealsense/blob/master/third-party/libtm/lib
   <arg name="enable_accel"        default="true"/>
   <arg name="enable_pose"         default="true"/>
 
-  <arg name="enable_sync"           default="false"/>
+  <arg name="enable_sync"           default="true"/>
 
   <arg name="linear_accel_cov"      default="0.01"/>
   <arg name="initial_reset"         default="false"/>
   <arg name="reconnect_timeout"     default="6.0"/>
-  <arg name="unite_imu_method"      default=""/>
+  <arg name="unite_imu_method"      default="copy"/>
 
   <arg name="publish_odom_tf"     default="true"/>
+  
+  <rosparam>
+      /camera/tracking_module/enable_relocalization: false
+      /camera/tracking_module/enable_pose_jumping: false
+      /camera/tracking_module/enable_mapping: false
+  </rosparam>
   
   <group ns="$(arg camera)">
     <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
