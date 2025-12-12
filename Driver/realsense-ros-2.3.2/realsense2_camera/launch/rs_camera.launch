@@ -74,6 +74,10 @@
   
   <arg name="emitter_on_off"            default="true"/>
 
+  <rosparam>
+    /camera/stereo_module/emitter_enabled: 1
+  </rosparam>
+  
   <group ns="$(arg camera)">
     <param name="decimation/filter_magnitude" value="$(arg decimation_filter_magnitude)"/>
     <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
