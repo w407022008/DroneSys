@@ -7,6 +7,7 @@ mavros:
   fcu_url: "udp://:14540@localhost:14557"
   # gcs_url: gcs communication address, udp address with port, 
   # e.g: "udp-b://192.168.1.101:14555@14550" msg to gcs from ip address 192.168.1.101 with port 14555@14550
+  # e.g: "udp://192.168.1.101:14555@14550" msg only to gcs at ip address 192.168.1.101 with port 14555@14550
   gcs_url: ""
 
 vrpn_client_node:
