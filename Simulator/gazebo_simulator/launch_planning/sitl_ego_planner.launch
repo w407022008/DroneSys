@@ -11,8 +11,8 @@
   <arg name="map_size_z" value=" 4.0"/>
   
   <!-- maximum velocity and acceleration the drone will reach -->
-  <arg name="max_vel" value="4.0" />
-  <arg name="max_acc" value="2.0" />
+  <arg name="max_vel" value="1.0" />
+  <arg name="max_acc" value="1.0" />
 
   <arg name="planning_horizon" value="7.5" />
   <arg name="inflate" value="0.4"/>
@@ -224,10 +224,10 @@
 
       <!-- camera parameter -->
       <!-- intrinsic params of the depth camera -->
-      <param name="grid_map/cx" value="160.5"/>
-      <param name="grid_map/cy" value="120.5"/>
-      <param name="grid_map/fx" value="231.06897487523196"/>
-      <param name="grid_map/fy" value="231.06897487523196"/>
+      <param name="grid_map/cx" value="320"/>
+      <param name="grid_map/cy" value="240"/>
+      <param name="grid_map/fx" value="337.20843505859375"/>
+      <param name="grid_map/fy" value="337.20843505859375"/>
 
       <!-- camera pose: transform of camera frame in the world frame -->
       <!-- depth topic: depth image, 640x480 by default -->

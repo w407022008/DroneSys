@@ -6,12 +6,18 @@
     <param name="control_from_joy" value="$(arg control_from_joy)" type="int"/>
     <param name="joy_goal_xy_max" value="4.0" type="double"/>      <!-- Horizontal furthest distance (when joy control) -->
     <param name="joy_goal_z_max" value="1.0" type="double"/>       <!-- Vertical furthest distance (when joy control) -->
-		<param name="is_2D" value="false" type="bool"/>				<!-- if 2D: target height is fixed; if 3D: pls choice VFH Histogram mode below -->
-		<param name="fly_height_2D" value="1.0" type="double"/>		<!-- if 2D, fixed height -->
-		<param name="min_goal_height" value="1.0" type="double"/>				<!-- virtual ground -->
-		<param name="ceil_height" value="4.0" type="double"/>
-		<!-- GeoFence -->
-		<rosparam command="load" file="$(find drone_experiment)/config/control_config/geofence.yaml"/>
+    <param name="is_2D" value="false" type="bool"/>                <!-- if 2D: target height is fixed; if 3D: pls choice VFH Histogram mode below -->
+    <param name="fly_height_2D" value="1.0" type="double"/>        <!-- if 2D, fixed height -->
+    <param name="min_goal_height" value="1.0" type="double"/>      
+    <param name="ceil_height" value="4.0" type="double"/>
+    <!-- GeoFence -->
+    <rosparam command="load" file="$(find drone_experiment)/config/control_config/geofence.yaml"/>
+  </node>
+
+  <!-- Depth image rotation node for D435i -->
+  <node pkg="drone_experiment" type="rotate_depth_image.py" name="depth_image_rotator" output="screen">
+    <param name="input_topic" value="/camera/depth/image_rect_raw" />
+    <param name="output_topic" value="/mav_isir/camera/depth/image_raw" />
   </node>
 
   <!-- size of map, change the size inflate x, y, z according to your application -->
@@ -37,7 +43,7 @@
   <arg name="fy" value="387.229248046875"/>
 
   <!-- maximum velocity and acceleration the drone will reach -->
-  <arg name="max_vel" value="2.0" />
+  <arg name="max_vel" value="1.0" />
   <arg name="max_acc" value="1.0" />
 
   <!--always set to 1.5 times grater than sensing horizen-->
