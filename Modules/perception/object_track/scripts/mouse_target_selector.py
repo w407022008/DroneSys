@@ -22,6 +22,12 @@ class MouseTargetSelector:
         self.target_selection_message = "Please click on the target"  # 显示在图像上的提示信息
         self.message_display_time = 0  # 消息显示时间戳
         self.tracking_info_cache = []  # 缓存跟踪信息供鼠标回调使用
+        
+        # 目标丢失恢复相关属性
+        self.lost_target_id = None  # 丢失的目标ID
+        self.lost_target_time = None  # 目标丢失的时间
+        self.lost_target_recovery_timeout = 3.0  # 丢失目标后恢复的最大时间（秒）
+        self.lost_target_recoordinate_timeout = 0.5  # 丢失目标后重新定位的时间间隔（秒）
     
     def mouse_callback(self, event, x, y, flags, param):
         """
@@ -49,18 +55,18 @@ class MouseTargetSelector:
             y (int): y坐标
         """
         # 查找点击位置对应的目标
+        found_target = False
         if self.tracking_info_cache:
-            found_target = False
             for info in self.tracking_info_cache:
                 x1, y1, x2, y2 = info['xyxy']
                 # 检查点击位置是否在边界框内
                 if x1 <= x <= x2 and y1 <= y <= y2:
                     self._select_target(info['id'],info['xyxy'])
                     found_target = True
-                    break
             
-            if not found_target:
-                self._no_target_found()
+        return found_target
+            # if not found_target:
+            #     self._no_target_found()
 
     def _select_target(self, target_id, target_box):
         """
@@ -73,6 +79,11 @@ class MouseTargetSelector:
         self.last_seen_target_box= target_box  # 更新最后看到的目标ID
         self.target_selection_message = f"Tracking ID: {self.selected_target_id}"
         self.message_display_time = time.time()
+        
+        # 清除丢失目标的信息（如果重新选择了相同或不同的目标）
+        self.lost_target_id = None
+        self.lost_target_time = None
+        
         print(f"Tracking ID: {self.selected_target_id}")
 
     def _cancel_selection(self):
@@ -139,17 +150,58 @@ class MouseTargetSelector:
             target_exists = any(info['id'] == self.selected_target_id for info in self.tracking_info_cache)
             
             if not target_exists:
-                # 获取上一次选中目标的边界框信息
+                # 检查是否可以在丢失目标中恢复
+                self._try_recover_lost_target()
+
+                # # 目标不存在，直接取消选中
+                # print(f"Target ID {self.selected_target_id} lost")
+                # self.selected_target_id = None
+            else:
+                self.lost_target_id = None
+                self.lost_target_time = None
+    
+    def _try_recover_lost_target(self):
+        """
+        尝试恢复丢失的目标
+        
+        Returns:
+            bool: 如果成功恢复返回True，否则返回False
+        """
+        # 记录丢失的目标信息
+        if self.selected_target_id is not None and self.lost_target_id is None:
+            self.lost_target_id = self.selected_target_id
+            self.lost_target_time = time.time()
+        
+        # 检查是否超时
+        if (self.lost_target_id is not None and 
+            self.lost_target_time is not None):
+            if(time.time() - self.lost_target_time <= self.lost_target_recoordinate_timeout):
+                # 无法恢复，尝试用中心点重新选择目标
                 x1, y1, x2, y2 = self.last_seen_target_box
                 # 计算边界框的中心点
                 center_x = int((x1 + x2) / 2)
                 center_y = int((y1 + y2) / 2)
                 # 使用中心点坐标重新选择目标
-                self.select_target_by_coordinates(center_x, center_y)
+                return self.select_target_by_coordinates(center_x, center_y)
+            elif(time.time() - self.lost_target_time <= self.lost_target_recovery_timeout):
+                # 在当前帧中查找相同ID的目标
+                for info in self.tracking_info_cache:
+                    if info['id'] == self.lost_target_id:
+                        # 找到了丢失的目标，恢复选择
+                        self._select_target(self.lost_target_id, info['xyxy'])
+                        print(f"Recovered lost target ID: {self.lost_target_id}")
+                        return True
                 
-                # # 目标不存在，直接取消选中
-                # print(f"Target ID {self.selected_target_id} lost")
-                # self.selected_target_id = None
+        
+        # 检查是否超时，如果超时则清除丢失目标信息
+        if (self.lost_target_id is not None and 
+            self.lost_target_time is not None and
+            time.time() - self.lost_target_time > self.lost_target_recovery_timeout):
+            self.lost_target_id = None
+            self.lost_target_time = None
+            self._cancel_selection()
+            
+        return False
     
     def draw_selection_message(self, frame):
         """
@@ -194,3 +246,6 @@ class MouseTargetSelector:
         self.selected_target_id = None
         self.target_selection_message = "Please click on the target to select for tracking"
         self.message_display_time = time.time()
+        # 同时重置丢失目标的信息
+        self.lost_target_id = None
+        self.lost_target_time = None

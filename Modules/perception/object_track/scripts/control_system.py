@@ -101,10 +101,10 @@ class ControlSystem:
         
         # 控制参数
         self.desired_target_angle = 25 * math.pi / 180
-        self.default_target_altitude = 3.0
+        self.default_target_altitude = 1.0
         self.MINIMUM_ALTITUDE = 1.0
-        self.MAXIMUM_ALTITUDE = 3.0
-        self.MAX_VELOCITY = 5.0
+        self.MAXIMUM_ALTITUDE = 2.0
+        self.MAX_VELOCITY = 1.0
         self.VELOCITY_GAIN_X = 5
         self.VELOCITY_GAIN_XY = 5
         self.ANGULAR_GAIN = 90/180*math.pi
@@ -647,8 +647,9 @@ class ControlSystem:
 
                     # 如果检测框下边界接近图像下边界，则保留上次的angle_diff值
                     edge_threshold = 0.01  # 边缘阈值，距离图像边缘1%范围内认为是边缘
+                    angle_control_scale_factor = scale_factor
                     if y2 >= self.image_height * (1 - edge_threshold):
-                        scale_factor = 2*scale_factor
+                        angle_control_scale_factor = 1.2*scale_factor
 
                     # 初始化临时目标角度（如果尚未定义）
                     if not hasattr(self, 'temporary_target_angle'):
@@ -833,8 +834,9 @@ class ControlSystem:
 
                     # 如果检测框下边界接近图像下边界，则增加scale_factor
                     edge_threshold = 0.01  # 边缘阈值，距离图像边缘1%范围内认为是边缘
+                    angle_control_scale_factor = scale_factor
                     if y2 >= self.image_height * (1 - edge_threshold):
-                        scale_factor = 2*scale_factor
+                        angle_control_scale_factor = 1.2*scale_factor
 
                     # 初始化临时目标角度（如果尚未定义）
                     if not hasattr(self, 'temporary_target_angle'):
@@ -853,7 +855,7 @@ class ControlSystem:
 
                     # 角度过大则下降高度，角度过小则抬升高度
                     enu_vz = self.pid_angle_controller.update(
-                        error_angle, max_integral=10/180*math.pi) * self.VELOCITY_GAIN_XY * scale_factor
+                        error_angle, max_integral=10/180*math.pi) * self.VELOCITY_GAIN_XY * angle_control_scale_factor
 
                     print(f"水平速度大小: {velocity_x:.4f} 竖直速度大小：{enu_vz:.4f}")
                 else:

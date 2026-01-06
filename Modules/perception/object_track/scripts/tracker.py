@@ -8,6 +8,11 @@
 
 import numpy as np
 import torch
+import platform
+
+# 检查是否在NVIDIA Jetson平台（包括Orin NX）
+IS_JETSON = 'aarch64' in platform.machine() or 'arm' in platform.machine()
+
 from ultralytics.trackers.bot_sort import BOTSORT, BYTETracker
 from ultralytics.utils import IterableSimpleNamespace
 
@@ -19,21 +24,39 @@ class SingleObjectBotSortTracker:
 
     def __init__(self):
         """初始化追踪器"""
-        # 创建类似botsort.yaml的配置
-        args = IterableSimpleNamespace(
-            tracker_type='botsort',
-            track_high_thresh=0.25,
-            track_low_thresh=0.1,
-            new_track_thresh=0.25,
-            track_buffer=30,
-            match_thresh=0.8,
-            fuse_score=True,
-            gmc_method='sparseOptFlow',
-            proximity_thresh=0.5,
-            appearance_thresh=0.8,
-            with_reid=False,
-            model='auto'
-        )
+        # 根据平台调整追踪器参数
+        if IS_JETSON:
+            # 在Jetson平台上使用更轻量级的配置
+            args = IterableSimpleNamespace(
+                tracker_type='botsort',
+                track_high_thresh=0.3,
+                track_low_thresh=0.15,
+                new_track_thresh=0.3,
+                track_buffer=20,  # 减少缓冲区大小节省内存
+                match_thresh=0.7,
+                fuse_score=True,
+                gmc_method='sparseOptFlow',
+                proximity_thresh=0.4,
+                appearance_thresh=0.7,
+                with_reid=False,
+                model='auto'
+            )
+        else:
+            # 创建类似botsort.yaml的配置
+            args = IterableSimpleNamespace(
+                tracker_type='botsort',
+                track_high_thresh=0.25,
+                track_low_thresh=0.1,
+                new_track_thresh=0.25,
+                track_buffer=30,
+                match_thresh=0.8,
+                fuse_score=True,
+                gmc_method='sparseOptFlow',
+                proximity_thresh=0.5,
+                appearance_thresh=0.8,
+                with_reid=False,
+                model='auto'
+            )
 
         # 初始化BOTSORT追踪器
         self.tracker = BOTSORT(args=args, frame_rate=30)
@@ -139,16 +162,29 @@ class SingleObjectByteTrackTracker:
 
     def __init__(self):
         """初始化追踪器"""
-        # 创建类似bytetrack.yaml的配置
-        args = IterableSimpleNamespace(
-            tracker_type='bytetrack',
-            track_high_thresh=0.25,
-            track_low_thresh=0.1,
-            new_track_thresh=0.25,
-            track_buffer=30,
-            match_thresh=0.8,
-            fuse_score=True
-        )
+        # 根据平台调整追踪器参数
+        if IS_JETSON:
+            # 在Jetson平台上使用更轻量级的配置
+            args = IterableSimpleNamespace(
+                tracker_type='bytetrack',
+                track_high_thresh=0.3,
+                track_low_thresh=0.15,
+                new_track_thresh=0.3,
+                track_buffer=20,  # 减少缓冲区大小节省内存
+                match_thresh=0.7,
+                fuse_score=True
+            )
+        else:
+            # 创建类似bytetrack.yaml的配置
+            args = IterableSimpleNamespace(
+                tracker_type='bytetrack',
+                track_high_thresh=0.25,
+                track_low_thresh=0.1,
+                new_track_thresh=0.25,
+                track_buffer=30,
+                match_thresh=0.8,
+                fuse_score=True
+            )
 
         # 初始化BYTETracker追踪器
         self.tracker = BYTETracker(args=args, frame_rate=30)

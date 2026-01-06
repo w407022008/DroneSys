@@ -27,11 +27,15 @@ import json
 import threading
 import time
 import math
+import platform
 
 # 导入鼠标目标选择器
 from mouse_target_selector import MouseTargetSelector
 from tracker import SingleObjectBotSortTracker, SingleObjectByteTrackTracker
 from control_system import ControlSystem, apply_filter
+
+# 检查是否在NVIDIA Jetson平台（包括Orin NX）
+IS_JETSON = 'aarch64' in platform.machine() or 'arm' in platform.machine()
 
 # 尝试导入ROS模块
 ROS_AVAILABLE = False
@@ -60,7 +64,8 @@ model = None
 target_info_pub = None
 velocity_pub = None
 attitude_pub = None
-image_sub = None
+image0_sub = None
+image1_sub = None
 attitude_sub = None
 running = True
 model_loaded = False
@@ -233,10 +238,10 @@ def publish_attitude_command(roll, pitch, yaw, thrust):
 
 def extract_tracking_info(result):
     """
-    从YOLOv8追踪结果中提取关键信息
+    从YOLO追踪结果中提取关键信息
     
     Args:
-        result: YOLOv8追踪结果对象
+        result: YOLO追踪结果对象
         
     Returns:
         list: 包含边界框、ID、置信度、中心点位置和高度的字典列表
@@ -433,9 +438,9 @@ def process_frame(cv_image):
         annotated_frame = mouse_selector.draw_selection_message(annotated_frame)
 
         # 创建可调节大小的窗口并显示图像
-        cv2.namedWindow('YOLOv8 Object Tracking and PID Control', cv2.WINDOW_NORMAL)
-        cv2.imshow('YOLOv8 Object Tracking and PID Control', annotated_frame)
-        cv2.setMouseCallback('YOLOv8 Object Tracking and PID Control', mouse_selector.mouse_callback)
+        cv2.namedWindow('Object Tracking and Control', cv2.WINDOW_NORMAL)
+        cv2.imshow('Object Tracking and Control', annotated_frame)
+        cv2.setMouseCallback('Object Tracking and Control', mouse_selector.mouse_callback)
 
         # 发布目标信息（用于调试）
         publish_target_info(tracking_info)
@@ -467,7 +472,39 @@ def process_frame(cv_image):
         import traceback
         traceback.print_exc()
 
-def image_callback(msg):
+def image0_callback(msg):
+    """
+    图像回调函数，处理从/camera/rgb/image_raw接收的图像数据
+    
+    Args:
+        msg: 图像消息
+    """
+    global running
+    
+    try:
+        # 将ROS图像消息转换为OpenCV格式
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+        
+        # 将图像旋转90度
+        cv_image = cv2.rotate(cv_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        
+        # 如果图像是彩色的，将其转换为灰度图
+        if len(cv_image.shape) == 3 and cv_image.shape[2] == 3:
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+        
+        # 处理图像
+        process_frame(cv_image)
+        
+        # 按'q'键退出程序
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            running = False
+            
+    except Exception as e:
+        print(f"图像处理时出错: {e}")
+        import traceback
+        traceback.print_exc()
+
+def image1_callback(msg):
     """
     图像回调函数，处理从/camera/rgb/image_raw接收的图像数据
     
@@ -598,7 +635,7 @@ def cleanup():
 
 def run():
     """
-    主循环：运行YOLOv8追踪并发布控制指令
+    主循环：运行YOLO追踪并发布控制指令
     """
     global running, usb_camera
     
@@ -709,38 +746,33 @@ def load_detection_config(config_path):
         return None
 
 def init_model():
-    """初始化YOLOv8模型"""
+    """初始化YOLO模型"""
     global model, model_loaded
     try:
         # 获取当前工作目录
         current_dir = os.getcwd()
         print(f"当前工作目录: {current_dir}")
 
-        # 检查模型文件是否存在
-        model_path = os.path.join(current_dir, 'yolo11n.pt')
-        print(f"检查模型文件路径: {model_path}")
+        # 在Jetson平台上优先使用较小的模型以提高性能
+        model_candidates = ['yolo11n.pt', 'yolov8n.pt'] if IS_JETSON else ['yolo11s.pt']
+        
+        model_path = None
+        for candidate in model_candidates:
+            candidate_path = os.path.join(current_dir, candidate)
+            if os.path.exists(candidate_path):
+                model_path = candidate_path
+                print(f"找到模型文件: {model_path}")
+                break
 
-        if os.path.exists(model_path):
-            print(f"模型文件存在: {model_path}")
-        else:
-            print(f"警告：模型文件不存在: {model_path}")
-            # 尝试在其他可能的位置查找
-            possible_paths = [
-                './yolov8n.pt',
-                '../yolov8n.pt'
-            ]
-
-            for path in possible_paths:
-                if os.path.exists(path):
-                    model_path = path
-                    print(f"在 {path} 找到模型文件")
-                    break
-            else:
-                print("错误：在任何预期位置都未找到模型文件")
-                return False
-
-        # 加载YOLOv8模型（使用预训练的yolov8n模型）
-        print("正在加载YOLOv8模型...")
+        # 加载YOLO模型（使用预训练的yolo模型）
+        print("正在加载YOLO模型...")
+        print(f"使用模型: {model_path}")
+        
+        # 在Jetson平台上设置优化选项
+        if IS_JETSON:
+            print("检测到Jetson平台，应用优化设置")
+            # 可以在这里添加TensorRT优化或其他Jetson特定优化
+            
         model = YOLO(model_path)
         
         # 验证模型是否加载成功
@@ -748,7 +780,7 @@ def init_model():
             print("错误：模型加载失败")
             return False
 
-        print("YOLOv8模型加载成功")
+        print("YOLO模型加载成功")
         print(f"模型类型: {type(model)}")
         model_loaded = True  # 设置模型加载完成标志
         return True
@@ -773,10 +805,18 @@ def init_usb_camera():
             print(f"无法打开USB相机设备 {usb_camera_device}")
             return False
         
-        # 设置摄像头参数（根据相机支持的分辨率调整）
-        usb_camera.set(cv2.CAP_PROP_FRAME_WIDTH, 848)
-        usb_camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        usb_camera.set(cv2.CAP_PROP_FPS, 30)
+        # 根据是否在Jetson平台设置不同的参数
+        if IS_JETSON:
+            print("在Jetson平台，使用优化的相机设置")
+            # Jetson平台优化设置
+            usb_camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
+            usb_camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
+            usb_camera.set(cv2.CAP_PROP_FPS, 30)
+        else:
+            # 其他平台设置
+            usb_camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
+            usb_camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
+            usb_camera.set(cv2.CAP_PROP_FPS, 30)
         
         # 设置视频格式为MJPEG
         usb_camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
@@ -789,8 +829,9 @@ def init_usb_camera():
         # 获取实际分辨率
         image_width = int(usb_camera.get(cv2.CAP_PROP_FRAME_WIDTH))
         image_height = int(usb_camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = int(usb_camera.get(cv2.CAP_PROP_FPS))
         control_system.set_camera_resolution(image_width, image_height)
-        print(f"USB相机已初始化，分辨率: {image_width}x{image_height}")
+        print(f"USB相机已初始化，分辨率: {image_width}x{image_height}, 帧率值: {fps}")
         
         return True
     except Exception as e:
@@ -799,7 +840,7 @@ def init_usb_camera():
 
 def init_ros_components():
     """初始化ROS相关组件"""
-    global bridge, target_info_pub, velocity_pub, attitude_pub, image_sub, attitude_sub
+    global bridge, target_info_pub, velocity_pub, attitude_pub, image0_sub, image1_sub, attitude_sub
     
     # 创建CvBridge对象用于图像格式转换
     bridge = CvBridge()
@@ -813,7 +854,8 @@ def init_ros_components():
     attitude_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
     
     # 创建图像订阅者
-    image_sub = rospy.Subscriber('/camera/color/image_raw', Image, image_callback)
+    image0_sub = rospy.Subscriber('/d435i/infra2/image_rect_raw', Image, image0_callback)
+    image1_sub = rospy.Subscriber('/camera/infra1/image_raw', Image, image1_callback)
     
     # 订阅无人机当前姿态信息
     attitude_sub = rospy.Subscriber('/mavros/imu/data', Imu, attitude_callback)
@@ -896,12 +938,12 @@ def init_system():
     # 初始化坐标变换器
     init_coordinate_transformer()
 
-    print("YOLOv8 目标追踪节点已初始化")
+    print("YOLO 目标追踪节点已初始化")
     return True
 
 def main():
     """
-    主函数：运行YOLOv8追踪节点
+    主函数：运行YOLO追踪节点
     """
     try:
         # 初始化系统
@@ -926,11 +968,11 @@ if __name__ == "__main__":
     # 参数解析
     import argparse
     
-    parser = argparse.ArgumentParser(description='YOLOv8目标追踪程序')
+    parser = argparse.ArgumentParser(description='YOLO目标追踪程序')
     parser.add_argument('--use-usb-camera', action='store_true', 
                         help='使用USB相机直接读取图像，而不是通过ROS订阅')
     parser.add_argument('--device', type=str, default='/dev/video0',
-                        help='USB相机设备路径 (默认: /dev/video2)')
+                        help='USB相机设备路径 (默认: /dev/video0)')
     parser.add_argument('--config', type=str, default='detection_config.yaml',
                         help='目标检测配置文件路径 (默认: detection_config.yaml)')
     
