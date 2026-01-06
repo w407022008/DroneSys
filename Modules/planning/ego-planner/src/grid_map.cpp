@@ -690,6 +690,41 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
   md_.local_updated_ = false;
 }
 
+void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
+                                const nav_msgs::OdometryConstPtr &odom)
+{
+  /* get pose */
+  Eigen::Quaterniond body_q = Eigen::Quaterniond(odom->pose.pose.orientation.w,
+                                                 odom->pose.pose.orientation.x,
+                                                 odom->pose.pose.orientation.y,
+                                                 odom->pose.pose.orientation.z);    
+  Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();   
+  Eigen::Matrix4d body2world;
+  body2world.block<3, 3>(0, 0) = body_r_m;
+  body2world(0, 3) = odom->pose.pose.position.x;
+  body2world(1, 3) = odom->pose.pose.position.y;
+  body2world(2, 3) = odom->pose.pose.position.z;
+  body2world(3, 3) = 1.0;
+  
+  Eigen::Matrix4d cam_T = body2world * md_.cam2body_;
+  md_.camera_pos_(0) = cam_T(0, 3);
+  md_.camera_pos_(1) = cam_T(1, 3);
+  md_.camera_pos_(2) = cam_T(2, 3);
+  md_.camera_q_ = Eigen::Quaterniond(cam_T.block<3, 3>(0, 0));
+
+  /* get depth image */
+  cv_bridge::CvImagePtr cv_ptr;
+  cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
+  if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+  {
+    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
+  }
+  cv_ptr->image.copyTo(md_.depth_image_);
+
+  cout << "got depthOdom" << endl;
+  md_.occ_need_update_ = true;
+}
+
 void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
                                 const geometry_msgs::PoseStampedConstPtr &pose)
 {
@@ -994,40 +1029,6 @@ Eigen::Vector3d GridMap::getOrigin() { return mp_.map_origin_; }
 void GridMap::getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size)
 {
   ori = mp_.map_origin_, size = mp_.map_size_;
-}
-
-void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
-                                const nav_msgs::OdometryConstPtr &odom)
-{
-  /* get pose */
-  Eigen::Quaterniond body_q = Eigen::Quaterniond(odom->pose.pose.orientation.w,
-                                                 odom->pose.pose.orientation.x,
-                                                 odom->pose.pose.orientation.y,
-                                                 odom->pose.pose.orientation.z);    
-  Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();   
-  Eigen::Matrix4d body2world;
-  body2world.block<3, 3>(0, 0) = body_r_m;
-  body2world(0, 3) = odom->pose.pose.position.x;
-  body2world(1, 3) = odom->pose.pose.position.y;
-  body2world(2, 3) = odom->pose.pose.position.z;
-  body2world(3, 3) = 1.0;
-  
-  Eigen::Matrix4d cam_T = body2world * md_.cam2body_;
-  md_.camera_pos_(0) = cam_T(0, 3);
-  md_.camera_pos_(1) = cam_T(1, 3);
-  md_.camera_pos_(2) = cam_T(2, 3);
-  md_.camera_q_ = Eigen::Quaterniond(cam_T.block<3, 3>(0, 0));
-
-  /* get depth image */
-  cv_bridge::CvImagePtr cv_ptr;
-  cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
-  if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
-  {
-    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
-  }
-  cv_ptr->image.copyTo(md_.depth_image_);
-
-  md_.occ_need_update_ = true;
 }
 
 // GridMap
